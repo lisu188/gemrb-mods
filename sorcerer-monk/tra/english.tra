@@ -1,6 +1,15 @@
-@0 = ~Sorcerer/Monk multiclass mod 1.7~
+@0 = ~Sorcerer/Monk multiclass for GemRB~
 @1 = ~sorcerer/monk~
 @2 = ~SORCERER/MONK:
-This is a multiclass-only combination, no dualclassing possible. Mage race and item restrictions, monk avatar, combined starting gear in tob, no detecting traps (custom actionbar) ...~
-@3 = ~SORCERER/MONK~
 
+A lawful multiclass combining spontaneous arcane spellcasting with a monk's unarmed combat, movement, defenses and class abilities.
+
+The class uses split multiclass progression, Sorcerer spell selection, Monk fists and Monk class abilities. It is restricted to humans and lawful alignments. Item restrictions from both Sorcerer/Mage and Monk are applied.
+
+Dual-classing is not supported. The class requires GemRB and cannot be used with the original Infinity Engine executable.~
+@3 = ~Sorcerer/Monk~
+@4 = ~Run this game with GemRB at least once before installing. WeiDU could not find gemrb_path.txt.~
+@5 = ~This release supports BG2, ToB, BGT, BG2EE and EET installations running through GemRB.~
+@6 = ~Required modern GemRB class tables are missing. Update GemRB, run it once on this game installation, and retry.~
+@7 = ~No free 8-bit class identifier is available. Remove conflicting custom-class mods before installing.~
+@8 = ~A lawful spontaneous arcane caster trained in unarmed combat and monastic disciplines.~
