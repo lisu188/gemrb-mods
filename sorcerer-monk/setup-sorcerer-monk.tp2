@@ -1,75 +1,144 @@
-BACKUP ~sorcerer-monk-cleric/backup~
+BACKUP ~sorcerer-monk/backup~
 AUTHOR ~lynxlynxlynx~
-VERSION ~1.9~
+VERSION ~2.0~
+AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~sorcerer-monk/tra/english.tra~
 
-BEGIN ~Sorcerer/monk multiclass for gemrb~
+BEGIN @0
+DESIGNATED 0
 
-// ******************************************
-// first all the game table changes
-APPEND ~alignmnt.2da~ ~SORCERER_MONK 1       1       1       0       0       0       0       0       0~ 
-UNLESS ~SORCERER_MONK~
+REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @4
+REQUIRE_PREDICATE GAME_IS ~bg2 tob bgt bg2ee eet~ @5
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~classes.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~clastext.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~clsrcreq.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~hpclass.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~clskills.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~fistweap.2da~ @6
+REQUIRE_PREDICATE FILE_EXISTS_IN_GAME ~qslots.2da~ @6
 
-APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
-UNLESS ~SORCERER_MONK~
+OUTER_SET sm_lower = RESOLVE_STR_REF (@1)
+OUTER_SET sm_desc = RESOLVE_STR_REF (@2)
+OUTER_SET sm_mixed = RESOLVE_STR_REF (@3)
+OUTER_SET sm_brief = RESOLVE_STR_REF (@8)
 
-APPEND ~profs.2da~ ~SORCERER_MONK 2 5~
-UNLESS ~SORCERER_MONK~
+OUTER_SET sm_class_id = -1
+OUTER_SET sm_max_class_id = 20
+OUTER_SET sm_clastext_cols = 6
 
-APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
-UNLESS ~SORCERER_MONK~
+COPY_EXISTING ~clastext.2da~ ~override~
+  COUNT_2DA_COLS sm_clastext_cols
+  READ_2DA_ENTRIES_NOW ~sm_clastext~ sm_clastext_cols
+  FOR (sm_i = 0; sm_i < sm_clastext; ++sm_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_clastext~ sm_i 0 sm_class_name
+    READ_2DA_ENTRY_FORMER ~sm_clastext~ sm_i 1 sm_existing_id
+    PATCH_IF IS_AN_INT ~%sm_existing_id%~ BEGIN
+      PATCH_IF sm_existing_id > sm_max_class_id BEGIN
+        SET sm_max_class_id = sm_existing_id
+      END
+      PATCH_IF (~%sm_class_name%~ STRING_EQUAL_CASE ~SORCERER_MONK~) BEGIN
+        SET sm_class_id = sm_existing_id
+      END
+    END
+  END
+BUT_ONLY
 
-APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
-UNLESS ~SORCERER_MONK~
-
-// if you want dualclassing
-// modify the two abdc* tables, dualclass.2da
-// then also change gemrb's classes.2da and add in the new MC_WAS_ID
-
-// modify the other ab* tables if you want different stat prereqs/mods
-
-// modify lu* for HLAs
-// lazy: no special table (lusm0.2da), since currently gemrb automatically uses the hlas from all classes
-// WTF @ lunumab? is the original so retarded too?
-APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~ UNLESS ~SORCERER_MONK~
-APPEND ~lunumab.2da~ ~MULTI2SORCERER 14          1          99           1~ UNLESS ~MULTI2SORCERER~
-APPEND ~lunumab.2da~ ~MULTI2MONK 14          1          99           1~ UNLESS ~MULTI2MONK~
-APPEND ~lunumab.2da~ ~SORCERER_MONK 14          1          99           1~ UNLESS ~SORCERER_MONK~
-
-// ******************************************
-// GemRB unhardcoded table changes
-
-// avatar class value (partial Animation ID)
-APPEND ~avprefc.2da~ ~SORCERER_MONK          0x500~
-
-// class details
-ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
-  APPEND ~clastext.2da~ ~21 * SORCERER_MONK PLACEHOLDER_1 PLACEHOLDER_2 PLACEHOLDER_3~
-  APPEND ~clsrcreq.2da~ ~SORCERER_MONK 1 1 1 0 0 2 0~
-  APPEND ~hpclass.2da~ ~SORCERER_MONK HPMONK~
-  APPEND ~classes.2da~ ~SORCERER_MONK SAVEPRS 786432 0x40000 -1 0 9~
-END ELSE BEGIN
-  APPEND ~classes.2da~ ~SORCERER_MONK PLACEHOLDER_1 PLACEHOLDER_2 PLACEHOLDER_3 * 786432 21 * 0x40000 -1 1 1 1 0 0 2 0~
+ACTION_IF sm_class_id < 0 THEN BEGIN
+  OUTER_SET sm_class_id = sm_max_class_id + 1
 END
-COPY_EXISTING ~classes.2da~ ~override~
-  REPLACE ~PLACEHOLDER_1~ @1
-  REPLACE ~PLACEHOLDER_2~ @2
-  REPLACE ~PLACEHOLDER_3~ @3
 
-// class skills
-APPEND ~clskills.2da~ ~SORCERER_MONK   *    *    MXSPLSRC   89000   *    SKILLS    *   0     2      *  CLABMO01   -4    2500000    * 0~
+ACTION_IF sm_class_id > 255 THEN BEGIN
+  FAIL @7
+END
 
-// add monk fists
-APPEND ~fistweap.2da~ ~21       MFIST1     MFIST1     MFIST2     MFIST2     MFIST2     MFIST3     MFIST3     MFIST3     MFIST4     MFIST4     MFIST4     MFIST5     MFIST5     MFIST5     MFIST6     MFIST6     MFIST6     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8~
+OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed%~
+ACTION_IF sm_clastext_cols >= 7 THEN BEGIN
+  OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% -1~
+END
+ACTION_IF sm_clastext_cols >= 8 THEN BEGIN
+  OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% 0~
+END
+ACTION_IF sm_clastext_cols >= 9 THEN BEGIN
+  OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% %sm_brief%~
+END
+ACTION_IF sm_clastext_cols >= 10 THEN BEGIN
+  OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% -1~
+END
 
-// action bar setup
-APPEND ~qslots.2da~ ~SORCERER_MONK       0          3          4          2          8          9          11         12        13~
+APPEND ~clastext.2da~ ~%sm_clastext_row%~
+  UNLESS ~SORCERER_MONK~
 
-ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
-  // gemrb since 0.9.5-git
+APPEND ~classes.2da~ ~SORCERER_MONK * 786432 0x20040000 -1 0 9~
+  UNLESS ~SORCERER_MONK~
+
+APPEND ~clsrcreq.2da~ ~SORCERER_MONK 1 0 0 0 0 0 0~
+  UNLESS ~SORCERER_MONK~
+
+APPEND ~hpclass.2da~ ~SORCERER_MONK *~
+  UNLESS ~SORCERER_MONK~
+
+ACTION_IF FILE_EXISTS_IN_GAME ~class.ids~ THEN BEGIN
+  APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~alignmnt.2da~ THEN BEGIN
+  APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~weapprof.2da~ THEN BEGIN
+  APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~profs.2da~ THEN BEGIN
+  APPEND ~profs.2da~ ~SORCERER_MONK 2 5~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~xpcap.2da~ THEN BEGIN
+  APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
+  APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
+  APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
+  APPEND ~lunumab.2da~ ~MULTI2SORCERER 14 1 99 1~
+    UNLESS ~MULTI2SORCERER~
+  APPEND ~lunumab.2da~ ~MULTI2MONK 14 1 99 1~
+    UNLESS ~MULTI2MONK~
+  APPEND ~lunumab.2da~ ~SORCERER_MONK 14 1 99 1~
+    UNLESS ~SORCERER_MONK~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~avprefc.2da~ THEN BEGIN
+  APPEND ~avprefc.2da~ ~SORCERER_MONK 0x500~
+    UNLESS ~SORCERER_MONK~
+END
+
+APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC 89000 * SKILLS * 0 2 * CLABMO01 2500000 * 0 *~
+  UNLESS ~SORCERER_MONK~
+
+APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
+  UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]+MFIST1~
+
+APPEND ~qslots.2da~ ~SORCERER_MONK 0 3 4 2 8 9 11 12 13~
+  UNLESS ~SORCERER_MONK~
+
+ACTION_IF (FILE_EXISTS_IN_GAME ~thiefscl.2da~) AND (FILE_EXISTS_IN_GAME ~thiefskl.2da~) THEN BEGIN
   APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
+    UNLESS ~SORCERER_MONK~
   APPEND ~thiefskl.2da~ ~SORCERER_MONK 10 5~
-END ELSE BEGIN
-  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 5 -1 -1 -1 1 1 -1 -1~
+    UNLESS ~SORCERER_MONK~
 END
