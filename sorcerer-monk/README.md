@@ -1,30 +1,54 @@
-What does this mod do?
-======================
+# Sorcerer/Monk multiclass for GemRB
 
-This mod adds a new multiclass choice, sorcerer/monk. Currently dualclassing is **not** possible (see notes in the tp2 file).
+This mod adds a true Sorcerer/Monk multiclass to Baldur's Gate II-family installations running through GemRB.
 
-Mage race and item restrictions, monk avatar, combined starting gear in tob, no detecting traps (custom actionbar).
+It does not work with the original Infinity Engine executable. Install it before creating the character and do not uninstall it while a save still contains Sorcerer/Monk characters.
 
-![screenshot](http://lynxlynx.info/bugs/sorcerer_monk.jpg)
+## Supported games
 
-[Screenshot of the game area with the merged action bar](http://lynxlynx.info/bugs/sorcerer_monk2.jpg)
+- Baldur's Gate II: Shadows of Amn
+- Throne of Bhaal
+- BGT
+- Baldur's Gate II: Enhanced Edition
+- EET
 
-Only the english strings are currently supported, but that's easily changed - just provide me a standard TRA file.
+All supported games must be launched through a current GemRB build.
 
-Installation
-------------
+## Installation
 
-**As of WeiDU version 247, you can install this mod like any other.**
-Make sure to run GemRB at least once on this install, so WeiDU will know
-where to look for files.
+1. Run GemRB once against the target game installation.
+2. Copy the `sorcerer-monk` directory into the game directory.
+3. Run:
 
-Run WeiDU from the game dir:
+```text
+weidu sorcerer-monk/setup-sorcerer-monk.tp2
 ```
-   weidu sorcerer-monk/setup-sorcerer-monk.tp2
 
-```
+Use WeiDU 247 or newer.
 
-Uninstallation
---------------
-Rerun weidu and choose uninstall.
+## Version 2.0 corrections
 
+- Corrects the backup directory.
+- Allocates a free class identifier instead of hardcoding class ID 21.
+- Adds the class to `CLASS.IDS` when available.
+- Writes the current `CLASSTEXT.2DA` row layout.
+- Corrects the shifted `CLSKILLS.2DA` fields.
+- Uses multiclass save and hit-point handling instead of priest saves and full Monk hit points.
+- Restricts the class to humans, matching the intersection of Sorcerer and Monk race rules.
+- Combines Mage/Sorcerer and Monk item-usability restrictions.
+- Protects optional table changes and repeated row additions.
+- Rejects unsupported games and installations where GemRB metadata is unavailable.
+
+## Gameplay model
+
+- Sorcerer spontaneous arcane spell progression
+- Monk fists and class abilities
+- Lawful alignments only
+- Human only
+- Combined Sorcerer/Mage and Monk equipment restrictions
+- No dual-classing
+- Custom merged action bar
+
+## Compatibility
+
+Install this after GemRB has generated `gemrb_path.txt`. Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
