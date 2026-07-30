@@ -96,7 +96,7 @@ Specific tests or globs can be supplied:
 perl 10pp/test-suite.pl test02 test4*
 ```
 
-Every test input has a matching `_expected` file. Dialog tests use a `D` suffix. The test runner compares exact content after normalizing line endings and exits nonzero when any test fails.
+Every test input has a matching `_expected` file. Dialog tests use a `D` suffix. For transformed cases, the runner compares exact content after normalizing line endings. Known exception cases are reported as skipped. The runner exits nonzero when any executed comparison fails.
 
 `cdiff.pl` and the bundled `Algorithm::Diff` module provide portable unified diffs.
 
