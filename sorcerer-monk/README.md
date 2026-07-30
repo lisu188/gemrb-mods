@@ -1,18 +1,21 @@
 # Sorcerer/Monk multiclass for GemRB
 
-This mod adds a true Sorcerer/Monk multiclass to Baldur's Gate II-family installations running through GemRB.
+This mod adds a true Sorcerer/Monk multiclass to Infinity Engine games running through GemRB.
 
-It does not work with the original Infinity Engine executable. Install it before creating the character and do not uninstall it while a save still contains Sorcerer/Monk characters.
+Install it before creating the character and do not uninstall it while a save still contains Sorcerer/Monk characters.
 
 ## Supported games
 
+- Tutu and Tutu_TotSC
+- Baldur's Gate: Enhanced Edition
+- Classic Adventures
 - Baldur's Gate II: Shadows of Amn
 - Throne of Bhaal
 - BGT
 - Baldur's Gate II: Enhanced Edition
 - EET
 
-All supported games must be launched through a current GemRB build.
+The original BG1 and TotSC data sets are not included because they do not provide the Sorcerer and Monk base classes. All supported games must be launched through GemRB.
 
 ## Installation
 
@@ -30,14 +33,16 @@ Use WeiDU 247 or newer.
 
 - Corrects the backup directory.
 - Allocates a free class identifier instead of hardcoding class ID 21.
-- Adds the class to `CLASS.IDS` when available.
-- Writes the current `CLASSTEXT.2DA` row layout.
-- Corrects the shifted `CLSKILLS.2DA` fields.
+- Supports both the combined class table used by released GemRB versions and the split class tables used by current development builds.
+- Supports GemRB-normalized and native Enhanced Edition `CLASSTEXT.2DA` layouts.
+- Supports compact BG1-style and extended BG2/EE proficiency tables.
+- Handles all three relevant `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
 - Uses multiclass save and hit-point handling instead of priest saves and full Monk hit points.
 - Restricts the class to humans, matching the intersection of Sorcerer and Monk race rules.
 - Combines Mage/Sorcerer and Monk item-usability restrictions.
-- Protects optional table changes and repeated row additions.
-- Rejects unsupported games and installations where GemRB metadata is unavailable.
+- Adds the dynamically allocated class identifier to `CLASS.IDS`.
+- Avoids modifying ToB starting-equipment and HLA tables in games where those tables do not exist.
+- Restores compatibility with the older `SKILLS.2DA` layout as well as the newer `THIEFSCL.2DA`/`THIEFSKL.2DA` pair.
 
 ## Gameplay model
 
@@ -49,6 +54,8 @@ Use WeiDU 247 or newer.
 - No dual-classing
 - Custom merged action bar
 
-## Compatibility
+## Compatibility notes
 
-Install this after GemRB has generated `gemrb_path.txt`. Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
+The installer contains documented compatibility branches for released and development GemRB table layouts. Native Enhanced Edition `CLASSTEXT.2DA` files contain four additional fields—`BIOGRAPHY`, `FALLEN`, `BRIEFDESC` and `FALLEN_NOTICE`—which are appended only when present.
+
+Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
