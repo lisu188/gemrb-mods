@@ -135,9 +135,11 @@ APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
 // Classic BG1 tables use eight broad proficiency groups, while Tutu, BG2 and
 // the Enhanced Editions use the extended proficiency table. The compact row
 // is the first eight restrictions from the original BG2 column.
+OUTER_SET sm_weapprof_cols = 0
 OUTER_SET sm_weapprof_rows = 0
 COPY_EXISTING ~weapprof.2da~ ~override~
-  COUNT_2DA_ROWS sm_weapprof_rows
+  COUNT_2DA_COLS sm_weapprof_cols
+  COUNT_2DA_ROWS sm_weapprof_cols sm_weapprof_rows
 BUT_ONLY
 
 ACTION_IF sm_weapprof_rows <= 8 THEN BEGIN
