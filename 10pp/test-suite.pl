@@ -70,22 +70,23 @@ for my $test (@tests) {
     close($result_handle) or die "Could not close $result_file: $!";
 
     my $rc = extend($test, $result_file, 8);
-    my $result = $rc ? read_text($result_file) : read_text($test);
+    if (!$rc) {
+        print basename($test), ': ', GREEN, 'SUCCESS', RESET, " (skipped)\n";
+        $successes++;
+        unlink $result_file if -e $result_file;
+        next;
+    }
+
+    my $result = read_text($result_file);
     my $expected = read_text($expected_file);
 
     if (normalize_newlines($result) eq normalize_newlines($expected)) {
-        print basename($test), ': ', GREEN, 'SUCCESS', RESET;
-        print ' (skipped)' unless $rc;
-        print "\n";
+        print basename($test), ': ', GREEN, 'SUCCESS', RESET, "\n";
         $successes++;
     } else {
         print basename($test), ': ', RED, 'FAILURE', RESET, "\n";
         $failures++;
         unless ($quiet) {
-            open(my $actual_handle, '>:encoding(UTF-8)', $result_file)
-                or die "Could not write $result_file: $!";
-            print {$actual_handle} $result;
-            close($actual_handle) or die "Could not close $result_file: $!";
             system($^X, "-I$Bin", File::Spec->catfile($Bin, 'cdiff.pl'), '-u', $expected_file, $result_file);
         }
     }
