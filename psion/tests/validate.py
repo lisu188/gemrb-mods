@@ -16,6 +16,21 @@ DISCIPLINE_CLABS = {
     "TELEPATH": "clabptel.2da",
 }
 
+LEVEL1_REFS = {
+    "PS1ERAY",
+    "PS1MTHR",
+    "PS1IARM",
+    "PS1VIGR",
+    "PS1FSCR",
+    "PS1EMND",
+    "PS1PREC",
+    "PS1ACON",
+    "PS1EPUS",
+    "PS1TSKN",
+    "PS1BRST",
+    "PS1CHAR",
+}
+
 
 def table_lines(name):
     return (ROOT / "tables" / name).read_text(encoding="utf-8").splitlines()
@@ -103,6 +118,55 @@ def validate_progressions():
                     assert metadata[exclusive[0]]["level"] == maximum_level
 
 
+def validate_level1_builders():
+    exact_path = ROOT / "lib" / "level1-powers.tpa"
+    exact = exact_path.read_text(encoding="utf-8")
+    powers_driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
+    prototype = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
+
+    assert "level1-powers.tpa" in powers_driver
+    assert "psion_level > 1" in prototype
+
+    # SPL V1 correctness: level and flags must use 0x34 and 0x18. The old alpha
+    # accidentally wrote them to 0x24 and 0x14.
+    assert "WRITE_LONG 0x34 psion_level" in prototype
+    assert "WRITE_LONG 0x18 (THIS | BIT25)" in prototype
+    assert "WRITE_SHORT 0x24" not in prototype
+    assert "WRITE_LONG 0x14" not in prototype
+    assert "WRITE_LONG 0x34 1" in exact
+    assert "WRITE_LONG 0x18 ps_flags" in exact
+
+    created = set(re.findall(r"ps_resref = ~(PS1[A-Z0-9]+)~", exact))
+    assert created == LEVEL1_REFS, (created, LEVEL1_REFS)
+
+    # Guard the intended implementation primitives for every major behavior.
+    required_fragments = {
+        "PS1ERAY": ("opcode = 12", "dicesize = 6"),
+        "PS1MTHR": ("dicesize = 10", "savingthrow = BIT0"),
+        "PS1IARM": ("parameter1 = -4", "duration = 3600"),
+        "PS1VIGR": ("opcode = 18", "opcode = 17"),
+        "PS1FSCR": ("opcode = 206", "resource = ~SPWI112~"),
+        "PS1EMND": ("opcode = 37", "parameter1 = -2"),
+        "PS1PREC": ("opcode = 54", "duration = 18"),
+        "PS1ACON": ("opcode = 67", "resource = ~PSACON01~"),
+        "PS1EPUS": ("opcode = 238", "savingthrow = BIT1"),
+        "PS1TSKN": ("parameter1 = -1", "duration = 60"),
+        "PS1BRST": ("opcode = 126", "parameter1 = 130"),
+        "PS1CHAR": ("opcode = 5", "duration = 60"),
+    }
+    for index, ref in enumerate(sorted(LEVEL1_REFS)):
+        start = exact.index(f"ps_resref = ~{ref}~")
+        later = [
+            exact.find(f"ps_resref = ~{other}~", start + 1)
+            for other in LEVEL1_REFS
+            if exact.find(f"ps_resref = ~{other}~", start + 1) != -1
+        ]
+        end = min(later) if later else len(exact)
+        section = exact[start:end]
+        for fragment in required_fragments[ref]:
+            assert fragment in section, (ref, fragment)
+
+
 def validate_installer_references():
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     for table in (
@@ -175,11 +239,12 @@ def validate_gui_patcher():
 def main():
     validate_2da_schemas()
     validate_progressions()
+    validate_level1_builders()
     validate_installer_references()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)
     validate_gui_patcher()
-    print("Psion 0.2 static and GUI-hook validation passed.")
+    print("Psion 0.3 static, level-1 resource, and GUI-hook validation passed.")
 
 
 if __name__ == "__main__":
