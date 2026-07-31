@@ -1,10 +1,10 @@
 // Higher-level prototype resources still clone thematically similar game spells.
-// Level-1 powers are built from empty SPL files in level1-powers.tpa.
+// Levels 1 and 2 are built from empty SPL files in their dedicated builders.
 ACTION_PHP_EACH psion_power_template AS psion_resref => psion_template BEGIN
   OUTER_SPRINT psion_name $psion_power_name(~%psion_resref%~)
   OUTER_SET psion_level = $psion_power_level(~%psion_resref%~)
 
-  ACTION_IF psion_level > 1 THEN BEGIN
+  ACTION_IF psion_level > 2 THEN BEGIN
     COPY_EXISTING ~%psion_template%.spl~ ~override/%psion_resref%.spl~
       SAY NAME1 ~%psion_name%~
       SAY UNIDENTIFIED_DESC ~Experimental point-based Psion power. See PSIONPOWERS.2DA for cost and discipline metadata.~
