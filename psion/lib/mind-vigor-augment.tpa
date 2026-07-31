@@ -1,0 +1,143 @@
+// Mind Thrust and Vigor augmentation variants.
+//
+// Like Energy Ray, each learned parent becomes an opcode-214 selector. The
+// chosen child resource carries its total PP cost in PSIONAUGMENT.2DA.
+
+DEFINE_ACTION_FUNCTION psion_create_mind_thrust_variant
+INT_VAR
+  ps_cost = 1
+STR_VAR
+  ps_resref = ~~
+BEGIN
+  OUTER_SET ps_save_penalty = (0 - ((ps_cost - 1) / 2))
+  OUTER_SPRINT ps_variant_name ~Mind Thrust (%ps_cost% PP)~
+  OUTER_SPRINT ps_variant_description ~A direct mental attack deals %ps_cost%d10 magical damage. A save vs spell negates the damage; the save penalty improves by 1 for every 2 PP beyond the first.~
+
+  LAF psion_create_level1_power
+    INT_VAR
+      ps_target = 2
+      ps_range = 30
+      ps_projectile = psion_none_projectile
+      ps_flags = psion_hostile_flags
+    STR_VAR
+      ps_resref = ~%ps_resref%~
+      ps_name = ~%ps_variant_name%~
+      ps_description = ~%ps_variant_description%~
+      ps_icon = ~spwi105~
+  END
+
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR
+        opcode = 12
+        target = 2
+        resist_dispel = BIT0
+        parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
+        dicenumber = ps_cost
+        dicesize = 10
+        savingthrow = BIT0
+        save_bonus = ps_save_penalty
+    END
+  BUT_ONLY
+END
+
+DEFINE_ACTION_FUNCTION psion_create_vigor_variant
+INT_VAR
+  ps_cost = 1
+STR_VAR
+  ps_resref = ~~
+BEGIN
+  OUTER_SET ps_vigor_hp = (ps_cost * 5)
+  OUTER_SPRINT ps_variant_name ~Vigor (%ps_cost% PP)~
+  OUTER_SPRINT ps_variant_description ~The manifester gains %ps_vigor_hp% temporary-hit-point-equivalent points for one turn. A new Vigor replaces every existing Vigor variant.~
+
+  LAF psion_create_level1_power
+    STR_VAR
+      ps_resref = ~%ps_resref%~
+      ps_name = ~%ps_variant_name%~
+      ps_description = ~%ps_variant_description%~
+      ps_icon = ~sppr103~
+  END
+
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    // Remove effects from every possible Vigor variant before applying this
+    // one, so changing augmentation refreshes the pool rather than stacking it.
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG01~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG02~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG03~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG04~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG05~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG06~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG07~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG08~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG09~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 18 target = 1 resist_dispel = BIT1 parameter1 = ps_vigor_hp timing = 0 duration = 60 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 parameter1 = ps_vigor_hp timing = 1 END
+  BUT_ONLY
+END
+
+// Parent selectors are free. Their chosen child resources perform the actual
+// manifestation and PP transaction.
+DELETE ~override/PS1MTHR.spl~
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1MTHR~
+    ps_name = ~Mind Thrust~
+    ps_description = ~Spend 1 to 9 power points. Damage is 1d10 per PP and the save DC increases for every 2 additional PP.~
+    ps_icon = ~spwi105~
+END
+COPY_EXISTING ~PS1MTHR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS1MTHR~ END
+BUT_ONLY
+
+DELETE ~override/PS1VIGR.spl~
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1VIGR~
+    ps_name = ~Vigor~
+    ps_description = ~Spend 1 to 9 power points to gain 5 temporary-hit-point-equivalent points per PP for one turn.~
+    ps_icon = ~sppr103~
+END
+COPY_EXISTING ~PS1VIGR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS1VIGR~ END
+BUT_ONLY
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_mind_thrust_variants BEGIN
+  ~PSMT01~ => 1
+  ~PSMT02~ => 2
+  ~PSMT03~ => 3
+  ~PSMT04~ => 4
+  ~PSMT05~ => 5
+  ~PSMT06~ => 6
+  ~PSMT07~ => 7
+  ~PSMT08~ => 8
+  ~PSMT09~ => 9
+END
+ACTION_PHP_EACH psion_mind_thrust_variants AS ps_variant => ps_cost BEGIN
+  LAF psion_create_mind_thrust_variant
+    INT_VAR
+      ps_cost = ps_cost
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+  END
+END
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_vigor_variants BEGIN
+  ~PSVG01~ => 1
+  ~PSVG02~ => 2
+  ~PSVG03~ => 3
+  ~PSVG04~ => 4
+  ~PSVG05~ => 5
+  ~PSVG06~ => 6
+  ~PSVG07~ => 7
+  ~PSVG08~ => 8
+  ~PSVG09~ => 9
+END
+ACTION_PHP_EACH psion_vigor_variants AS ps_variant => ps_cost BEGIN
+  LAF psion_create_vigor_variant
+    INT_VAR
+      ps_cost = ps_cost
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+  END
+END
