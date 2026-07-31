@@ -41,7 +41,7 @@ jobs:
 
           gh release download "v${WEIDU_VERSION}" \
             --repo WeiDUorg/weidu \
-            --pattern '*linux*' \
+            --pattern '*Linux*' \
             --dir "$RUNNER_TEMP"
           archive="$(find "$RUNNER_TEMP" -maxdepth 1 -type f -iname '*linux*' -print -quit)"
           test -n "$archive"
