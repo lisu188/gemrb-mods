@@ -56,9 +56,9 @@ END
 COPY_EXISTING ~PS2AMOR.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2AMOR~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 65 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
   FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 60 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 60 END
   END
 BUT_ONLY
 
@@ -92,7 +92,7 @@ COPY_EXISTING ~PS2DHIN.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2DHIN~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
 BUT_ONLY
 
 // Thought Shield: mental-only saves do not exist in BG, so every saving throw
@@ -107,7 +107,7 @@ END
 COPY_EXISTING ~PS2TSHD.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2TSHD~ END
   FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = -4 timing = 0 duration = 18 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 18 END
   END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 31 target = 1 resist_dispel = BIT1 parameter1 = 20 timing = 0 duration = 18 END
 BUT_ONLY
