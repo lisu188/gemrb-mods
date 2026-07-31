@@ -54,6 +54,7 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Purpose-built resources for all sixty powers at levels 1–5.
 - Fifty-seven registered augmentation or choice child resources.
 - Backup-safe GemRB GUI-script installation and removal.
+- Ownership-aware installation of the standalone `Psionics.py` runtime module.
 
 ## Power-point transaction
 
@@ -156,14 +157,21 @@ These are gameplay-scope limitations, not silent installer fallbacks.
 
    `weidu psion/setup-psion.tp2`
 
-4. Patch GemRB's shared GUI scripts:
+4. Patch GemRB's shared GUI scripts and install the runtime module:
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
-The patcher updates `ActionsWindow.py`, `Spellbook.py`, `MenuWindow.py` and
-`GUISTORE.py`, creating a `.psion.bak` backup for each.
+The patcher copies `psion/guiscripts/Psionics.py` into the selected GemRB
+`GUIScripts` directory and updates `ActionsWindow.py`, `Spellbook.py`,
+`MenuWindow.py` and `GUISTORE.py`.
 
-To remove the GUI hooks:
+For each shared script it creates a byte-for-byte `.psion.bak` backup. If a
+pre-existing `Psionics.py` is present, that module is also backed up and restored
+on uninstall. If the Psion mod created the runtime file, ownership is recorded
+and uninstall removes it. Repeating the installation with identical files is
+idempotent and does not replace the original backups.
+
+To remove the GUI hooks and runtime module:
 
 `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts --uninstall`
 
@@ -185,6 +193,7 @@ GitHub Actions runs:
 - parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
 - GUI patch install, idempotence, backup and uninstall fixtures;
+- runtime-module replacement, restoration, creation and removal fixtures;
 - dedicated level-3, level-4 and level-5 resource regression suites;
 - Python compilation checks;
 - official WeiDU 251 parsing of the TP2 and every TPA module;
