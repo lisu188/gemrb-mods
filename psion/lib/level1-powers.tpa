@@ -21,9 +21,9 @@ BEGIN
   CREATE ~spl~ ~%ps_resref%~
   COPY_EXISTING ~%ps_resref%.spl~ ~override~
     SAY NAME1 ~%ps_name%~
-    WRITE_LONG NAME2 -1
+    WRITE_LONG NAME2 0xffffffff
     SAY UNIDENTIFIED_DESC ~%ps_description%~
-    WRITE_LONG DESC -1
+    WRITE_LONG DESC 0xffffffff
 
     // CLAB GA_ entries grant these as innate abilities. BIT25 allows mental
     // manifestation while silenced; BIT14 ignores dead/wild-magic processing.
