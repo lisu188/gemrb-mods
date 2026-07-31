@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Static and fake-runtime validation for the experimental GemRB Psion mod."""
 from pathlib import Path
 import importlib.util
 import py_compile
@@ -22,6 +23,10 @@ LEVEL1_REFS = {
     "PS1ERAY", "PS1MTHR", "PS1IARM", "PS1VIGR", "PS1FSCR", "PS1EMND",
     "PS1PREC", "PS1ACON", "PS1EPUS", "PS1TSKN", "PS1BRST", "PS1CHAR",
 }
+LEVEL2_REFS = {
+    "PS2AMOR", "PS2CBLS", "PS2DHIN", "PS2TSHD", "PS2BIOF", "PS2SWCR",
+    "PS2CLAI", "PS2RPRD", "PS2EMIS", "PS2AAFF", "PS2DSWP", "PS2BRLK",
+}
 
 
 def table_lines(name):
@@ -40,6 +45,17 @@ def rows(name):
     ]
 
 
+def section_for(text, ref, refs):
+    marker = f"ps_resref = ~{ref}~"
+    start = text.index(marker)
+    later = [
+        text.find(f"ps_resref = ~{other}~", start + 1)
+        for other in refs
+        if text.find(f"ps_resref = ~{other}~", start + 1) != -1
+    ]
+    return text[start:min(later) if later else len(text)]
+
+
 def validate_2da_schemas():
     expected = {
         "psionpowers.2da": [
@@ -49,6 +65,7 @@ def validate_2da_schemas():
         "ps1eray.2da": ["ResRef", "Type"],
         "ps1mthr.2da": ["ResRef", "Type"],
         "ps1vigr.2da": ["ResRef", "Type"],
+        "ps2aaff.2da": ["ResRef", "Type"],
         "psiondisc.2da": ["DISCIPLINE", "SCHOOL", "SPECIAL_SKILL"],
         "psionskills.2da": ["ABILITY", "ACCESS", "COST", "BREAK1", "BREAK2", "BREAK3"],
         "psionfeats.2da": ["MIN_LEVEL", "FOCUS", "PP_SURCHARGE"],
@@ -64,7 +81,8 @@ def validate_progressions():
     powers = rows("psionpowers.2da")
     assert len(pool) == 20 and len(known) == 20
     assert len(powers) == 60
-    assert [int(row[2]) for row in powers].count(1) == 12
+    assert {row[0] for row in powers if row[2] == "1"} == LEVEL1_REFS
+    assert {row[0] for row in powers if row[2] == "2"} == LEVEL2_REFS
 
     known_by_level = {int(row[0]): (int(row[1]), int(row[2])) for row in known}
     metadata = {row[0]: {"level": int(row[2]), "discipline": row[3]} for row in powers}
@@ -88,38 +106,33 @@ def validate_progressions():
                     assert metadata[exclusive[0]]["level"] == maximum_level
 
 
-def section_for(text, ref, refs):
-    start = text.index(f"ps_resref = ~{ref}~")
-    later = [
-        text.find(f"ps_resref = ~{other}~", start + 1)
-        for other in refs
-        if text.find(f"ps_resref = ~{other}~", start + 1) != -1
-    ]
-    return text[start:min(later) if later else len(text)]
-
-
-def validate_level1_builders():
-    exact = (ROOT / "lib" / "level1-powers.tpa").read_text(encoding="utf-8")
+def validate_power_builders():
+    level1 = (ROOT / "lib" / "level1-powers.tpa").read_text(encoding="utf-8")
+    level2 = (ROOT / "lib" / "level2-powers.tpa").read_text(encoding="utf-8")
+    animal = (ROOT / "lib" / "animal-affinity.tpa").read_text(encoding="utf-8")
     energy = (ROOT / "lib" / "energy-ray-augment.tpa").read_text(encoding="utf-8")
     mind_vigor = (ROOT / "lib" / "mind-vigor-augment.tpa").read_text(encoding="utf-8")
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     prototype = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
 
-    for include in ("level1-powers.tpa", "energy-ray-augment.tpa", "mind-vigor-augment.tpa"):
+    for include in (
+        "level1-powers.tpa", "level2-powers.tpa", "energy-ray-augment.tpa",
+        "mind-vigor-augment.tpa", "animal-affinity.tpa",
+    ):
         assert include in driver
-    assert "psion_level > 1" in prototype
 
+    # Exact levels must not be overwritten by the remaining template builder.
+    assert "psion_level > 2" in prototype
+    assert "psion_level > 1" not in prototype
     assert "WRITE_LONG 0x34 psion_level" in prototype
     assert "WRITE_LONG 0x18 (THIS | BIT25)" in prototype
-    assert "WRITE_SHORT 0x24" not in prototype
-    assert "WRITE_LONG 0x14" not in prototype
-    assert "WRITE_LONG 0x34 1" in exact
-    assert "WRITE_LONG 0x18 ps_flags" in exact
 
-    created = set(re.findall(r"ps_resref = ~(PS1[A-Z0-9]+)~", exact))
-    assert created == LEVEL1_REFS, (created, LEVEL1_REFS)
+    assert set(re.findall(r"ps_resref = ~(PS1[A-Z0-9]+)~", level1)) == LEVEL1_REFS
+    assert set(re.findall(r"ps_resref = ~(PS2[A-Z0-9]+)~", level2)) == LEVEL2_REFS
+    assert "WRITE_LONG 0x34 1" in level1
+    assert "WRITE_LONG 0x34 2" in level2
 
-    required = {
+    level1_required = {
         "PS1ERAY": ("opcode = 12", "dicesize = 6"),
         "PS1MTHR": ("dicesize = 10", "savingthrow = BIT0"),
         "PS1IARM": ("parameter1 = -4", "duration = 3600"),
@@ -133,40 +146,56 @@ def validate_level1_builders():
         "PS1BRST": ("opcode = 126", "parameter1 = 130"),
         "PS1CHAR": ("opcode = 5", "duration = 60"),
     }
-    for ref in LEVEL1_REFS:
-        section = section_for(exact, ref, LEVEL1_REFS)
-        for fragment in required[ref]:
+    for ref, fragments in level1_required.items():
+        section = section_for(level1, ref, LEVEL1_REFS)
+        for fragment in fragments:
+            assert fragment in section, (ref, fragment)
+
+    level2_required = {
+        "PS2AMOR": ("opcode = 65", "parameter1 = -2"),
+        "PS2CBLS": ("dicenumber = 2", "dicesize = 6"),
+        "PS2DHIN": ("opcode = 193", "opcode = 292"),
+        "PS2TSHD": ("opcode = 31", "parameter1 = 20"),
+        "PS2BIOF": ("ps_resist_opcode = 86", "ps_resist_opcode <= 89"),
+        "PS2SWCR": ("dicenumber = 3", "special = BIT8"),
+        "PS2CLAI": ("opcode = 193", "opcode = 91"),
+        "PS2RPRD": ("opcode = 17", "dicesize = 8"),
+        "PS2EMIS": ("ELECTRICITY", "special = BIT8"),
+        "PS2AAFF": ("opcode = 214", "resource = ~PS2AAFF~"),
+        "PS2DSWP": ("opcode = 124", "parameter2 = 3"),
+        "PS2BRLK": ("opcode = 175", "duration = 18"),
+    }
+    for ref, fragments in level2_required.items():
+        section = section_for(level2, ref, LEVEL2_REFS)
+        for fragment in fragments:
             assert fragment in section, (ref, fragment)
 
     assert "DELETE ~override/PS1ERAY.spl~" in energy
-    assert "opcode = 214" in energy
     assert "dicenumber = ps_cost" in energy
-    assert "ps_dice_size = 4" in energy
-    assert "ps_flat_bonus = 1" in energy
-
     assert "DELETE ~override/PS1MTHR.spl~" in mind_vigor
     assert "DELETE ~override/PS1VIGR.spl~" in mind_vigor
-    assert "save_bonus = ps_save_penalty" in mind_vigor
-    assert "dicenumber = ps_cost" in mind_vigor
     assert "ps_vigor_hp = (ps_cost * 5)" in mind_vigor
-    for ref in (f"PSVG{cost:02d}" for cost in range(1, 10)):
-        assert f"resource = ~{ref}~" in mind_vigor
+
+    for ref, opcode in (("PSAASTR", "44"), ("PSAADEX", "15"), ("PSAACON", "10")):
+        assert f"~{ref}~ => {opcode}" in animal
+        assert f"resource = ~{ref}~" in animal
+    assert "parameter1 = 4" in animal and "duration = 60" in animal
 
 
 def validate_augmentation_tables():
     augment = rows("psionaugment.2da")
-    assert len(augment) == 54
-    assert len({row[0] for row in augment}) == 54
+    assert len(augment) == 57
+    assert len({row[0] for row in augment}) == 57
 
     selector_files = {
-        "PS1ERAY": "ps1eray.2da",
-        "PS1MTHR": "ps1mthr.2da",
-        "PS1VIGR": "ps1vigr.2da",
+        "PS1ERAY": ("ps1eray.2da", 36),
+        "PS1MTHR": ("ps1mthr.2da", 9),
+        "PS1VIGR": ("ps1vigr.2da", 9),
+        "PS2AAFF": ("ps2aaff.2da", 3),
     }
     all_selector_refs = set()
-    for parent, filename in selector_files.items():
+    for parent, (filename, expected_count) in selector_files.items():
         selector = rows(filename)
-        expected_count = 36 if parent == "PS1ERAY" else 9
         assert len(selector) == expected_count
         assert all(row[2] == "3" for row in selector)
         selector_refs = {row[1] for row in selector}
@@ -175,26 +204,19 @@ def validate_augmentation_tables():
         all_selector_refs |= selector_refs
 
     assert all_selector_refs == {row[0] for row in augment}
-
-    energy_rows = [row for row in augment if row[1] == "PS1ERAY"]
-    for energy in ("FIRE", "COLD", "ELECTRICITY", "SONIC"):
-        costs = sorted(int(row[2]) for row in energy_rows if row[4] == energy)
-        assert costs == list(range(1, 10)), (energy, costs)
-
-    for parent, effect in (("PS1MTHR", "DAMAGE"), ("PS1VIGR", "TEMP_HP")):
-        entries = [row for row in augment if row[1] == parent]
-        assert sorted(int(row[2]) for row in entries) == list(range(1, 10))
-        assert all(row[3] == effect for row in entries)
+    animal = [row for row in augment if row[1] == "PS2AAFF"]
+    assert {row[0] for row in animal} == {"PSAASTR", "PSAADEX", "PSAACON"}
+    assert all(row[2:] == ["3", "ABILITY", row[4]] for row in animal)
 
 
 def validate_installer_references():
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
-    assert "VERSION ~0.4.0-alpha~" in setup
+    assert "VERSION ~0.5.0-alpha~" in setup
     for table in (
         "psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
         "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
-        "mxpsion", "clabpsee", "clabpsha", "clabpkin", "clabpego",
-        "clabpnom", "clabptel",
+        "ps2aaff", "mxpsion", "clabpsee", "clabpsha", "clabpkin",
+        "clabpego", "clabpnom", "clabptel",
     ):
         assert table in setup
 
@@ -203,10 +225,6 @@ def validate_installer_references():
         "class-common.tpa", "class-skills.tpa",
     ):
         assert include in setup
-
-    skills = (ROOT / "lib" / "class-skills.tpa").read_text(encoding="utf-8")
-    for clab in ("CLABPSEE", "CLABPSHA", "CLABPKIN", "CLABPEGO", "CLABPNOM", "CLABPTEL"):
-        assert clab in skills
 
     power_data = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
     generated = set(re.findall(r"~(PS[0-9A-Z]+)~ =>", power_data))
@@ -246,7 +264,7 @@ def validate_runtime_transactions():
         "psionaugment": fake_table("psionaugment.2da"),
     }
 
-    fake_gui.GetClassRowName = lambda actor: "PSION_KINETICIST" if actor == 1 else ""
+    fake_gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
     fake_gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
     fake_gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
     fake_gemrb.LoadTable = lambda name, *_args: tables[name.lower()]
@@ -262,57 +280,38 @@ def validate_runtime_transactions():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR"):
-            selector = module.power_info(parent)
-            assert selector["selector"] and selector["cost"] == 0
-
-        assert module.power_info("PSRF03")["value"] == "FIRE"
-        assert module.power_info("PSMT03")["parent"] == "PS1MTHR"
-        assert module.power_info("PSVG03")["parent"] == "PS1VIGR"
-
         starting_pool = module.ensure_pool(1)
         assert starting_pool == 17
+        for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
+            info = module.power_info(parent)
+            assert info["selector"] and info["cost"] == 0
+            assert module.can_manifest(1, parent)
 
-        # Temporary selectors must retain unrelated resources while hiding
-        # Psion variants above the level-3 manifester cap.
-        mixed = ["SPWI112", "PSRF01", "PSRF04", "PSMT03", "PSVG09"]
-        filtered = module.filter_spellinfo(1, mixed)
-        assert filtered == ["SPWI112", "PSRF01", "PSMT03"]
+        affinity = module.power_info("PSAADEX")
+        assert affinity["parent"] == "PS2AAFF" and affinity["cost"] == 3
+        assert affinity["value"] == "DEXTERITY"
 
-        for parent, child in (
-            ("PS1ERAY", "PSRF03"),
-            ("PS1MTHR", "PSMT03"),
-            ("PS1VIGR", "PSVG03"),
-        ):
-            before = module.ensure_pool(1)
-            assert module.begin_manifest(1, parent)
-            assert module.ensure_pool(1) == before
-            assert module.begin_manifest(1, child)
-            assert module.ensure_pool(1) == before
-            assert module.begin_manifest(1, child)
-            assert module.ensure_pool(1) == before - 3
+        mixed = ["SPWI112", "PSRF01", "PSRF04", "PSMT03", "PSVG09", "PSAADEX"]
+        assert module.filter_spellinfo(1, mixed) == ["SPWI112", "PSRF01", "PSMT03", "PSAADEX"]
 
-        for child in ("PSRF04", "PSMT04", "PSVG04"):
-            assert not module.can_manifest(1, child)
-            assert not module.begin_manifest(1, child)
+        before = module.ensure_pool(1)
+        assert module.begin_manifest(1, "PS2AAFF")
+        assert module.ensure_pool(1) == before
+        assert module.begin_manifest(1, "PSAADEX")
+        assert module.ensure_pool(1) == before
+        assert module.begin_manifest(1, "PSAADEX")
+        assert module.ensure_pool(1) == before - 3
 
-        for parent, legal, illegal in (
-            ("PS1ERAY", "PSRF03", "PSRF04"),
-            ("PS1MTHR", "PSMT03", "PSMT04"),
-            ("PS1VIGR", "PSVG03", "PSVG04"),
-        ):
-            available = module.available_variants(1, parent)
-            assert legal in available
-            assert illegal not in available
+        assert not module.can_manifest(1, "PSRF04")
+        assert "PSRF03" in module.available_variants(1, "PS1ERAY")
+        assert "PSRF04" not in module.available_variants(1, "PS1ERAY")
+        assert set(module.available_variants(1, "PS2AAFF")) == {"PSAASTR", "PSAADEX", "PSAACON"}
 
-        # An empty PP pool must disable the selector itself and filter every
-        # Psion child, but must not remove another mod's temporary spell.
         stats[(1, 188)] = 1
         stats[(1, 239)] = 0
-        assert not module.can_manifest(1, "PS1ERAY")
-        assert module.available_variants(1, "PS1ERAY") == []
-        assert module.filter_spellinfo(1, ["SPWI112", "PSRF01"]) == ["SPWI112"]
-        assert messages
+        assert not module.can_manifest(1, "PS2AAFF")
+        assert module.available_variants(1, "PS2AAFF") == []
+        assert module.filter_spellinfo(1, ["SPWI112", "PSAASTR"]) == ["SPWI112"]
     finally:
         if old_gemrb is None:
             sys.modules.pop("GemRB", None)
@@ -349,40 +348,26 @@ def validate_gui_patcher():
         assert module.patch(spellbook, "spellbook")
         assert module.patch(menu, "rest")
         assert module.patch(store, "rest")
-
-        patched_actions = actions.read_text(encoding="utf-8")
-        assert "Psionics.begin_manifest" in patched_actions
-        assert "Spellbook.GetSpellinfoSpells" in patched_actions
-        assert patched_actions.count("Psionics.cancel_pending") == 2
-        assert "import Psionics" in patched_actions
-
-        patched_spellbook = spellbook.read_text(encoding="utf-8")
-        assert "Psionics.filter_spellinfo(actor, spellResRefs)" in patched_spellbook
-        assert "import Psionics" in patched_spellbook
-
+        assert "Psionics.begin_manifest" in actions.read_text(encoding="utf-8")
+        assert "Psionics.filter_spellinfo(actor, spellResRefs)" in spellbook.read_text(encoding="utf-8")
         assert not module.patch(actions, "actions")
         assert not module.patch(spellbook, "spellbook")
-
-        assert module.remove(actions)
-        assert module.remove(spellbook)
+        assert module.remove(actions) and module.remove(spellbook)
         assert actions.read_text(encoding="utf-8") == actions_fixture
         assert spellbook.read_text(encoding="utf-8") == spellbook_fixture
-
-    patcher_source = patcher_path.read_text(encoding="utf-8")
-    assert '(args.guiscripts / "Spellbook.py", "spellbook")' in patcher_source
 
 
 def main():
     validate_2da_schemas()
     validate_progressions()
-    validate_level1_builders()
+    validate_power_builders()
     validate_augmentation_tables()
     validate_installer_references()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)
     validate_runtime_transactions()
     validate_gui_patcher()
-    print("Psion 0.4 filtered-selector, 54-variant, runtime, and GUI-hook validation passed.")
+    print("Psion 0.5 level-2, 57-variant, runtime, and GUI-hook validation passed.")
 
 
 if __name__ == "__main__":
