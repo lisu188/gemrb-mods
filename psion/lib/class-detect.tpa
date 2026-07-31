@@ -1,18 +1,26 @@
 // Allocate six consecutive class IDs above every class already registered by
 // the game or earlier mods. GemRB's normalized split CLASSTEXT layout has six
-// fields including the row label. Do not infer its width with COUNT_2DA_COLS:
-// some shipped tables end with explanatory # lines containing more tokens than
-// the actual header, which would make WeiDU report a false column count.
+// fields including the row label, while native Enhanced Edition tables have ten.
+// Do not use COUNT_2DA_COLS here: some GemRB tables end with explanatory # lines
+// containing more tokens than the real header.
 OUTER_SET ps_max_id = (0 - 1)
 OUTER_SET ps_split = 0
 OUTER_SET ps_text_cols = 0
 
 ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
   OUTER_SET ps_split = 1
-  OUTER_SET ps_text_cols = 6
 
   COPY_EXISTING ~clastext.2da~ ~override~
+    // BIOGRAPHY is unique to the native EE layout. INDEX_BUFFER inspects the
+    // active game resource, so this also works when CLASSTEXT is stored in a BIF.
     SET ps_detect_cols = 6
+    PATCH_IF (INDEX_BUFFER (~BIOGRAPHY~) >= 0) BEGIN
+      SET ps_detect_cols = 10
+    END
+    INNER_ACTION BEGIN
+      OUTER_SET ps_text_cols = %ps_detect_cols%
+    END
+
     COUNT_2DA_ROWS ps_detect_cols ps_text_rows
 
     // COUNT_2DA_ROWS may include long trailing comments. They are harmless:
@@ -29,8 +37,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
   BUT_ONLY
 END ELSE BEGIN
   // Legacy GemRB stores the class identifier in data column 6 of the combined
-  // CLASSES.2DA table. Its established row width is nineteen fields including
-  // the row label; using that fixed width likewise avoids trailing comments.
+  // nineteen-field CLASSES.2DA table.
   COPY_EXISTING ~classes.2da~ ~override~
     SET ps_detect_cols = 19
     COUNT_2DA_ROWS ps_detect_cols ps_class_rows
