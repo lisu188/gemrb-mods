@@ -10,7 +10,7 @@ Enhanced Edition campaigns running through GemRB:
 - Nomad — Psychoportation
 - Telepath — Telepathy
 
-## Implemented in 0.3.0-alpha
+## Implemented in 0.4.0-alpha
 
 - Six dynamically allocated custom class rows.
 - Released combined and newer split GemRB class-table layouts.
@@ -31,7 +31,10 @@ Enhanced Edition campaigns running through GemRB:
 - Purpose-built level-1 resources for all twelve first-tier powers.
 - Point-scaled augmentation for Energy Ray, Mind Thrust and Vigor.
 - Fifty-four augmentation child resources with runtime cost enforcement.
-- Static progression, 2DA schema, SPL-builder, runtime-transaction and
+- Runtime filtering of opcode-214 choice lists so unaffordable Psion variants
+  are hidden without changing unrelated selectors from the base game or other
+  mods.
+- Static progression, 2DA schema, SPL-builder, fake-runtime transaction and
   GUI-patcher fixture tests.
 
 ## Exact level-1 vertical slice
@@ -87,10 +90,19 @@ variant removes the effects of all nine other Vigor variants before applying
 its own value, so changing the amount refreshes the power instead of stacking
 multiple pools.
 
-The current generic selectors show all variants: 36 for Energy Ray and 9 each
-for Mind Thrust and Vigor. Illegal choices are rejected by the runtime. A later
-dedicated augmentation panel will hide choices above the current manifester
-level or remaining PP.
+### Filtered choice lists
+
+GemRB stores opcode-214 choices in a temporary spellinfo list. The installed
+`Spellbook.py` hook passes that list through `Psionics.filter_spellinfo` before
+buttons are created. Only resources registered as children in
+`PSIONAUGMENT.2DA` are filtered. Ordinary temporary spell selectors remain in
+their original order and are not modified.
+
+For a level-3 Psion with 2 PP remaining, the selector therefore displays only
+1- and 2-PP children. At zero PP the augmented parent is rejected instead of
+opening an empty choice list. The final child resource is still validated again
+when selected, so a pool change between opening the list and choosing a power
+cannot overspend points.
 
 ## Current level 1–9 progression
 
@@ -121,10 +133,10 @@ Power selection is fixed in this alpha. A later level-up interface will allow
 players to choose general powers while enforcing one discipline power whenever
 a new tier becomes available, plus replacement at levels 4/8/12/16/20.
 
-The cancellation-safe point transaction follows GemRB's documented two-callback
-spell flow and is covered by GUI-script and fake-runtime fixtures, but it still
-requires an in-game test against the exact GemRB build used by the player. No
-complete WeiDU/GemRB installation was available during development.
+The cancellation-safe point transaction and filtered selector are covered by
+GUI-script and fake-runtime fixtures, but both still require an in-game test
+against the exact GemRB build used by the player. No complete WeiDU/GemRB
+installation was available during development.
 
 ## Installation
 
@@ -135,7 +147,9 @@ complete WeiDU/GemRB installation was available during development.
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
-The patcher creates `.psion.bak` backups. Remove hooks with `--uninstall`.
+The patcher updates `ActionsWindow.py`, `Spellbook.py`, `MenuWindow.py` and
+`GUISTORE.py`, creating a `.psion.bak` backup for each. Remove all hooks with
+`--uninstall`.
 
 ## Supported targets
 
@@ -145,12 +159,11 @@ class data used by this implementation.
 
 ## Development priorities
 
-1. Dedicated augmentation panel that filters variants by current PP and level.
+1. Exact level-2 power resources and their legal augmentation paths.
 2. Add augmentation variants to discipline powers and remaining general powers.
 3. Replace the temporary Astral Construct body with a dedicated CRE and AI.
-4. Exact level-2 power resources.
-5. Choice-based power learning and replacement at levels 4/8/12/16/20.
-6. Current/max pool display on the action and character-record interfaces.
-7. Psionic focus, feats and skill allocation UI.
-8. Psicrystal, psionic items and enemy users.
-9. Automated WeiDU installation fixtures and GemRB integration tests.
+4. Choice-based power learning and replacement at levels 4/8/12/16/20.
+5. Current/max pool display on the action and character-record interfaces.
+6. Psionic focus, feats and skill allocation UI.
+7. Psicrystal, psionic items and enemy users.
+8. Automated WeiDU installation fixtures and GemRB integration tests.
