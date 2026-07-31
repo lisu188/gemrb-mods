@@ -29,7 +29,8 @@ Enhanced Edition campaigns running through GemRB:
   by level 9 and gains its exclusive discipline power at levels 1, 3, 5, 7
   and 9.
 - Purpose-built level-1 resources for all twelve first-tier powers.
-- Energy Ray energy selection and point-scaled augmentation from 1 to 9 PP.
+- Point-scaled augmentation for Energy Ray, Mind Thrust and Vigor.
+- Fifty-four augmentation child resources with runtime cost enforcement.
 - Static progression, 2DA schema, SPL-builder, runtime-transaction and
   GUI-patcher fixture tests.
 
@@ -39,9 +40,9 @@ The following powers no longer inherit unrelated effects from existing wizard
 or priest spells:
 
 - **Energy Ray:** opens an energy/cost selector described below.
-- **Mind Thrust:** 1d10 magical damage, save vs spell negates.
+- **Mind Thrust:** opens a 1–9 PP damage and save-DC selector.
 - **Inertial Armor:** +4 Armor Class for one hour, non-stacking.
-- **Vigor:** +5 temporary-HP approximation for one turn, non-stacking.
+- **Vigor:** opens a 1–9 PP temporary-HP-equivalent selector.
 - **Force Screen:** +2 Armor Class and Magic Missile protection for one turn.
 - **Empty Mind:** +2 to all saves for one round.
 - **Precognition:** +1 attack, Armor Class and saves for three rounds.
@@ -57,25 +58,39 @@ D&D 3e construct body. Empty Mind therefore modifies all five saves, Vigor
 uses timed maximum/current HP effects, and Astral Construct currently uses a
 renamed wolf-derived creature that will be replaced by a dedicated CRE.
 
-## Energy Ray augmentation
+## Implemented augmentation
 
-Selecting Energy Ray opens an opcode-214 choice table containing four energy
-types at total costs from 1 through 9 PP:
+Every augmented parent is a free opcode-214 selector. The chosen child resource
+reserves its total cost on the first casting callback and spends it on the
+matching second callback. Total cost cannot exceed manifester level and must be
+available in the current PP pool.
+
+### Energy Ray
+
+Energy Ray offers four energy types at total costs from 1 through 9 PP:
 
 - **Fire:** one d6 per PP, plus 1 damage per die.
 - **Cold:** one d6 per PP.
 - **Electricity:** one d6 per PP.
 - **Sonic:** one d4 per PP, represented as magical damage by the engine.
 
-The parent selector costs no PP. The selected child resource reserves its full
-cost on the first casting callback and spends it on the matching second
-callback. Total cost cannot exceed manifester level and must be available in
-the current PP pool. For example, a level-3 Psion can use any 1–3 PP Energy Ray
-but is rejected when selecting a 4–9 PP variant.
+### Mind Thrust
 
-The current generic selector lists all 36 variants. Illegal choices are blocked
-by the runtime; a later dedicated augmentation panel will hide choices above
-the current manifester-level and PP limits.
+Mind Thrust deals one d10 per PP. A save vs spell negates all damage. The save
+penalty improves by 1 for every 2 PP spent beyond the first, approximating the
+D&D 3e augmentation that raises the power's save DC.
+
+### Vigor
+
+Vigor grants 5 temporary-hit-point-equivalent points per PP for one turn. Every
+variant removes the effects of all nine other Vigor variants before applying
+its own value, so changing the amount refreshes the power instead of stacking
+multiple pools.
+
+The current generic selectors show all variants: 36 for Energy Ray and 9 each
+for Mind Thrust and Vigor. Illegal choices are rejected by the runtime. A later
+dedicated augmentation panel will hide choices above the current manifester
+level or remaining PP.
 
 ## Current level 1–9 progression
 
@@ -131,7 +146,7 @@ class data used by this implementation.
 ## Development priorities
 
 1. Dedicated augmentation panel that filters variants by current PP and level.
-2. Add augmentation variants to Vigor, Mind Thrust and discipline powers.
+2. Add augmentation variants to discipline powers and remaining general powers.
 3. Replace the temporary Astral Construct body with a dedicated CRE and AI.
 4. Exact level-2 power resources.
 5. Choice-based power learning and replacement at levels 4/8/12/16/20.
