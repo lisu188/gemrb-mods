@@ -108,8 +108,50 @@ def validate_weidu_integer_syntax() -> None:
 
     for path in sorted((ROOT / "lib").glob("*.tpa")):
         text = path.read_text(encoding="utf-8")
-        assert not bare_negative.search(text), (path.name, bare_negative.search(text).group(0))
-        assert not negative_long.search(text), (path.name, negative_long.search(text).group(0))
+        match = bare_negative.search(text)
+        assert not match, (path.name, match.group(0) if match else "")
+        match = negative_long.search(text)
+        assert not match, (path.name, match.group(0) if match else "")
+
+
+def validate_release_infrastructure() -> None:
+    """Lock the self-contained installer and all 1.0 lifecycle fixtures."""
+    driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
+    includes = re.findall(r"INCLUDE ~psion/lib/([^~]+)~", driver)
+    assert includes[0] == "spell-functions.tpa", includes
+
+    helpers = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
+    for fragment in (
+        "DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~",
+        "DEFINE_PATCH_FUNCTION ~ADD_SPELL_EFFECT~",
+        "INSERT_BYTES ps_new_header 0x28",
+        "INSERT_BYTES ps_new_effect 0x30",
+        "WRITE_SHORT 0x68 (ps_header_count + 1)",
+    ):
+        assert fragment in helpers, fragment
+
+    detector = (ROOT / "lib" / "class-detect.tpa").read_text(encoding="utf-8")
+    for fragment in (
+        "INDEX_BUFFER (~BIOGRAPHY~)",
+        "SET ps_detect_cols = 10",
+        "SET ps_detect_cols = 19",
+        "READ_2DA_ENTRY ps_i 6 ps_detect_cols ps_id",
+    ):
+        assert fragment in detector, fragment
+
+    fixture = (ROOT / "tests" / "make_weidu_fixture.py").read_text(encoding="utf-8")
+    lifecycle = (ROOT / "tests" / "validate_weidu_install.sh").read_text(encoding="utf-8")
+    for layout in ("normalized", "native", "legacy"):
+        assert layout in fixture, layout
+        assert layout in lifecycle, layout
+    for fragment in (
+        "SPL V1  ",
+        "header_offset + header_count * 0x28",
+        "effect_offset + maximum_effect * 0x30",
+        "verify_uninstalled",
+        "install\nverify_installed\nuninstall\nverify_uninstalled\ninstall\nverify_installed",
+    ):
+        assert fragment in lifecycle, fragment
 
 
 def validate_builders() -> None:
@@ -172,7 +214,7 @@ def validate_augmentation() -> None:
 
 def validate_installer() -> None:
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
-    assert re.search(r"VERSION ~0\.[0-9]+\.0-alpha~", setup)
+    assert "VERSION ~1.0.0~" in setup
     for name in (
         "psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
         "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
@@ -188,6 +230,7 @@ def main() -> None:
     validate_tables()
     validate_progressions()
     validate_weidu_integer_syntax()
+    validate_release_infrastructure()
     validate_builders()
     validate_augmentation()
     validate_installer()
