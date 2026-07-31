@@ -1,0 +1,243 @@
+// Purpose-built level-2 Psion powers.
+//
+// These resources deliberately avoid copying wizard or priest effects. Where
+// the Infinity Engine has no direct D&D 3e equivalent, the approximation is
+// documented next to the resource and in its in-game description.
+
+DEFINE_ACTION_FUNCTION psion_create_level2_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 3
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi206~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 -1
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC -1
+    WRITE_SHORT 0x1c 4 // Innate power granted through the discipline CLAB.
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 2
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level2_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+OUTER_SET psion_cone_projectile = game_is_iwdee
+  ? IDS_OF_SYMBOL (~missile~ ~Cone_Of_Cold~)
+  : IDS_OF_SYMBOL (~missile~ ~New_Cone_Of_Cold~)
+
+// Concealing Amorpha: BG has no generic percentage miss-chance opcode. Blur,
+// +2 AC and +1 saves are a stable approximation of the 20% concealment.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2AMOR~
+    ps_name = ~Concealing Amorpha~
+    ps_description = ~A translucent ectoplasmic membrane surrounds the manifester for one turn. The Infinity Engine approximation applies Blur, improves Armor Class by 2, and grants +1 to all saves. Recasting refreshes rather than stacks the effect.~
+    ps_icon = ~spwi206~
+END
+COPY_EXISTING ~PS2AMOR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2AMOR~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 65 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Concussion Blast: force damage, no saving throw.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level2_hostile_flags
+  STR_VAR
+    ps_resref = ~PS2CBLS~
+    ps_name = ~Concussion Blast~
+    ps_description = ~A focused pulse of force deals 2d6 points of magical damage to one creature. It allows magic resistance but no saving throw.~
+    ps_icon = ~spwi212~
+END
+COPY_EXISTING ~PS2CBLS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 2 dicesize = 6 END
+BUT_ONLY
+
+// Detect Hostile Intent: invisibility detection and backstab immunity are exact;
+// the tabletop awareness bonus is represented by +2 AC.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2DHIN~
+    ps_name = ~Detect Hostile Intent~
+    ps_description = ~For one turn the manifester detects invisible creatures, cannot be backstabbed, and gains +2 Armor Class against anticipated attacks. Recasting refreshes the effect.~
+    ps_icon = ~sppr209~
+END
+COPY_EXISTING ~PS2DHIN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2DHIN~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
+BUT_ONLY
+
+// Thought Shield: mental-only saves do not exist in BG, so every saving throw
+// receives the bonus. Magical-damage resistance approximates psychic resistance.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2TSHD~
+    ps_name = ~Thought Shield~
+    ps_description = ~For three rounds the manifester gains +4 to all saving throws and 20 percent resistance to magical damage. This approximates protection against mental and psychic attacks.~
+    ps_icon = ~sppr204~
+END
+COPY_EXISTING ~PS2TSHD.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2TSHD~ END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = -4 timing = 0 duration = 18 END
+  END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 31 target = 1 resist_dispel = BIT1 parameter1 = 20 timing = 0 duration = 18 END
+BUT_ONLY
+
+// Biofeedback: BG has percentage resistances rather than flat damage reduction.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2BIOF~
+    ps_name = ~Biofeedback~
+    ps_description = ~For one turn the manifester converts pain into harmless sensory feedback, gaining 10 percent resistance to crushing, missile, piercing, and slashing damage. This is the engine approximation of flat damage reduction.~
+    ps_icon = ~sppr203~
+END
+COPY_EXISTING ~PS2BIOF.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2BIOF~ END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 1 resist_dispel = BIT1 parameter1 = 10 timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Swarm of Crystals: a cone of slashing shards, save vs breath for half.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 25
+    ps_projectile = psion_cone_projectile
+    ps_flags = psion_level2_hostile_flags
+  STR_VAR
+    ps_resref = ~PS2SWCR~
+    ps_name = ~Swarm of Crystals~
+    ps_description = ~A cone of razor-edged crystals deals 3d4 slashing damage. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi217~
+END
+COPY_EXISTING ~PS2SWCR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 3 dicesize = 4 savingthrow = BIT1 special = BIT8 END
+BUT_ONLY
+
+// Clairvoyant Sense: remote cameras are area/script specific. The portable
+// implementation grants enhanced vision, invisibility detection and trap lore.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2CLAI~
+    ps_name = ~Clairvoyant Sense~
+    ps_description = ~For five rounds the Seer extends perception beyond ordinary sight, detecting invisible creatures and gaining +20 to trap detection. Scripted quests may additionally use this power to reveal remote information.~
+    ps_icon = ~spwi301~
+END
+COPY_EXISTING ~PS2CLAI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS2CLAI~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 91 target = 1 resist_dispel = BIT1 parameter1 = 20 timing = 0 duration = 30 END
+BUT_ONLY
+
+// Repair Construct: a generic target filter for construct bodies is not exposed
+// consistently across supported games. The alpha heals 3d8+3 and documents the
+// intended construct-only restriction for later GemRB-side enforcement.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 15
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS2RPRD~
+    ps_name = ~Psionic Repair Damage~
+    ps_description = ~Repairs 3d8+3 hit points of damage. This alpha resource can target any ally; a later runtime filter will restrict it to psicrystals, astral constructs, and other constructs.~
+    ps_icon = ~sppr212~
+END
+COPY_EXISTING ~PS2RPRD.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 2 resist_dispel = BIT1 parameter1 = 3 dicenumber = 3 dicesize = 8 timing = 1 END
+BUT_ONLY
+
+// Energy Missile: the tabletop power chooses several discrete creatures. The
+// portable alpha uses a small electrical burst around the selected target.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 30
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level2_hostile_flags
+  STR_VAR
+    ps_resref = ~PS2EMIS~
+    ps_name = ~Energy Missile~
+    ps_description = ~An electrical burst deals 3d6 damage to creatures near the selected point. A successful save vs spell halves the damage. This area burst approximates the tabletop power's three discrete targets.~
+    ps_icon = ~spwi215~
+END
+COPY_EXISTING ~PS2EMIS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+BUT_ONLY
+
+// Animal Affinity becomes a free selector. Its three children are generated in
+// animal-affinity.tpa and carry the actual 3-PP transaction.
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2AAFF~
+    ps_name = ~Animal Affinity~
+    ps_description = ~Choose Strength, Dexterity, or Constitution. The selected physical ability increases by 4 for one turn. The choice costs 3 power points in total.~
+    ps_icon = ~sppr205~
+END
+COPY_EXISTING ~PS2AAFF.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS2AAFF~ END
+BUT_ONLY
+
+// Dimension Swap: opcode 124 mode 3 exchanges source and target positions.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS2DSWP~
+    ps_name = ~Dimension Swap~
+    ps_description = ~The Nomad instantly exchanges positions with the selected creature. The power does not permit a saving throw, but plot-protected creatures may be immune.~
+    ps_icon = ~spwi402~
+END
+COPY_EXISTING ~PS2DSWP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 2 resist_dispel = BIT0 parameter2 = 3 timing = 1 END
+BUT_ONLY
+
+// Brain Lock: held for three rounds; damage-based early release is not native
+// to the hold opcode and remains a later runtime enhancement.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level2_hostile_flags
+  STR_VAR
+    ps_resref = ~PS2BRLK~
+    ps_name = ~Brain Lock~
+    ps_description = ~One intelligent creature is mentally locked and held for three rounds unless it succeeds on a save vs spell. Magic resistance applies.~
+    ps_icon = ~spwi211~
+END
+COPY_EXISTING ~PS2BRLK.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+BUT_ONLY
