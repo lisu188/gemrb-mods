@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.0-alpha
+
+- Replaced all twelve level-3 template clones with purpose-built SPL resources.
+- Implemented Dispel Psionics, Body Adjustment, Energy Bolt, Mental Barrier,
+  Touchsight, Time Hop, Danger Sense, Ectoplasmic Cocoon, Energy Cone, Hustle,
+  Spatial Step and Mental Stasis.
+- Added documented Infinity Engine approximations for fixed-level dispelling,
+  Maze-based temporary removal, manual reaction defenses and a non-destructible
+  cocoon shell.
+- Added portable line and cone projectile handling with a classic projectile-ID
+  fallback for Lightning Bolt layouts.
+- Added non-stacking refresh protection to Mental Barrier, Touchsight, Danger
+  Sense and Hustle.
+- Restricted template spell cloning to powers of levels 4 and 5.
+- Added a dedicated level-3 regression suite covering all twelve resources,
+  hostile flags, durations, teleport mode, line/cone damage and non-stacking
+  protections.
+- Updated the core validator and installer version to 0.6.0-alpha.
+
 ## 0.5.0-alpha
 
 - Replaced all twelve level-2 template clones with purpose-built SPL resources.
