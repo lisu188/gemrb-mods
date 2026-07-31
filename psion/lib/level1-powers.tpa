@@ -226,7 +226,7 @@ COPY_EXISTING ~PS1TSKN.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 60 END
 BUT_ONLY
 
-// Burst: movement-rate modifier is percentage mode (parameter2 = 1).
+// Burst: movement rate is set to 130 percent through percentage mode.
 LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1BRST~
@@ -236,7 +236,7 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1BRST.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1BRST~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 130 parameter2 = 1 timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 130 parameter2 = 2 timing = 0 duration = 6 END
 BUT_ONLY
 
 // Psionic Charm: humanoid restriction is inherited from opcode 5 mode 1.
