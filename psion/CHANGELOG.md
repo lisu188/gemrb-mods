@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0-alpha
+
+- Replaced all twelve level-1 template clones with purpose-built SPL resources.
+- Implemented base effects for Energy Ray, Mind Thrust, Inertial Armor, Vigor,
+  Force Screen, Empty Mind, Precognition, Astral Construct, Energy Push,
+  Thicken Skin, Burst and Psionic Charm.
+- Added non-stacking refresh protection to level-1 defensive powers.
+- Added a temporary custom Astral Construct creature resource.
+- Corrected two SPL-header bugs from earlier alpha versions: spell level now
+  uses offset `0x34`, and cast-while-silenced flags use offset `0x18`.
+- Kept higher-level prototype cloning isolated from exact level-1 generation.
+- Added static checks for level-1 resource coverage, required opcodes and the
+  corrected SPL header fields.
+
 ## 0.2.0-alpha
 
 - Added separate level 1–9 power progressions for all six disciplines.
