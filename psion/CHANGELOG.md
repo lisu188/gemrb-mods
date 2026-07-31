@@ -10,6 +10,12 @@
 - Added a temporary custom Astral Construct creature resource.
 - Corrected two SPL-header bugs from earlier alpha versions: spell level now
   uses offset `0x34`, and cast-while-silenced flags use offset `0x18`.
+- Added an opcode-214 Energy Ray selector with fire, cold, electricity and
+  sonic variants at total costs from 1 through 9 PP.
+- Added 36 point-scaled Energy Ray child resources and augmentation metadata.
+- Extended the GUI hook to resolve powers from GemRB temporary spellinfo lists.
+- Added fake-GemRB runtime tests for selector cost, reserve/commit accounting,
+  manifester-level limits and legal variant filtering.
 - Kept higher-level prototype cloning isolated from exact level-1 generation.
 - Added static checks for level-1 resource coverage, required opcodes and the
   corrected SPL header fields.
