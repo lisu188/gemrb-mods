@@ -17,6 +17,8 @@ CURRENT_POOL_STAT = 239
 POOL_READY_STAT = 188
 INT_STAT = 38
 LEVEL_STAT = 34
+INNATE_TYPE = 2
+INNATE_LEVEL = 0
 
 PSION_CLASSES = {
     "PSION_SEER": "SEER",
@@ -239,6 +241,59 @@ def filter_spellinfo(actor, resrefs):
         elif can_manifest(actor, resref):
             filtered.append(resref)
     return filtered
+
+
+def refresh_innate_charges(actor):
+    """Replace depleted Psion innate entries with one usable copy.
+
+    CLAB ``GA_`` grants create ordinary one-charge innate entries. Psion powers
+    are limited by PP instead, so the next time the innate bar opens we remove
+    depleted Psion entries and memorize their known spell again. Other innate
+    abilities are never touched, and an already usable duplicate is preserved.
+    """
+    if not is_psion(actor):
+        return 0
+
+    try:
+        known = {}
+        known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(known_count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            resref = str(spell.get("SpellResRef", "")).upper()
+            if power_info(resref):
+                known[resref] = index
+
+        charged = set()
+        depleted = []
+        memorized_count = GemRB.GetMemorizedSpellsCount(
+            actor, INNATE_TYPE, INNATE_LEVEL, False
+        )
+        for index in range(memorized_count):
+            spell = GemRB.GetMemorizedSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            resref = str(spell.get("SpellResRef", "")).upper()
+            if resref not in known:
+                continue
+            if spell.get("Flags", 0):
+                charged.add(resref)
+            else:
+                depleted.append((index, resref))
+
+        needed = []
+        for index, resref in reversed(depleted):
+            if GemRB.UnmemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, index):
+                if resref not in charged and resref not in needed:
+                    needed.append(resref)
+
+        restored = 0
+        for resref in reversed(needed):
+            if GemRB.MemorizeSpell(
+                actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1
+            ):
+                restored += 1
+        return restored
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "charge refresh failed: %s" % error)
+        return 0
 
 
 def begin_manifest(actor, resref):
