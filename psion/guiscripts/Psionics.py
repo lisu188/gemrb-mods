@@ -3,8 +3,8 @@
 
 Power points are stored in GemRB's user-defined actor stat 239. Manifestation
 uses a two-phase transaction: the first SpellPressed callback reserves a power,
-while the second callback commits its cost. Cancelling target selection and
-opening the power list again clears the reservation without charging points.
+while the second callback commits its cost. Selector resources are free; their
+chosen child resources carry the authoritative augmented PP cost.
 """
 import GemRB
 
@@ -82,22 +82,88 @@ def restore_party():
             pass
 
 
-def power_info(resref):
-    """Load one power's authoritative metadata from PSIONPOWERS.2DA."""
-    key = (resref or "").upper()
-    if not key.startswith("PS"):
-        return None
+def _base_power_info(key):
     table = GemRB.LoadTable("psionpowers", False, True)
     try:
         return {
             "resref": key,
+            "parent": key,
             "level": int(table.GetValue(key, "LEVEL")),
             "discipline": str(table.GetValue(key, "DISCIPLINE")).upper(),
             "cost": int(table.GetValue(key, "BASE_COST")),
             "augment_step": int(table.GetValue(key, "AUGMENT_STEP")),
+            "selector": False,
+            "variant": False,
         }
     except Exception:
         return None
+
+
+def _augment_table():
+    try:
+        return GemRB.LoadTable("psionaugment", False, True)
+    except Exception:
+        return None
+
+
+def augment_info(resref):
+    """Return child-resource augmentation metadata, if present."""
+    key = (resref or "").upper()
+    table = _augment_table()
+    if not table:
+        return None
+    try:
+        return {
+            "resref": key,
+            "parent": str(table.GetValue(key, "PARENT")).upper(),
+            "cost": int(table.GetValue(key, "TOTAL_COST")),
+            "effect": str(table.GetValue(key, "EFFECT")).upper(),
+            "value": str(table.GetValue(key, "VALUE")).upper(),
+        }
+    except Exception:
+        return None
+
+
+def _has_variants(parent):
+    table = _augment_table()
+    if not table:
+        return False
+    key = parent.upper()
+    try:
+        for index in range(table.GetRowCount()):
+            row = table.GetRowName(index)
+            if str(table.GetValue(row, "PARENT")).upper() == key:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def power_info(resref):
+    """Load base or augmented power metadata from the authoritative 2DAs."""
+    key = (resref or "").upper()
+    if not key.startswith("PS"):
+        return None
+
+    augmented = augment_info(key)
+    if augmented:
+        base = _base_power_info(augmented["parent"])
+        if not base:
+            return None
+        base.update(augmented)
+        base["selector"] = False
+        base["variant"] = True
+        return base
+
+    base = _base_power_info(key)
+    if not base:
+        return None
+    if _has_variants(key):
+        # The parent only opens an opcode-214 choice list. Spending happens on
+        # the selected child resource, never on the selector itself.
+        base["selector"] = True
+        base["cost"] = 0
+    return base
 
 
 def can_manifest(actor, resref):
@@ -110,9 +176,29 @@ def can_manifest(actor, resref):
         return False
     if GemRB.GetPlayerStat(actor, INT_STAT) < 10 + info["level"]:
         return False
+    if info["selector"]:
+        return True
     if info["cost"] > manifester_level(actor):
         return False
     return ensure_pool(actor) >= info["cost"]
+
+
+def available_variants(actor, parent):
+    """Return legal child resrefs for a future dedicated augmentation GUI."""
+    table = _augment_table()
+    if not table or not can_manifest(actor, parent):
+        return []
+    available = []
+    try:
+        for index in range(table.GetRowCount()):
+            resref = table.GetRowName(index)
+            if str(table.GetValue(resref, "PARENT")).upper() != parent.upper():
+                continue
+            if can_manifest(actor, resref):
+                available.append(resref.upper())
+    except Exception:
+        return []
+    return available
 
 
 def begin_manifest(actor, resref):
@@ -120,13 +206,18 @@ def begin_manifest(actor, resref):
 
     GemRB's spell action invokes SpellPressed twice for an ordinary cast. This
     avoids charging a power that the player cancels during target selection.
+    Selector resources do not reserve PP; their chosen variants do.
     """
     info = power_info(resref)
     if not info:
         return True
+    if info["selector"]:
+        cancel_pending(actor)
+        return can_manifest(actor, info["resref"])
 
-    key = (actor, info["resref"])
-    if _pending.get(actor) == key:
+    pending = _pending.get(actor)
+    transaction = (info["resref"], info["cost"])
+    if pending == transaction:
         if not can_manifest(actor, info["resref"]):
             _pending.pop(actor, None)
             GemRB.DisplayString(10417, 0xFFFFFF, actor)
@@ -140,7 +231,7 @@ def begin_manifest(actor, resref):
         GemRB.DisplayString(10417, 0xFFFFFF, actor)
         return False
 
-    _pending[actor] = key
+    _pending[actor] = transaction
     return True
 
 
