@@ -1,7 +1,7 @@
-# Experimental D&D 3e Psion for GemRB
+# D&D 3e Psion for GemRB
 
-This mod adds a point-based Psion class to BG1-family conversions and Enhanced
-Edition campaigns running through GemRB.
+This mod adds a point-based D&D 3e Psion class to BG1-family conversions and
+Enhanced Edition campaigns running through GemRB.
 
 The six selectable discipline classes are:
 
@@ -12,24 +12,30 @@ The six selectable discipline classes are:
 - **Nomad** — Psychoportation
 - **Telepath** — Telepathy
 
-## Status: 0.9.0-alpha
+## Release status: 1.0.0
 
-Class registration, progression, persistent power points, filtered augmentation
-selectors and all sixty level 1–5 powers are implemented. Every power is built
-from an empty SPL resource; the mod no longer clones or depends on wizard and
-priest spells for its power catalogue.
+Version 1.0.0 is the first installable release. It includes class registration,
+level progression, persistent power points, filtered augmentation selectors and
+all sixty level 1–5 powers. Every power is built from an empty SPL resource; the
+installer has no wizard/priest template-spell dependency and no undeclared WeiDU
+helper-library dependency.
 
-The complete TP2 and every included TPA module are parsed in CI with the
-official Linux build of WeiDU 251. This uncovered and fixed invalid negative
-integer syntax that the earlier source-text tests could not detect.
+The release is validated with official WeiDU 251 through complete install,
+uninstall and reinstall lifecycles against generated fixtures for all supported
+class-table formats:
 
-The project remains an alpha until it completes an installation against actual
-BG-family game data and an in-game GemRB smoke test.
+- released GemRB's normalized six-field split layout;
+- native Enhanced Edition's ten-field split layout;
+- older GemRB's nineteen-field combined layout.
+
+These automated fixtures verify installer behavior and generated resource
+structure without distributing proprietary game data. They are not a substitute
+for a manual full-campaign playthrough on every supported game configuration.
 
 ## Implemented systems
 
-- Six dynamically allocated custom class rows.
-- Released combined and newer split GemRB class-table layouts.
+- Six dynamically allocated custom class identifiers.
+- Normalized split, native EE split and legacy combined class-table support.
 - D&D 3e base power-point progression through level 20.
 - Intelligence bonus pool:
 
@@ -39,7 +45,7 @@ BG-family game data and an in-game GemRB smoke test.
 - Full PP restoration after ordinary and temple resting.
 - Base costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
 - Maximum PP expenditure per manifestation equal to Psion level.
-- Discipline, Intelligence, level and current-pool validation.
+- Discipline, Intelligence, manifester-level and current-pool validation.
 - Cancellation-safe two-phase PP transactions.
 - Runtime-filtered augmentation and choice lists.
 - Separate fixed level 1–9 progression for every discipline.
@@ -75,7 +81,7 @@ Current selectors:
 - **Vigor:** 5–45 temporary-HP-equivalent variants costing 1–9 PP.
 - **Animal Affinity:** +4 Strength, Dexterity or Constitution for 3 PP.
 
-## Purpose-built powers
+## Power catalogue
 
 ### Level 1
 
@@ -103,67 +109,67 @@ Ball, Metamorphosis, Psionic Flight and Compulsion.
 
 ### Level 5
 
-- **Adapt Body:** poison and disease protection plus 25% resistance to acid,
-  cold, electricity and fire.
-- **Catapsi:** stationary field imposing 30% wizard, priest and innate failure.
-- **Power Resistance:** grants 29% magic and power resistance at the first legal
-  manifestation level.
-- **Cognitive Overload:** 6d6 magical damage plus slow and 50% casting failure
-  on a failed save.
-- **True Seeing:** detects invisibility, prevents backstab and blocks blindness.
-- **Teleport:** unrestricted current-area relocation.
-- **Second Chance:** short +2 attack, Armor Class and saving-throw insight bonus.
-- **Hail of Crystals:** 9d4 slashing area damage, save for half.
-- **Energy Current:** 5d6 initial electrical damage followed by four delayed 2d6
-  pulses.
-- **Psychofeedback:** +4 Strength, Dexterity and Constitution with a saving-throw
-  penalty.
-- **Spatial Disruption:** 9d6 magical damage and save-negated slow.
-- **Mind Probe:** worsens all target saving throws by 2 for five rounds.
+Adapt Body, Catapsi, Power Resistance, Cognitive Overload, True Seeing,
+Teleport, Second Chance, Hail of Crystals, Energy Current, Psychofeedback,
+Spatial Disruption and Mind Probe.
 
 ## Deliberate engine approximations
 
-The Infinity Engine does not expose every D&D 3e psionic mechanism. Current
-portable approximations are explicit in source comments and in-game text:
+The Infinity Engine does not expose every D&D 3e psionic mechanism. The
+following portable approximations are intentional and documented in source
+comments and in-game descriptions:
 
 - Will saves use save vs spell or broad BG saving-throw modifiers.
 - Vigor uses timed HP effects instead of native temporary HP.
 - Concealment uses Blur, AC and saving-throw bonuses.
 - Biofeedback uses percentage rather than flat damage reduction.
 - Energy Missile uses a small area burst instead of three discrete targets.
+- Psionic Repair Damage is not yet restricted to construct targets.
 - Dispel Psionics uses a fixed effective level rather than Psicraft.
 - Time Hop uses Maze.
 - Ectoplasmic Cocoon is not a destructible hit-point shell.
-- Energy Adaptation currently protects against four energies rather than
-  selecting one stronger resistance.
+- Energy Adaptation protects against four energies rather than selecting one
+  stronger resistance.
 - Intellect Fortress is self-only rather than a maintained party aura.
-- Telekinetic Maneuver currently implements push and trip only.
+- Telekinetic Maneuver implements push and trip, but not pull or disarm.
 - Power Leech applies casting failure but does not transfer PP.
 - Wall of Ectoplasm creates one construct node instead of a segmented wall.
-- Metamorphosis currently provides one bear-like form.
+- Metamorphosis provides one bear-like form.
 - Psionic Flight cannot cross arbitrary unwalkable map geometry.
-- Adapt Body does not yet implement portable fatigue immunity.
+- Adapt Body does not provide portable fatigue immunity.
 - Catapsi is stationary rather than following the manifester.
-- Teleport remains current-area only until a safe destination GUI exists.
-- Second Chance uses a broad insight bonus instead of a true reroll callback.
-- Energy Current does not yet stop when concentration is broken.
-- Psychofeedback does not yet select exact ability transfers.
-- Mind Probe does not yet display full statistics or scripted memories.
-- Astral Construct still uses a temporary wolf-derived creature body.
+- Teleport relocates within the current area only.
+- Second Chance uses an insight bonus instead of a true reroll callback.
+- Energy Current does not stop when concentration is broken.
+- Psychofeedback does not select exact ability transfers.
+- Mind Probe does not display full statistics or scripted memories.
+- Astral Construct uses a temporary wolf-derived creature body.
+- Power learning is fixed by discipline rather than player-selected.
+
+These are gameplay-scope limitations, not silent installer fallbacks.
 
 ## Installation
 
 1. Run GemRB against the game once so `gemrb_path.txt` exists.
 2. Copy the `psion` directory into the game directory.
-3. Run `weidu psion/setup-psion.tp2`.
+3. Install the WeiDU component:
+
+   `weidu psion/setup-psion.tp2`
+
 4. Patch GemRB's shared GUI scripts:
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
 The patcher updates `ActionsWindow.py`, `Spellbook.py`, `MenuWindow.py` and
-`GUISTORE.py`, creating a `.psion.bak` backup for each. Remove the hooks with:
+`GUISTORE.py`, creating a `.psion.bak` backup for each.
+
+To remove the GUI hooks:
 
 `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts --uninstall`
+
+Uninstall the WeiDU component through WeiDU in the normal way. WeiDU restores
+patched game resources; as with other WeiDU mods, unused appended TLK slots may
+remain after uninstall while all original strings remain unchanged.
 
 ## Supported targets
 
@@ -175,28 +181,22 @@ Sorcerer/Monk-era class data.
 
 GitHub Actions runs:
 
-- version-neutral table, progression, builder and installer checks;
-- a parser-safety guard rejecting bare negative WeiDU argument values and
-  negative long-write sentinels;
+- table, progression, augmentation and installer-source checks;
+- parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
-- GUI patch, idempotence, backup and uninstall fixtures;
+- GUI patch install, idempotence, backup and uninstall fixtures;
 - dedicated level-3, level-4 and level-5 resource regression suites;
 - Python compilation checks;
-- official WeiDU 251 component parsing for `setup-psion.tp2`;
-- independent WeiDU 251 parsing of every `psion/lib/*.tpa` module.
+- official WeiDU 251 parsing of the TP2 and every TPA module;
+- real WeiDU install, verification, uninstall and reinstall for normalized,
+  native EE and legacy combined class-table layouts;
+- binary validation of every generated Psion SPL header and effect range;
+- byte-for-byte restoration checks for every patched table;
+- semantic preservation checks for all original TLK entries.
 
-The WeiDU stage validates grammar and module structure. It does not yet prove
-that every resource and table mutation succeeds against a real game install.
+## Post-1.0 development
 
-## Remaining development priorities
-
-1. Automated WeiDU installation against a representative BG-family fixture or
-   test installation.
-2. Real GemRB in-game smoke test.
-3. Construct-only targeting for Psionic Repair Damage.
-4. Dedicated Astral Construct creature and AI.
-5. Choice-based power learning and replacement.
-6. Current/maximum PP display in action and record interfaces.
-7. Psionic focus, feats and skill allocation.
-8. Psicrystal, psionic items and enemy Psions.
-9. Runtime implementations for PP transfer, rerolls, concentration and travel.
+Future work can improve fidelity without changing the 1.0 installer contract:
+choice-based power learning, dedicated Astral Construct assets and AI, exact
+construct targeting, PP transfer, reroll and concentration callbacks, a travel
+interface, psionic focus/feats/skills, psicrystals, items and enemy Psions.
