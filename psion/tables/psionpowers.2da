@@ -1,6 +1,6 @@
 2DA V1.0
 *
-RESREF   NAME                   LEVEL DISCIPLINE  BASE_COST AUGMENT_STEP TEMPLATE
+         NAME                   LEVEL DISCIPLINE  BASE_COST AUGMENT_STEP TEMPLATE
 PS1ERAY  ENERGY_RAY             1     GENERAL     1         1            SPWI112
 PS1MTHR  MIND_THRUST            1     GENERAL     1         2            SPWI105
 PS1IARM  INERTIAL_ARMOR         1     GENERAL     1         2            SPWI102
