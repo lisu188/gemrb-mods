@@ -124,17 +124,12 @@ def _patch_rest(text: str, path: Path) -> str:
     return text[: match.start()] + hook + text[match.end() :]
 
 
-def patch(path: Path, kind: str) -> bool:
-    text = path.read_text(encoding="utf-8")
+def render_patch(text: str, kind: str, path: Path) -> str | None:
+    """Render one patch without mutating the target file."""
     if MARK_BEGIN in text:
-        return False
-
-    backup = path.with_suffix(path.suffix + ".psion.bak")
-    if not backup.exists():
-        shutil.copy2(path, backup)
+        return None
 
     text = _insert_import(text)
-
     if kind == "actions":
         text = _patch_spell_pressed(text)
         text = _patch_cancel_on_open(text, "ActionCastPressed", "ACT_CAST")
@@ -145,9 +140,23 @@ def patch(path: Path, kind: str) -> bool:
         text = _patch_rest(text, path)
     else:
         raise ValueError(f"Unknown patch kind: {kind}")
+    return text
 
-    path.write_text(text, encoding="utf-8")
+
+def apply_patch(path: Path, rendered: str | None) -> bool:
+    """Write a preflighted patch and preserve the original bytes once."""
+    if rendered is None:
+        return False
+    backup = path.with_suffix(path.suffix + ".psion.bak")
+    if not backup.exists():
+        shutil.copy2(path, backup)
+    path.write_text(rendered, encoding="utf-8")
     return True
+
+
+def patch(path: Path, kind: str) -> bool:
+    rendered = render_patch(path.read_text(encoding="utf-8"), kind, path)
+    return apply_patch(path, rendered)
 
 
 def remove(path: Path) -> bool:
@@ -227,10 +236,21 @@ def main() -> None:
         print(("updated " if changed else "unchanged ") + str(runtime_target))
         return
 
+    # Validate every supported layout before copying or modifying anything.
+    # An incompatible shared script therefore fails without leaving a partial
+    # installation that imports a missing or only partly wired runtime.
+    try:
+        prepared = [
+            (path, render_patch(path.read_text(encoding="utf-8"), kind, path))
+            for path, kind in targets
+        ]
+    except (OSError, RuntimeError, ValueError) as error:
+        raise SystemExit(str(error)) from error
+
     changed = install_runtime(runtime_source, runtime_target)
     print(("updated " if changed else "unchanged ") + str(runtime_target))
-    for path, kind in targets:
-        changed = patch(path, kind)
+    for path, rendered in prepared:
+        changed = apply_patch(path, rendered)
         print(("updated " if changed else "unchanged ") + str(path))
 
 
