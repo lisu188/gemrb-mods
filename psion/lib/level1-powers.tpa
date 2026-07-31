@@ -1,9 +1,7 @@
 // Purpose-built level-1 Psion powers.
 //
-// Higher-level powers still clone existing resources while their exact effects
-// are implemented incrementally. These spells are created from empty SPL files
-// so their behavior does not depend on the effects or scaling of a template
-// wizard/priest spell.
+// These spells are created from empty SPL files so their behavior does not
+// depend on the effects or scaling of a template wizard or priest spell.
 
 DEFINE_ACTION_FUNCTION psion_create_level1_power
 INT_VAR
@@ -108,7 +106,7 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1IARM.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1IARM~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -4 timing = 0 duration = 3600 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 3600 END
 BUT_ONLY
 
 // Vigor: the IE approximation raises maximum and current HP for one turn.
@@ -135,7 +133,7 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1FSCR.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1FSCR~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 STR_VAR resource = ~SPWI112~ END
 BUT_ONLY
 
@@ -150,11 +148,11 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1EMND.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1EMND~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
 BUT_ONLY
 
 // Precognition: short, broad insight into immediate danger.
@@ -167,13 +165,13 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1PREC.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1PREC~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
 BUT_ONLY
 
 // Astral Construct: clone a universally available wolf body and summon it
@@ -225,7 +223,7 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1TSKN.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1TSKN~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 60 END
 BUT_ONLY
 
 // Burst: movement-rate modifier is percentage mode (parameter2 = 1).
