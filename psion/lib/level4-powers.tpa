@@ -20,9 +20,9 @@ BEGIN
   CREATE ~spl~ ~%ps_resref%~
   COPY_EXISTING ~%ps_resref%.spl~ ~override~
     SAY NAME1 ~%ps_name%~
-    WRITE_LONG NAME2 -1
+    WRITE_LONG NAME2 0xffffffff
     SAY UNIDENTIFIED_DESC ~%ps_description%~
-    WRITE_LONG DESC -1
+    WRITE_LONG DESC 0xffffffff
     WRITE_SHORT 0x1c 4 // Innate power granted through a discipline CLAB.
     WRITE_LONG 0x18 ps_flags
     WRITE_LONG 0x34 4
