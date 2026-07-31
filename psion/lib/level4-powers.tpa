@@ -215,7 +215,7 @@ LAF psion_create_level4_power
 END
 COPY_EXISTING ~PS4META.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4META~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 15 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 44 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 10 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 60 END
