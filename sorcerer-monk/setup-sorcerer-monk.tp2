@@ -8,13 +8,13 @@ LANGUAGE ~English~ ~english~ ~sorcerer-monk/tra/english.tra~
 BEGIN @0
 DESIGNATED 0
 
-// WeiDU creates this file after GemRB has been run against the game once.
-// Without it, WeiDU would patch the original game data instead of GemRB's
-// unhardcoded table set.
+// GemRB writes this path file after it has been run against the game once.
+// WeiDU uses it to locate GemRB-provided tables that are absent from the
+// original game data.
 REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @4
 
-// All of these games provide Sorcerer and Monk through BG2-style or EE class
-// data. BG1 and TotSC themselves do not provide either base class.
+// These game types expose the Sorcerer and Monk data needed by the class.
+// Original BG1 and TotSC are excluded because they lack both base classes.
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bg2 tob bgt bg2ee eet~ @5
 
 OUTER_SET sm_lower = RESOLVE_STR_REF (@1)
@@ -23,13 +23,14 @@ OUTER_SET sm_mixed = RESOLVE_STR_REF (@3)
 OUTER_SET sm_brief = RESOLVE_STR_REF (@8)
 OUTER_SET sm_class_id = -1
 OUTER_SET sm_max_class_id = -1
+OUTER_SET sm_split_class_tables = 0
+OUTER_SET sm_clastext_cols = 0
 
-// Released GemRB versions store text, numeric IDs, hit points and race
-// restrictions in one large CLASSES.2DA row. Current development builds split
-// those fields into CLASSTEXT.2DA, HPCLASS.2DA and CLSRCREQ.2DA. Keep both
-// layouts working instead of requiring an unreleased GemRB table format.
+// Released GemRB versions keep class text, IDs, hit points and race rules in
+// one combined CLASSES.2DA row. Development versions split these fields into
+// CLASSTEXT.2DA, HPCLASS.2DA and CLSRCREQ.2DA.
 ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
-  OUTER_SET sm_clastext_cols = 0
+  OUTER_SET sm_split_class_tables = 1
 
   COPY_EXISTING ~clastext.2da~ ~override~
     COUNT_2DA_COLS sm_clastext_cols
@@ -47,45 +48,6 @@ ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
       END
     END
   BUT_ONLY
-
-  ACTION_IF sm_max_class_id < 0 THEN BEGIN
-    FAIL @9
-  END
-  ACTION_IF sm_class_id < 0 THEN BEGIN
-    OUTER_SET sm_class_id = sm_max_class_id + 1
-  END
-  ACTION_IF sm_class_id > 255 THEN BEGIN
-    FAIL @7
-  END
-
-  // GemRB's normalized CLASSTEXT has five data columns (six including the
-  // row label). Native BGEE/BG2EE tables add BIOGRAPHY, FALLEN, BRIEFDESC and
-  // FALLEN_NOTICE, for nine data columns. Append those documented EE fields
-  // only when the target table actually contains them.
-  OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed%~
-  ACTION_IF sm_clastext_cols >= 7 THEN BEGIN
-    OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% -1~
-  END
-  ACTION_IF sm_clastext_cols >= 8 THEN BEGIN
-    OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% 0~
-  END
-  ACTION_IF sm_clastext_cols >= 9 THEN BEGIN
-    OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% %sm_brief%~
-  END
-  ACTION_IF sm_clastext_cols >= 10 THEN BEGIN
-    OUTER_SPRINT sm_clastext_row ~%sm_clastext_row% -1~
-  END
-
-  APPEND ~clastext.2da~ ~%sm_clastext_row%~
-    UNLESS ~SORCERER_MONK~
-
-  // Multiclass saves and hit points are derived from the component classes.
-  APPEND ~classes.2da~ ~SORCERER_MONK * 786432 0x20040000 -1 0 9~
-    UNLESS ~SORCERER_MONK~
-  APPEND ~clsrcreq.2da~ ~SORCERER_MONK 1 0 0 0 0 0 0~
-    UNLESS ~SORCERER_MONK~
-  APPEND ~hpclass.2da~ ~SORCERER_MONK *~
-    UNLESS ~SORCERER_MONK~
 END ELSE BEGIN
   OUTER_SET sm_classes_cols = 0
 
@@ -105,24 +67,51 @@ END ELSE BEGIN
       END
     END
   BUT_ONLY
+END
 
-  ACTION_IF sm_max_class_id < 0 THEN BEGIN
-    FAIL @9
-  END
-  ACTION_IF sm_class_id < 0 THEN BEGIN
-    OUTER_SET sm_class_id = sm_max_class_id + 1
-  END
-  ACTION_IF sm_class_id > 255 THEN BEGIN
-    FAIL @7
+// An unreadable or empty class table is an installation error. Otherwise use
+// the next free numeric ID, while preserving an existing ID on reinstall.
+ACTION_IF sm_max_class_id < 0 THEN BEGIN
+  FAIL @9
+END
+ACTION_IF sm_class_id < 0 THEN BEGIN
+  OUTER_SET sm_class_id = sm_max_class_id + 1
+END
+ACTION_IF sm_class_id > 255 THEN BEGIN
+  FAIL @7
+END
+
+ACTION_IF sm_split_class_tables = 1 THEN BEGIN
+  // CLASSTEXT has two supported layouts: GemRB's normalized six-column form,
+  // and the native EE ten-column form with biography and fallen-state fields.
+  ACTION_IF sm_clastext_cols = 6 THEN BEGIN
+    OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed%~
+  END ELSE BEGIN
+    ACTION_IF sm_clastext_cols = 10 THEN BEGIN
+      OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief% -1~
+    END ELSE BEGIN
+      FAIL @12
+    END
   END
 
-  // Legacy CLASSES.2DA contains text references, class ID, hit-point table
-  // and race restrictions in the same row.
+  APPEND ~clastext.2da~ ~%sm_clastext_row%~
+    UNLESS ~SORCERER_MONK~
+
+  // Multiclass saves and hit points are derived from the component classes.
+  APPEND ~classes.2da~ ~SORCERER_MONK * 786432 0x20040000 -1 0 9~
+    UNLESS ~SORCERER_MONK~
+  APPEND ~clsrcreq.2da~ ~SORCERER_MONK 1 0 0 0 0 0 0~
+    UNLESS ~SORCERER_MONK~
+  APPEND ~hpclass.2da~ ~SORCERER_MONK *~
+    UNLESS ~SORCERER_MONK~
+END ELSE BEGIN
+  // The released combined table contains text references, class ID, hit-point
+  // handling and race restrictions in the same row.
   APPEND ~classes.2da~ ~SORCERER_MONK %sm_lower% %sm_desc% %sm_mixed% * 786432 %sm_class_id% * 0x20040000 -1 1 0 0 0 0 0 0 0 9~
     UNLESS ~SORCERER_MONK~
 END
 
-// Register the dynamic numeric ID for scripts and other mods.
+// Register the numeric ID for scripts and other mods.
 APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
   UNLESS ~SORCERER_MONK~
 
@@ -132,23 +121,9 @@ APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
 APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
   UNLESS ~SORCERER_MONK~
 
-// Classic BG1 tables use eight broad proficiency groups, while Tutu, BG2 and
-// the Enhanced Editions use the extended proficiency table. The compact row
-// is the first eight restrictions from the original BG2 column.
-OUTER_SET sm_weapprof_cols = 0
-OUTER_SET sm_weapprof_rows = 0
-COPY_EXISTING ~weapprof.2da~ ~override~
-  COUNT_2DA_COLS sm_weapprof_cols
-  COUNT_2DA_ROWS sm_weapprof_cols sm_weapprof_rows
-BUT_ONLY
-
-ACTION_IF sm_weapprof_rows <= 8 THEN BEGIN
-  APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1~
-    UNLESS ~SORCERER_MONK~
-END ELSE BEGIN
-  APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
-    UNLESS ~SORCERER_MONK~
-END
+// All supported games expose the extended BG2-style proficiency table.
+APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
+  UNLESS ~SORCERER_MONK~
 
 APPEND ~profs.2da~ ~SORCERER_MONK 2 5~
   UNLESS ~SORCERER_MONK~
@@ -156,8 +131,7 @@ APPEND ~profs.2da~ ~SORCERER_MONK 2 5~
 APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
   UNLESS ~SORCERER_MONK~
 
-// ToB starting equipment and HLA tables are genuinely optional: BG1-family
-// games do not contain them, while BG2/ToB-family games do.
+// ToB starting equipment and HLA tables are absent from some supported games.
 ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
     UNLESS ~SORCERER_MONK~
@@ -185,12 +159,9 @@ END
 APPEND ~avprefc.2da~ ~SORCERER_MONK 0x500~
   UNLESS ~SORCERER_MONK~
 
-// CLSKILLS.2DA has three relevant layouts. COUNT_2DA_COLS includes the row
-// label, hence 13 for compact BG1 tables, 17 for released BG2 tables with
-// NO_PROF, and 16 for newer/EE tables without NO_PROF. STARTXP and STARTXP2
-// are copied from SORCERER so BGEE keeps 0/* while BG2 keeps 89000/2500000.
+// Released and development GemRB tables differ only by the legacy NO_PROF
+// column. Inherit campaign-specific starting XP values from the Sorcerer row.
 OUTER_SET sm_clskills_cols = 0
-OUTER_SET sm_found_sorcerer = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-4~
@@ -201,42 +172,30 @@ COPY_EXISTING ~clskills.2da~ ~override~
   FOR (sm_i = 0; sm_i < sm_clskills; ++sm_i) BEGIN
     READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 0 sm_skill_class
     PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
-      SET sm_found_sorcerer = 1
-      PATCH_IF sm_clskills_cols = 16 BEGIN
-        READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
-        READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_startxp2
-      END
+      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
       PATCH_IF sm_clskills_cols = 17 BEGIN
-        READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_no_prof
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 13 sm_startxp2
+      END ELSE BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_startxp2
       END
     END
   END
 BUT_ONLY
 
-ACTION_IF sm_found_sorcerer = 0 THEN BEGIN
-  FAIL @11
-END
-
-ACTION_IF sm_clskills_cols = 13 THEN BEGIN
-  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC * SKILLS * 0 2 * CLABMO01 0 *~
+ACTION_IF sm_clskills_cols = 17 THEN BEGIN
+  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
     UNLESS ~SORCERER_MONK~
 END ELSE BEGIN
-  ACTION_IF sm_clskills_cols = 17 THEN BEGIN
-    APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
+  ACTION_IF sm_clskills_cols = 16 THEN BEGIN
+    APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~
       UNLESS ~SORCERER_MONK~
   END ELSE BEGIN
-    ACTION_IF sm_clskills_cols = 16 THEN BEGIN
-      APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~
-        UNLESS ~SORCERER_MONK~
-    END ELSE BEGIN
-      FAIL @10
-    END
+    FAIL @10
   END
 END
 
-// Monk fist progression is keyed by the dynamically allocated class ID.
+// Monk fist progression is keyed by the allocated class ID.
 APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
   UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]+MFIST1~
 
