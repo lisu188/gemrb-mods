@@ -24,3 +24,9 @@ jobs:
       - run: python psion/tests/validate_level3.py
       - run: python psion/tests/validate_level4.py
       - run: python psion/tests/validate_level5.py
+      - name: Install WeiDU
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes weidu
+      - name: Parse complete WeiDU installer
+        run: bash psion/tests/validate_weidu.sh
