@@ -1,0 +1,2 @@
+INCLUDE ~psion/lib/power-data.tpa~
+INCLUDE ~psion/lib/power-build.tpa~

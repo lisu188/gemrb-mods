@@ -1,0 +1,14 @@
+2DA V1.0
+*
+FEAT                 MIN_LEVEL FOCUS PP_SURCHARGE
+FOCUS_TRAINING       1         NONE   0
+CRYSTAL_AFFINITY     1         NONE   0
+MEDITATION           1         NONE   0
+EXPANDED_KNOWLEDGE   3         NONE   0
+MENTAL_RESILIENCE    1         NONE   0
+SWIFT_THOUGHT        1         FOCUS  0
+TALENTED             1         FOCUS  0
+EXTEND_POWER         3         FOCUS  2
+EMPOWER_POWER        5         FOCUS  2
+MAXIMIZE_POWER       10        FOCUS  4
+QUICKEN_POWER        12        FOCUS  6

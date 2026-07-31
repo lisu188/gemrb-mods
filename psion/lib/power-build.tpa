@@ -1,0 +1,10 @@
+ACTION_PHP_EACH psion_power_template AS psion_resref => psion_template BEGIN
+  OUTER_SPRINT psion_name $psion_power_name(~%psion_resref%~)
+  OUTER_SET psion_level = $psion_power_level(~%psion_resref%~)
+  COPY_EXISTING ~%psion_template%.spl~ ~override/%psion_resref%.spl~
+    SAY NAME1 ~%psion_name%~
+    SAY UNIDENTIFIED_DESC ~Experimental point-based Psion power. See PSIONPOWERS.2DA for cost and discipline metadata.~
+    WRITE_SHORT 0x24 psion_level
+    WRITE_LONG 0x14 (THIS | 0x02000000) // Ignore silence: manifestation is mental.
+  BUT_ONLY
+END

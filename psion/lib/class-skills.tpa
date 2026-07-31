@@ -1,0 +1,54 @@
+OUTER_SET ps_skill_cols=0
+OUTER_SPRINT ps_startxp ~0~
+OUTER_SPRINT ps_startxp2 ~*~
+OUTER_SPRINT ps_noprof ~-4~
+COPY_EXISTING ~clskills.2da~ ~override~
+  COUNT_2DA_COLS ps_skill_cols
+  READ_2DA_ENTRIES_NOW ~ps_skill_rows~ ps_skill_cols
+  FOR (ps_i=0; ps_i<ps_skill_rows; ++ps_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~ps_skill_rows~ ps_i 0 ps_skill_class
+    PATCH_IF ~%ps_skill_class%~ STRING_EQUAL_CASE ~SORCERER~ BEGIN
+      READ_2DA_ENTRY_FORMER ~ps_skill_rows~ ps_i 4 ps_startxp
+      PATCH_IF ps_skill_cols=17 BEGIN
+        READ_2DA_ENTRY_FORMER ~ps_skill_rows~ ps_i 12 ps_noprof
+        READ_2DA_ENTRY_FORMER ~ps_skill_rows~ ps_i 13 ps_startxp2
+      END ELSE BEGIN
+        READ_2DA_ENTRY_FORMER ~ps_skill_rows~ ps_i 12 ps_startxp2
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF (ps_skill_cols != 16) AND (ps_skill_cols != 17) THEN BEGIN FAIL @5 END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_SEER * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_SEER~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_SEER * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_SEER~
+END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_SHAPER * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_SHAPER~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_SHAPER * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_SHAPER~
+END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_KINETICIST * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_KINETICIST~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_KINETICIST * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_KINETICIST~
+END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_EGOIST * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_EGOIST~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_EGOIST * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_EGOIST~
+END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_NOMAD * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_NOMAD~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_NOMAD * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_NOMAD~
+END
+ACTION_IF ps_skill_cols=17 THEN BEGIN
+  APPEND ~clskills.2da~ ~PSION_TELEPATH * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_noprof% %ps_startxp2% * 0 *~ UNLESS ~PSION_TELEPATH~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~PSION_TELEPATH * * MXPSION %ps_startxp% * * * 0 2 * CLABPSIO %ps_startxp2% * 0 *~ UNLESS ~PSION_TELEPATH~
+END
+
+// Install runtime hooks after WeiDU completes:
+// python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts
