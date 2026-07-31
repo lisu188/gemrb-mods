@@ -1,189 +1,227 @@
 # Experimental D&D 3e Psion for GemRB
 
-This mod adds six selectable Psion disciplines to BG1-family conversions and
-Enhanced Edition campaigns running through GemRB:
+This mod adds a point-based Psion class to BG1-family conversions and Enhanced
+Edition campaigns running through GemRB.
 
-- Seer — Clairsentience
-- Shaper — Metacreativity
-- Kineticist — Psychokinesis
-- Egoist — Psychometabolism
-- Nomad — Psychoportation
-- Telepath — Telepathy
+The six selectable discipline classes are:
 
-## Implemented in 0.6.0-alpha
+- **Seer** — Clairsentience
+- **Shaper** — Metacreativity
+- **Kineticist** — Psychokinesis
+- **Egoist** — Psychometabolism
+- **Nomad** — Psychoportation
+- **Telepath** — Telepathy
+
+## Status: 0.7.0-alpha
+
+The architecture, class registration, power-point pool and all level 1–4 power
+resources are implemented. Level-5 powers remain prototypes, and the mod still
+requires a complete WeiDU installation and in-game GemRB smoke test before it
+should be considered ready for normal play.
+
+## Implemented systems
 
 - Six dynamically allocated custom class rows.
-- Released combined and newer split GemRB class-table layouts.
+- Support for released combined and newer split GemRB class-table layouts.
 - D&D 3e base power-point progression through level 20.
-- Intelligence bonus pool: `floor(Int modifier × level / 2)`.
-- Persistent current pool in GemRB actor stat 239.
-- Full restoration after normal or temple rest.
-- Two-phase manifestation accounting: reserve before targeting and charge only
-  after GemRB confirms the casting flow.
-- Runtime validation of discipline, Intelligence, manifester level and current
-  power points.
-- Separate fixed progression for every discipline, reaching 19 powers known at
-  BG1 level 9.
-- Purpose-built resources for all twelve powers at each of levels 1, 2 and 3.
-- Point-scaled augmentation for Energy Ray, Mind Thrust and Vigor.
-- Choice-based Animal Affinity with Strength, Dexterity and Constitution forms.
-- Fifty-seven selector children with authoritative PP costs.
-- Runtime filtering of opcode-214 lists so only currently legal variants are
-  shown, while unrelated base-game and third-party selectors remain unchanged.
-- Backup-safe GUI hooks with uninstall support.
-- Static progression, 2DA schema, SPL-builder, fake-runtime transaction and
-  GUI-patcher fixture tests, plus dedicated level-3 resource regression checks.
+- Intelligence bonus pool:
 
-## Power-point rules
+  `floor(Intelligence modifier × Psion level / 2)`
 
-The base costs are 1, 3, 5, 7 and 9 PP for power levels 1–5. A manifestation
-cannot spend more PP than the character's Psion level. Selectors cost nothing;
-the selected child resource carries the full cost and is validated twice:
-when the choice list is built and again when the child is manifested.
+- Persistent current power points stored in GemRB actor stat 239.
+- Full PP restoration after ordinary and temple resting.
+- Base power costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
+- Maximum PP expenditure per manifestation equal to Psion level.
+- Discipline, Intelligence, level and current-pool validation.
+- Cancellation-safe two-phase PP transactions.
+- Runtime-filtered augmentation and choice lists.
+- Separate fixed level 1–9 progression for each discipline.
+- Nineteen known powers at level 9, including one exclusive discipline power
+  whenever a new power tier becomes available.
+- Purpose-built resources for all 48 powers at levels 1–4.
+- Fifty-seven registered augmentation or choice child resources.
+- Backup-safe GemRB GUI-script installation and removal.
 
-PP are reserved on the first GemRB casting callback and deducted on the matching
-second callback. Cancelling target selection does not intentionally consume PP,
-and a duplicate callback cannot intentionally charge the same manifestation
-twice.
+## Power-point transaction
+
+GemRB invokes the spell-selection flow more than once while a target is being
+chosen. The Psion runtime therefore treats manifestation as a transaction:
+
+1. The first matching callback validates and reserves the manifestation.
+2. A matching confirmation callback deducts the PP exactly once.
+3. Cancelling the targeting interface clears the pending transaction.
+4. Repeated callbacks cannot intentionally charge the same manifestation twice.
+
+The runtime revalidates the selected child resource at confirmation time. A
+power cannot overspend merely because the character lost PP after opening a
+selector.
+
+## Filtered selectors
+
+Opcode-214 choice lists are filtered through the installed `Spellbook.py` hook.
+Only choices registered in `PSIONAUGMENT.2DA` are modified; base-game and
+third-party selectors are preserved in their original order.
+
+The current selectors are:
+
+- **Energy Ray:** fire, cold, electricity and sonic variants costing 1–9 PP.
+- **Mind Thrust:** 1d10–9d10 variants costing 1–9 PP.
+- **Vigor:** 5–45 temporary-HP-equivalent variants costing 1–9 PP.
+- **Animal Affinity:** +4 Strength, Dexterity or Constitution for 3 PP.
+
+A selector displays only children legal for the selected actor's current PP,
+manifester level, discipline and Intelligence.
 
 ## Purpose-built level-1 powers
 
-- **Energy Ray:** energy and cost selector, 1–9 PP.
-- **Mind Thrust:** 1d10 per PP; save vs spell negates.
-- **Inertial Armor:** +4 Armor Class for one hour.
-- **Vigor:** 5 temporary-HP-equivalent points per PP.
-- **Force Screen:** +2 Armor Class and Magic Missile protection.
-- **Empty Mind:** +2 to all saves for one round.
-- **Precognition:** +1 attack, Armor Class and saves for three rounds.
-- **Astral Construct:** summons the current construct prototype.
-- **Energy Push:** electrical damage plus save-negated knockback.
-- **Thicken Skin:** +1 Armor Class for one turn.
-- **Burst:** +30 percent movement for one round.
-- **Psionic Charm:** one-turn charm, save negates.
+- Energy Ray
+- Mind Thrust
+- Inertial Armor
+- Vigor
+- Force Screen
+- Empty Mind
+- Precognition
+- Astral Construct
+- Energy Push
+- Thicken Skin
+- Burst
+- Psionic Charm
 
 ## Purpose-built level-2 powers
 
-- **Concealing Amorpha:** Blur, +2 Armor Class and +1 saves for one turn.
-- **Concussion Blast:** 2d6 magical force damage, no save.
-- **Detect Hostile Intent:** detects invisibility, prevents backstab and grants
-  +2 Armor Class for one turn.
-- **Thought Shield:** +4 saves and 20 percent magical-damage resistance for
-  three rounds.
-- **Biofeedback:** 10 percent resistance to all four physical damage types for
-  one turn.
-- **Swarm of Crystals:** 3d4 slashing damage in a cone, save vs breath for half.
-- **Clairvoyant Sense:** detects invisibility and grants +20 Find Traps for five
-  rounds; quest scripts may add remote information.
-- **Psionic Repair Damage:** heals 3d8+3. Construct-only target filtering remains
-  a runtime task, so the alpha can target any ally.
-- **Energy Missile:** 3d6 electrical damage with a save for half. The current
-  area projectile approximates three discrete tabletop targets.
-- **Animal Affinity:** choose +4 Strength, Dexterity or Constitution for one
-  turn. Changing the choice refreshes the power rather than stacking forms.
-- **Dimension Swap:** exchanges the manifester and target positions.
-- **Brain Lock:** holds one target for three rounds, save negates.
+- Concealing Amorpha
+- Concussion Blast
+- Detect Hostile Intent
+- Thought Shield
+- Biofeedback
+- Swarm of Crystals
+- Clairvoyant Sense
+- Psionic Repair Damage
+- Energy Missile
+- Animal Affinity
+- Dimension Swap
+- Brain Lock
 
 ## Purpose-built level-3 powers
 
-- **Dispel Psionics:** area dispel using an effective level of 5. A later GemRB
-  check will use manifester level and Psicraft.
-- **Body Adjustment:** heals 1d12+5 hit points.
-- **Energy Bolt:** 5d6 electrical damage in a line, save vs breath for half.
-- **Mental Barrier:** +4 Armor Class, +2 saves and backstab immunity for one
-  round; recasting refreshes instead of stacking.
-- **Touchsight:** detects invisibility, blocks backstab and prevents new
-  blindness effects for one turn.
-- **Time Hop:** temporarily removes a target through the engine Maze effect;
-  save vs spell negates.
-- **Danger Sense:** +20 Find Traps, +2 Armor Class, +2 saves and backstab
-  immunity for one turn.
-- **Ectoplasmic Cocoon:** holds a target and grants it 50 percent physical
-  resistance for three rounds. This approximates a destructible cocoon shell.
-- **Energy Cone:** 5d6 electrical damage in a cone, save vs breath for half.
-- **Hustle:** double movement and one extra attack for one round.
-- **Spatial Step:** teleports the Nomad to a selected point within 30 feet.
-- **Mental Stasis:** holds, silences and slows one target for three rounds;
-  save vs spell negates.
+- Dispel Psionics
+- Body Adjustment
+- Energy Bolt
+- Mental Barrier
+- Touchsight
+- Time Hop
+- Danger Sense
+- Ectoplasmic Cocoon
+- Energy Cone
+- Hustle
+- Spatial Step
+- Mental Stasis
 
-## Engine approximations
+## Purpose-built level-4 powers
 
-The Infinity Engine does not directly expose every D&D 3e mechanic. These
-approximations are deliberate and documented in the in-game descriptions:
+- **Energy Adaptation:** 25% resistance to acid, cold, electricity and fire for
+  seven turns.
+- **Freedom of Movement:** removes hold and movement penalties, then protects
+  against common hold, slow, entangle, web and grease opcodes.
+- **Dimension Door:** teleports the manifester to a visible point.
+- **Intellect Fortress:** +2 saves and 50% magical-damage resistance for three
+  rounds.
+- **Telekinetic Maneuver:** pushes and knocks down one target on a failed save.
+- **Power Leech:** imposes 20% mage, priest and innate casting failure for five
+  rounds.
+- **Remote Viewing:** detects invisibility and grants +30 Lore and Find Traps.
+- **Wall of Ectoplasm:** creates one temporary construct obstruction.
+- **Energy Ball:** 7d6 electrical area damage, save for half.
+- **Metamorphosis:** bear-like combat form with physical statistics, AC, APR and
+  resistance bonuses.
+- **Psionic Flight:** movement, AC, backstab and ground-restraint protection.
+- **Compulsion:** dominates one target for five rounds, save negates.
 
-- Will saves use save vs spell or all five BG saving throws.
-- Vigor uses timed current/maximum HP effects instead of native temporary HP.
-- Concealment uses Blur plus AC and save bonuses instead of a generic miss
-  chance percentage.
-- Biofeedback uses percentage resistance rather than flat damage reduction.
-- Repair Construct is not yet restricted to construct creatures.
-- Energy Missile currently uses an area burst rather than three individually
-  selected creatures.
-- Dispel Psionics currently uses a fixed engine dispel level.
-- Time Hop uses Maze as the portable temporary-removal effect.
+## Deliberate engine approximations
+
+The Infinity Engine does not expose every D&D 3e psionic mechanic. The current
+portable approximations are explicit in source comments and in-game power
+text:
+
+- Will saves use save vs spell or broad BG saving-throw modifiers.
+- Vigor uses timed current and maximum HP effects rather than native temporary
+  hit points.
+- Concealment uses Blur, AC and saving-throw bonuses.
+- Biofeedback uses percentage resistance instead of flat damage reduction.
+- Energy Missile uses a small area burst rather than three discrete targets.
+- Dispel Psionics uses a fixed effective level rather than Psicraft.
+- Time Hop uses the engine's Maze effect.
 - Ectoplasmic Cocoon is not yet a destructible hit-point shell.
-- Mental Barrier is manually activated rather than an immediate reaction.
-- Astral Construct still uses a temporary wolf-derived body.
-
-## Filtered choice lists
-
-GemRB stores opcode-214 choices in a temporary spellinfo list. The installed
-`Spellbook.py` hook passes that list through `Psionics.filter_spellinfo` before
-buttons are created. Only rows registered in `PSIONAUGMENT.2DA` are filtered.
-
-For a level-3 Psion with 2 PP remaining, Energy Ray, Mind Thrust and Vigor show
-only their 1- and 2-PP children. Animal Affinity requires 3 PP, so it is hidden
-or rejected when fewer than 3 PP remain. At zero PP an augmented parent does
-not open an empty selector.
-
-## Current level 1–9 progression
-
-All disciplines share a conservative fixed alpha progression:
-
-- Level 1: Energy Ray, Inertial Armor, first discipline power
-- Level 2: Mind Thrust, Vigor
-- Level 3: Concealing Amorpha, second discipline power
-- Level 4: Force Screen, Detect Hostile Intent
-- Level 5: Dispel Psionics, third discipline power
-- Level 6: Body Adjustment, Energy Bolt
-- Level 7: Energy Adaptation, fourth discipline power
-- Level 8: Freedom of Movement, Intellect Fortress
-- Level 9: Power Resistance, fifth discipline power
-
-This matches the D&D 3e cumulative totals of 3, 5, 7, 9, 11, 13, 15, 17 and 19
-powers known while preventing access to another specialist's discipline list.
+- Energy Adaptation currently gives 25% to four energies instead of selecting
+  50% resistance to one energy.
+- Intellect Fortress is self-only rather than a maintained party aura.
+- Telekinetic Maneuver currently implements push and trip, not pull or disarm.
+- Power Leech applies casting failure but does not yet transfer PP.
+- Remote Viewing provides enhanced perception unless a quest script supplies a
+  remote scene.
+- Wall of Ectoplasm currently creates one construct node rather than a segmented
+  wall.
+- Metamorphosis currently provides one bear-like form.
+- Psionic Flight cannot cross arbitrary unwalkable map geometry.
+- Astral Construct still uses a temporary wolf-derived creature body.
 
 ## Installation
 
 1. Run GemRB against the game once so `gemrb_path.txt` exists.
-2. Copy the `psion` directory to the game directory.
-3. Run `weidu psion/setup-psion.tp2`.
+2. Copy the `psion` directory into the game directory.
+3. Run:
+
+   `weidu psion/setup-psion.tp2`
+
 4. Patch GemRB's shared GUI scripts:
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
-The patcher updates `ActionsWindow.py`, `Spellbook.py`, `MenuWindow.py` and
-`GUISTORE.py`, creating a `.psion.bak` backup for each. Remove all hooks with
-`--uninstall`.
+The patcher updates:
+
+- `ActionsWindow.py`
+- `Spellbook.py`
+- `MenuWindow.py`
+- `GUISTORE.py`
+
+A `.psion.bak` backup is created for each modified file. Remove the hooks with:
+
+`python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts --uninstall`
 
 ## Supported targets
 
-Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE and EET under GemRB.
-Original BG1/TotSC are excluded because they lack native Sorcerer/Monk-era
-class data used by this implementation.
+- Tutu
+- Tutu_TotSC
+- BGEE
+- Classic Adventures
+- BGT
+- BG2EE
+- EET
 
-## Important alpha limitations
+Original BG1/TotSC are excluded because this implementation depends on
+Sorcerer/Monk-era class data.
 
-Only powers of levels 4 and 5 still clone thematically similar game spells.
-Power selection is fixed rather than choice-based. The GUI hooks, extended
-teleport behavior and generated resources still require a complete WeiDU
-installation and in-game test against the intended GemRB build.
+## Automated validation
 
-## Development priorities
+GitHub Actions currently runs:
 
-1. Automated WeiDU installation fixture and real GemRB smoke test.
-2. Exact level-4 power resources and augmentation.
-3. Construct-only targeting and a dedicated Astral Construct CRE/AI.
-4. Choice-based power learning and replacement at levels 4/8/12/16/20.
-5. Current/max PP display on action and character-record interfaces.
-6. Psionic focus, feats and skill allocation UI.
-7. Psicrystal, psionic items and enemy users.
+- core table and progression validation;
+- level-1 and level-2 resource checks;
+- augmentation-table and filtered-selector tests;
+- fake-GemRB PP transaction tests;
+- GUI patch, idempotence, backup and uninstall fixtures;
+- dedicated level-3 resource regression checks;
+- dedicated level-4 resource regression checks;
+- Python compilation checks.
+
+## Remaining development priorities
+
+1. Automated WeiDU parsing and installation fixture.
+2. Real GemRB in-game smoke test.
+3. Purpose-built level-5 power resources.
+4. Construct-only targeting for Psionic Repair Damage.
+5. Dedicated Astral Construct creature and AI.
+6. Choice-based power learning and replacement.
+7. Current/maximum PP display in the action and record interfaces.
+8. Psionic focus, feats and skill allocation.
+9. Psicrystal, psionic items and enemy Psions.
