@@ -10,6 +10,9 @@ on:
       - "psion/**"
       - ".github/workflows/psion-static.yml"
 
+env:
+  WEIDU_VERSION: "251.00"
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -24,9 +27,26 @@ jobs:
       - run: python psion/tests/validate_level3.py
       - run: python psion/tests/validate_level4.py
       - run: python psion/tests/validate_level5.py
-      - name: Install WeiDU
+      - name: Install official WeiDU release
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes weidu
+          set -euo pipefail
+          release="$(curl --fail --silent --show-error --location \
+            "https://api.github.com/repos/WeiDUorg/weidu/releases/tags/v${WEIDU_VERSION}")"
+          asset_url="$(jq -r '
+            [.assets[]
+              | select(.name | test("linux"; "i"))
+              | select(.name | test("amd64|x86_64"; "i"))
+              | .browser_download_url][0] // empty
+          ' <<<"$release")"
+          test -n "$asset_url"
+          curl --fail --silent --show-error --location "$asset_url" --output /tmp/weidu.zip
+          mkdir -p "$RUNNER_TEMP/weidu"
+          unzip -q /tmp/weidu.zip -d "$RUNNER_TEMP/weidu"
+          executable="$(find "$RUNNER_TEMP/weidu" -type f -iname weidu -print -quit)"
+          test -n "$executable"
+          chmod +x "$executable"
+          ln -s "$executable" "$RUNNER_TEMP/weidu/weidu"
+          echo "$RUNNER_TEMP/weidu" >> "$GITHUB_PATH"
       - name: Parse complete WeiDU installer
         run: bash psion/tests/validate_weidu.sh
