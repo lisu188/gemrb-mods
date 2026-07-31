@@ -7,13 +7,20 @@ command -v weidu >/dev/null 2>&1 || {
 }
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-gemrb_root="${1:?usage: validate_weidu_install.sh GEMRB_ROOT}"
-game="$RUNNER_TEMP/psion-weidu-game"
-baseline="$RUNNER_TEMP/psion-weidu-baseline.json"
+gemrb_root="${1:?usage: validate_weidu_install.sh GEMRB_ROOT [LAYOUT]}"
+layout="${2:-normalized}"
+case "$layout" in
+  normalized|native|legacy) ;;
+  *) echo "Unsupported fixture layout: $layout" >&2; exit 2 ;;
+esac
+
+game="$RUNNER_TEMP/psion-weidu-game-$layout"
+baseline="$RUNNER_TEMP/psion-weidu-baseline-$layout.json"
 
 python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --gemrb-root "$gemrb_root" \
-  --output "$game"
+  --output "$game" \
+  --layout "$layout"
 cp -R "$repo_root/psion" "$game/psion"
 
 # Snapshot every pre-existing table that the installer edits. WeiDU restores
@@ -48,14 +55,12 @@ def tlk_entries(path: Path) -> list[bytes]:
 
 root = Path(sys.argv[1])
 out = Path(sys.argv[2])
-paths = [
-    root / "override" / name
-    for name in (
-        "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
-        "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
-        "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
-    )
-]
+candidates = (
+    "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
+    "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
+    "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
+)
+paths = [root / "override" / name for name in candidates if (root / "override" / name).is_file()]
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
 data = {
     "files": {
@@ -91,26 +96,31 @@ uninstall() {
 }
 
 verify_installed() {
-  python3 - "$game" <<'PY'
+  python3 - "$game" "$layout" <<'PY'
 from __future__ import annotations
+import struct
 import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
+layout = sys.argv[2]
 override = root / "override"
 disciplines = (
     "PSION_SEER", "PSION_SHAPER", "PSION_KINETICIST",
     "PSION_EGOIST", "PSION_NOMAD", "PSION_TELEPATH",
 )
 
+class_tables = ["classes.2da"]
+if layout != "legacy":
+    class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
 for filename in (
-    "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
+    *class_tables,
     "class.ids", "alignmnt.2da", "profs.2da", "xpcap.2da",
     "avprefc.2da", "qslots.2da", "clskills.2da",
 ):
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
-        assert discipline in text, (filename, discipline)
+        assert discipline in text, (layout, filename, discipline)
 
 for filename in (
     "psionpool.2da", "psionknown.2da", "psiondisc.2da",
@@ -120,19 +130,38 @@ for filename in (
     "clabpsee.2da", "clabpsha.2da", "clabpkin.2da",
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",
 ):
-    assert (override / filename).is_file(), filename
+    assert (override / filename).is_file(), (layout, filename)
 
-# WeiDU preserves the source resource's filename case, which differs between
-# platforms and fixture inputs. Inspect names semantically instead of relying on
-# case-sensitive glob patterns.
+# WeiDU preserves source filename case, which differs between platforms.
 generated = [path for path in override.iterdir() if path.is_file()]
 spells = {
     path.name.lower()
     for path in generated
     if path.suffix.lower() == ".spl" and path.stem.lower().startswith("ps")
 }
-assert len(spells) >= 117, len(spells)
-assert any(path.name.lower() == "psacon01.cre" for path in generated)
+assert len(spells) >= 117, (layout, len(spells))
+assert any(path.name.lower() == "psacon01.cre" for path in generated), layout
+
+# Inspect every generated SPL structurally. A valid power has the SPL V1
+# signature, at least one extended header, and all effect blocks within bounds.
+for name in spells:
+    path = next(item for item in generated if item.name.lower() == name)
+    data = path.read_bytes()
+    assert data[:8] == b"SPL V1  ", (layout, name, data[:8])
+    assert len(data) >= 0x72, (layout, name, len(data))
+    header_offset = struct.unpack_from("<I", data, 0x64)[0]
+    header_count = struct.unpack_from("<H", data, 0x68)[0]
+    effect_offset = struct.unpack_from("<I", data, 0x6A)[0]
+    global_effects = struct.unpack_from("<H", data, 0x70)[0]
+    assert header_count >= 1, (layout, name, header_count)
+    assert header_offset + header_count * 0x28 <= len(data), (layout, name)
+    maximum_effect = global_effects
+    for index in range(header_count):
+        ability = header_offset + index * 0x28
+        count = struct.unpack_from("<H", data, ability + 0x1E)[0]
+        first = struct.unpack_from("<H", data, ability + 0x20)[0]
+        maximum_effect = max(maximum_effect, first + count)
+    assert effect_offset + maximum_effect * 0x30 <= len(data), (layout, name, maximum_effect)
 
 log = next(
     path for path in root.iterdir()
@@ -141,12 +170,12 @@ log = next(
 log_text = log.read_text(encoding="utf-8", errors="replace")
 assert "PSION/SETUP-PSION.TP2" in log_text.upper()
 assert "#0 #0" in log_text
-print("WeiDU fixture installation validation passed.")
+print(f"WeiDU {layout} fixture installation validation passed.")
 PY
 }
 
 verify_uninstalled() {
-  python3 - "$game" "$baseline" <<'PY'
+  python3 - "$game" "$baseline" "$layout" <<'PY'
 from __future__ import annotations
 import hashlib
 import json
@@ -174,27 +203,27 @@ def tlk_entries(path: Path) -> list[bytes]:
 
 root = Path(sys.argv[1])
 baseline = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+layout = sys.argv[3]
 for relative, expected in baseline["files"].items():
     path = root / relative
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    assert actual == expected, (relative, expected, actual)
+    assert actual == expected, (layout, relative, expected, actual)
 
 # WeiDU generally does not compact DIALOG.TLK on uninstall. Verify that every
-# original entry is unchanged and in the same position; appended orphan slots
-# are acceptable and will be reused by future installations.
+# original entry is unchanged and in the same position.
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
 original_count = baseline["tlk"]["count"]
-assert len(entries) >= original_count, (len(entries), original_count)
+assert len(entries) >= original_count, (layout, len(entries), original_count)
 prefix_hash = hashlib.sha256(b"".join(entries[:original_count])).hexdigest()
-assert prefix_hash == baseline["tlk"]["prefix_sha256"], prefix_hash
+assert prefix_hash == baseline["tlk"]["prefix_sha256"], (layout, prefix_hash)
 
 override = root / "override"
 remaining = [path for path in override.iterdir() if path.is_file()]
 assert not any(
     path.suffix.lower() == ".spl" and path.stem.lower().startswith("ps")
     for path in remaining
-)
-assert not any(path.name.lower() == "psacon01.cre" for path in remaining)
+), layout
+assert not any(path.name.lower() == "psacon01.cre" for path in remaining), layout
 for filename in (
     "psionpool.2da", "psionknown.2da", "psiondisc.2da",
     "psionskills.2da", "psionfeats.2da", "psionpowers.2da",
@@ -203,8 +232,8 @@ for filename in (
     "clabpsee.2da", "clabpsha.2da", "clabpkin.2da",
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",
 ):
-    assert not (override / filename).exists(), filename
-print("WeiDU fixture uninstall restored tables and original TLK entries.")
+    assert not (override / filename).exists(), (layout, filename)
+print(f"WeiDU {layout} fixture uninstall restored tables and original TLK entries.")
 PY
 }
 
