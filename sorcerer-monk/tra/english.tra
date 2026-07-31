@@ -13,5 +13,5 @@ Dual-classing is not supported.~
 @7 = ~No free 8-bit class identifier is available. Remove conflicting custom-class mods before installing.~
 @8 = ~A lawful spontaneous arcane caster trained in unarmed combat and monastic disciplines.~
 @9 = ~Could not determine the existing numeric class identifiers from the GemRB class tables.~
-@10 = ~Unsupported CLSKILLS.2DA layout. Please report the table column count and game type.~
-@11 = ~CLSKILLS.2DA does not contain the required SORCERER row.~
+@10 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
+@12 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
