@@ -75,5 +75,11 @@ jobs:
           path: vendor/gemrb
           fetch-depth: 1
 
-      - name: Install, uninstall and reinstall with WeiDU
-        run: bash psion/tests/validate_weidu_install.sh vendor/gemrb
+      - name: Install, uninstall and reinstall every class-table layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          for layout in normalized native legacy; do
+            echo "Validating $layout class-table layout"
+            bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
+          done
