@@ -272,6 +272,12 @@ def validate_runtime_transactions():
         starting_pool = module.ensure_pool(1)
         assert starting_pool == 17
 
+        # Temporary selectors must retain unrelated resources while hiding
+        # Psion variants above the level-3 manifester cap.
+        mixed = ["SPWI112", "PSRF01", "PSRF04", "PSMT03", "PSVG09"]
+        filtered = module.filter_spellinfo(1, mixed)
+        assert filtered == ["SPWI112", "PSRF01", "PSMT03"]
+
         for parent, child in (
             ("PS1ERAY", "PSRF03"),
             ("PS1MTHR", "PSMT03"),
@@ -297,6 +303,14 @@ def validate_runtime_transactions():
             available = module.available_variants(1, parent)
             assert legal in available
             assert illegal not in available
+
+        # An empty PP pool must disable the selector itself and filter every
+        # Psion child, but must not remove another mod's temporary spell.
+        stats[(1, 188)] = 1
+        stats[(1, 239)] = 0
+        assert not module.can_manifest(1, "PS1ERAY")
+        assert module.available_variants(1, "PS1ERAY") == []
+        assert module.filter_spellinfo(1, ["SPWI112", "PSRF01"]) == ["SPWI112"]
         assert messages
     finally:
         if old_gemrb is None:
@@ -316,28 +330,45 @@ def validate_gui_patcher():
     spec.loader.exec_module(module)
 
     actions_fixture = '''import GemRB\nimport Spellbook\n\ndef ActionCastPressed ():\n\t"""Opens the spell choice scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_CAST)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\t"""Opens the innate spell scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_INNATE)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\n\tSpell = GemRB.GetVar ("Spell")\n'''
+    spellbook_fixture = '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\ti = 0\n\treturn memorizedSpells\n'''
     rest_fixture = '''import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n'''
 
     with tempfile.TemporaryDirectory() as directory:
         directory = Path(directory)
         actions = directory / "ActionsWindow.py"
+        spellbook = directory / "Spellbook.py"
         menu = directory / "MenuWindow.py"
         store = directory / "GUISTORE.py"
         actions.write_text(actions_fixture, encoding="utf-8")
+        spellbook.write_text(spellbook_fixture, encoding="utf-8")
         menu.write_text(rest_fixture, encoding="utf-8")
         store.write_text(rest_fixture, encoding="utf-8")
 
         assert module.patch(actions, "actions")
+        assert module.patch(spellbook, "spellbook")
         assert module.patch(menu, "rest")
         assert module.patch(store, "rest")
-        patched = actions.read_text(encoding="utf-8")
-        assert "Psionics.begin_manifest" in patched
-        assert "Spellbook.GetSpellinfoSpells" in patched
-        assert patched.count("Psionics.cancel_pending") == 2
-        assert "import Psionics" in patched
+
+        patched_actions = actions.read_text(encoding="utf-8")
+        assert "Psionics.begin_manifest" in patched_actions
+        assert "Spellbook.GetSpellinfoSpells" in patched_actions
+        assert patched_actions.count("Psionics.cancel_pending") == 2
+        assert "import Psionics" in patched_actions
+
+        patched_spellbook = spellbook.read_text(encoding="utf-8")
+        assert "Psionics.filter_spellinfo(actor, spellResRefs)" in patched_spellbook
+        assert "import Psionics" in patched_spellbook
+
         assert not module.patch(actions, "actions")
+        assert not module.patch(spellbook, "spellbook")
+
         assert module.remove(actions)
+        assert module.remove(spellbook)
         assert actions.read_text(encoding="utf-8") == actions_fixture
+        assert spellbook.read_text(encoding="utf-8") == spellbook_fixture
+
+    patcher_source = patcher_path.read_text(encoding="utf-8")
+    assert '(args.guiscripts / "Spellbook.py", "spellbook")' in patcher_source
 
 
 def main():
@@ -350,7 +381,7 @@ def main():
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)
     validate_runtime_transactions()
     validate_gui_patcher()
-    print("Psion 0.3 static, 54-variant augmentation, runtime, and GUI-hook validation passed.")
+    print("Psion 0.4 filtered-selector, 54-variant, runtime, and GUI-hook validation passed.")
 
 
 if __name__ == "__main__":
