@@ -19,6 +19,8 @@ jobs:
         with:
           python-version: "3.x"
       - run: python psion/tests/validate.py
+      - run: python psion/tests/validate_runtime.py
+      - run: python psion/tests/validate_patcher.py
       - run: python psion/tests/validate_level3.py
       - run: python psion/tests/validate_level4.py
       - run: python psion/tests/validate_level5.py
