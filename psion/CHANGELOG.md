@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.0.0
+
+- Promoted the Psion component from alpha to the first installable release.
+- Added self-contained `ADD_SPELL_HEADER` and `ADD_SPELL_EFFECT` implementations,
+  removing undeclared community-library dependencies from stock WeiDU installs.
+- Added official WeiDU 251 parsing for the complete TP2 and every included TPA.
+- Corrected every parser-invalid bare negative integer and encoded absent string
+  references with the explicit `0xffffffff` sentinel.
+- Replaced the undeclared `game_is_iwdee` variable with WeiDU's `GAME_IS`
+  predicate for cone-projectile selection.
+- Corrected class-ID discovery to count and scan actual 2DA rows, export values
+  across patch/action scope, and ignore long trailing GemRB comment lines.
+- Added format-aware handling for normalized six-field, native EE ten-field and
+  legacy nineteen-field class tables.
+- Added generated, non-proprietary BG-family fixtures based on pinned GemRB demo
+  data and GemRB's official CHITIN.KEY generator.
+- Added full install, verification, uninstall and reinstall lifecycles for all
+  three class-table layouts.
+- Added binary validation of every generated Psion SPL header, ability range and
+  effect range.
+- Added byte-for-byte uninstall restoration checks for patched tables and
+  semantic preservation checks for every original TLK entry.
+- Added case-insensitive fixture resource handling matching Infinity Engine
+  lookup behavior on Linux.
+- Locked the release infrastructure, helper ordering and compatibility layouts
+  into the version-neutral core validator.
+- Updated installation, compatibility, validation and known-limitation
+  documentation for the 1.0.0 release.
+
 ## 0.8.0-alpha
 
 - Replaced all twelve level-5 template clones with purpose-built SPL resources.
@@ -68,7 +97,7 @@
   another.
 - Corrected an audit-discovered Strength/Dexterity opcode inversion and added a
   regression check for the correct opcode mapping.
-- Restricted template spell cloning to powers of level 3 and above.
+- Restricted template spell cloning to power level 3 and above.
 - Expanded validation to cover every level-2 power, selector-table consistency,
   exact resource ownership and the new runtime choices.
 
