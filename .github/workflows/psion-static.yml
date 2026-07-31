@@ -36,17 +36,22 @@ jobs:
           asset_url="$(jq -r '
             [.assets[]
               | select(.name | test("linux"; "i"))
-              | select(.name | test("amd64|x86_64"; "i"))
+              | select(.name | test("source|src"; "i") | not)
               | .browser_download_url][0] // empty
           ' <<<"$release")"
-          test -n "$asset_url"
+          if [[ -z "$asset_url" ]]; then
+            jq -r '.assets[].name' <<<"$release" >&2
+            exit 1
+          fi
           curl --fail --silent --show-error --location "$asset_url" --output /tmp/weidu.zip
-          mkdir -p "$RUNNER_TEMP/weidu"
-          unzip -q /tmp/weidu.zip -d "$RUNNER_TEMP/weidu"
-          executable="$(find "$RUNNER_TEMP/weidu" -type f -iname weidu -print -quit)"
+          archive_dir="$RUNNER_TEMP/weidu-archive"
+          bin_dir="$RUNNER_TEMP/weidu-bin"
+          mkdir -p "$archive_dir" "$bin_dir"
+          unzip -q /tmp/weidu.zip -d "$archive_dir"
+          executable="$(find "$archive_dir" -type f -iname weidu -print -quit)"
           test -n "$executable"
-          chmod +x "$executable"
-          ln -s "$executable" "$RUNNER_TEMP/weidu/weidu"
-          echo "$RUNNER_TEMP/weidu" >> "$GITHUB_PATH"
+          cp "$executable" "$bin_dir/weidu"
+          chmod +x "$bin_dir/weidu"
+          echo "$bin_dir" >> "$GITHUB_PATH"
       - name: Parse complete WeiDU installer
         run: bash psion/tests/validate_weidu.sh
