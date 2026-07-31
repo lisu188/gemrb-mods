@@ -3,7 +3,9 @@ from pathlib import Path
 import importlib.util
 import py_compile
 import re
+import sys
 import tempfile
+import types
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,6 +60,8 @@ def validate_2da_schemas():
             "AUGMENT_STEP",
             "TEMPLATE",
         ],
+        "psionaugment.2da": ["PARENT", "TOTAL_COST", "EFFECT", "VALUE"],
+        "ps1eray.2da": ["ResRef", "Type"],
         "psiondisc.2da": ["DISCIPLINE", "SCHOOL", "SPECIAL_SKILL"],
         "psionskills.2da": [
             "ABILITY",
@@ -119,12 +123,13 @@ def validate_progressions():
 
 
 def validate_level1_builders():
-    exact_path = ROOT / "lib" / "level1-powers.tpa"
-    exact = exact_path.read_text(encoding="utf-8")
+    exact = (ROOT / "lib" / "level1-powers.tpa").read_text(encoding="utf-8")
+    energy = (ROOT / "lib" / "energy-ray-augment.tpa").read_text(encoding="utf-8")
     powers_driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     prototype = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
 
     assert "level1-powers.tpa" in powers_driver
+    assert "energy-ray-augment.tpa" in powers_driver
     assert "psion_level > 1" in prototype
 
     # SPL V1 correctness: level and flags must use 0x34 and 0x18. The old alpha
@@ -139,7 +144,6 @@ def validate_level1_builders():
     created = set(re.findall(r"ps_resref = ~(PS1[A-Z0-9]+)~", exact))
     assert created == LEVEL1_REFS, (created, LEVEL1_REFS)
 
-    # Guard the intended implementation primitives for every major behavior.
     required_fragments = {
         "PS1ERAY": ("opcode = 12", "dicesize = 6"),
         "PS1MTHR": ("dicesize = 10", "savingthrow = BIT0"),
@@ -154,7 +158,7 @@ def validate_level1_builders():
         "PS1BRST": ("opcode = 126", "parameter1 = 130"),
         "PS1CHAR": ("opcode = 5", "duration = 60"),
     }
-    for index, ref in enumerate(sorted(LEVEL1_REFS)):
+    for ref in sorted(LEVEL1_REFS):
         start = exact.index(f"ps_resref = ~{ref}~")
         later = [
             exact.find(f"ps_resref = ~{other}~", start + 1)
@@ -166,6 +170,30 @@ def validate_level1_builders():
         for fragment in required_fragments[ref]:
             assert fragment in section, (ref, fragment)
 
+    assert "opcode = 214" in energy
+    assert "DELETE ~override/PS1ERAY.spl~" in energy
+    assert "dicenumber = ps_cost" in energy
+    assert "ps_dice_size = 4" in energy
+    assert "ps_flat_bonus = 1" in energy
+
+
+def validate_augmentation_tables():
+    augment = rows("psionaugment.2da")
+    selector = rows("ps1eray.2da")
+    assert len(augment) == 36
+    assert len(selector) == 36
+
+    augment_refs = {row[0] for row in augment}
+    selector_refs = {row[1] for row in selector}
+    assert augment_refs == selector_refs
+    assert all(row[1] == "PS1ERAY" for row in augment)
+    assert all(row[3] == "ENERGY" for row in augment)
+    assert all(row[2] == "3" for row in selector)
+
+    for energy in ("FIRE", "COLD", "ELECTRICITY", "SONIC"):
+        costs = sorted(int(row[2]) for row in augment if row[4] == energy)
+        assert costs == list(range(1, 10)), (energy, costs)
+
 
 def validate_installer_references():
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
@@ -176,6 +204,8 @@ def validate_installer_references():
         "psionskills",
         "psionfeats",
         "psionpowers",
+        "psionaugment",
+        "ps1eray",
         "mxpsion",
         "clabpsee",
         "clabpsha",
@@ -205,6 +235,97 @@ def validate_installer_references():
     assert defined <= generated
 
 
+def fake_table(name):
+    columns = header(name)
+    data = rows(name)
+
+    class Table:
+        def __init__(self):
+            self.names = [row[0] for row in data]
+            self.values = {
+                row[0]: dict(zip(columns, row[1:]))
+                for row in data
+            }
+
+        def GetValue(self, row, column):
+            return self.values[str(row)][column]
+
+        def GetRowCount(self):
+            return len(self.names)
+
+        def GetRowName(self, index):
+            return self.names[index]
+
+    return Table()
+
+
+def validate_runtime_transactions():
+    fake_gemrb = types.ModuleType("GemRB")
+    fake_gui = types.ModuleType("GUICommon")
+    stats = {
+        (1, 38): 18,
+        (1, 34): 3,
+        (1, 188): 0,
+        (1, 239): 0,
+    }
+    messages = []
+    tables = {
+        "psionpool": fake_table("psionpool.2da"),
+        "psionpowers": fake_table("psionpowers.2da"),
+        "psionaugment": fake_table("psionaugment.2da"),
+    }
+
+    fake_gui.GetClassRowName = lambda actor: "PSION_KINETICIST" if actor == 1 else ""
+    fake_gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
+    fake_gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
+    fake_gemrb.LoadTable = lambda name, *_args: tables[name.lower()]
+    fake_gemrb.DisplayString = lambda *args: messages.append(args)
+
+    old_gemrb = sys.modules.get("GemRB")
+    old_gui = sys.modules.get("GUICommon")
+    sys.modules["GemRB"] = fake_gemrb
+    sys.modules["GUICommon"] = fake_gui
+    try:
+        path = ROOT / "guiscripts" / "Psionics.py"
+        spec = importlib.util.spec_from_file_location("psion_runtime_test", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        selector = module.power_info("PS1ERAY")
+        assert selector["selector"] and selector["cost"] == 0
+        variant = module.power_info("PSRF03")
+        assert variant["variant"] and variant["parent"] == "PS1ERAY"
+        assert variant["cost"] == 3 and variant["value"] == "FIRE"
+
+        starting_pool = module.ensure_pool(1)
+        assert starting_pool == 17
+        assert module.begin_manifest(1, "PS1ERAY")
+        assert module.ensure_pool(1) == starting_pool
+
+        assert module.begin_manifest(1, "PSRF03")
+        assert module.ensure_pool(1) == starting_pool
+        assert module.begin_manifest(1, "PSRF03")
+        assert module.ensure_pool(1) == starting_pool - 3
+
+        # A level-3 manifester may not spend 4 PP on one power.
+        assert not module.can_manifest(1, "PSRF04")
+        assert not module.begin_manifest(1, "PSRF04")
+        assert messages
+
+        available = module.available_variants(1, "PS1ERAY")
+        assert "PSRF03" in available
+        assert "PSRF04" not in available
+    finally:
+        if old_gemrb is None:
+            sys.modules.pop("GemRB", None)
+        else:
+            sys.modules["GemRB"] = old_gemrb
+        if old_gui is None:
+            sys.modules.pop("GUICommon", None)
+        else:
+            sys.modules["GUICommon"] = old_gui
+
+
 def validate_gui_patcher():
     patcher_path = ROOT / "tools" / "install_guiscripts.py"
     spec = importlib.util.spec_from_file_location("psion_gui_patcher", patcher_path)
@@ -228,6 +349,7 @@ def validate_gui_patcher():
         assert module.patch(store, "rest")
         patched = actions.read_text(encoding="utf-8")
         assert "Psionics.begin_manifest" in patched
+        assert "Spellbook.GetSpellinfoSpells" in patched
         assert patched.count("Psionics.cancel_pending") == 2
         assert "import Psionics" in patched
         assert not module.patch(actions, "actions")
@@ -240,11 +362,13 @@ def main():
     validate_2da_schemas()
     validate_progressions()
     validate_level1_builders()
+    validate_augmentation_tables()
     validate_installer_references()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)
+    validate_runtime_transactions()
     validate_gui_patcher()
-    print("Psion 0.3 static, level-1 resource, and GUI-hook validation passed.")
+    print("Psion 0.3 static, augmentation, runtime, and GUI-hook validation passed.")
 
 
 if __name__ == "__main__":
