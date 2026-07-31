@@ -1,6 +1,6 @@
 2DA V1.0
 *
-SKILL               ABILITY ACCESS      COST BREAK1 BREAK2 BREAK3
+                    ABILITY ACCESS      COST BREAK1 BREAK2 BREAK3
 CONCENTRATION       CON     CORE        1    5      10     15
 PSICRAFT            INT     CORE        1    5      10     15
 SELF_DISCIPLINE     WIS     CORE        1    4      8      12
@@ -9,6 +9,6 @@ DEVICE_LORE         CHA     CORE        1    5      10     15
 AWARENESS           WIS     SEER        1    5      10     15
 ECTOPLASMIC_CRAFT   INT     SHAPER      1    5      10     15
 ENERGY_LORE         CON     KINETICIST  1    5      10     15
-HEAL                 WIS     EGOIST      1    5      10     15
+HEAL                WIS     EGOIST      1    5      10     15
 SPATIAL_NAVIGATION  DEX     NOMAD       1    5      10     15
 INFLUENCE           CHA     TELEPATH    1    5      10     15
