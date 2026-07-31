@@ -16,31 +16,56 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --output "$game"
 cp -R "$repo_root/psion" "$game/psion"
 
-# Snapshot every pre-existing resource that the installer edits. Successful
-# uninstall must restore these files byte-for-byte, including the active TLK.
+# Snapshot every pre-existing table that the installer edits. WeiDU restores
+# those resources byte-for-byte. DIALOG.TLK is different: uninstall preserves
+# the original entries but may leave newly allocated, now-unreferenced string
+# slots at the end. Record a semantic digest of the original entry prefix.
 python3 - "$game" "$baseline" <<'PY'
 from __future__ import annotations
 import hashlib
 import json
+import struct
 import sys
 from pathlib import Path
+
+
+def tlk_entries(path: Path) -> list[bytes]:
+    data = path.read_bytes()
+    assert data[:8] == b"TLK V1  ", path
+    count = struct.unpack_from("<I", data, 0x0A)[0]
+    text_offset = struct.unpack_from("<I", data, 0x0E)[0]
+    entries: list[bytes] = []
+    for index in range(count):
+        offset = 0x12 + index * 0x1A
+        flags = data[offset : offset + 2]
+        sound = data[offset + 2 : offset + 10]
+        volume_pitch = data[offset + 10 : offset + 18]
+        relative, length = struct.unpack_from("<II", data, offset + 18)
+        text = data[text_offset + relative : text_offset + relative + length]
+        entries.append(flags + sound + volume_pitch + struct.pack("<I", length) + text)
+    return entries
+
 
 root = Path(sys.argv[1])
 out = Path(sys.argv[2])
 paths = [
-    root / "lang/en_US/dialog.tlk",
-    *(
-        root / "override" / name
-        for name in (
-            "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
-            "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
-            "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
-        )
-    ),
+    root / "override" / name
+    for name in (
+        "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
+        "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
+        "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
+    )
 ]
+entries = tlk_entries(root / "lang/en_US/dialog.tlk")
 data = {
-    str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
-    for path in paths
+    "files": {
+        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in paths
+    },
+    "tlk": {
+        "count": len(entries),
+        "prefix_sha256": hashlib.sha256(b"".join(entries)).hexdigest(),
+    },
 }
 out.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -125,15 +150,43 @@ verify_uninstalled() {
 from __future__ import annotations
 import hashlib
 import json
+import struct
 import sys
 from pathlib import Path
 
+
+def tlk_entries(path: Path) -> list[bytes]:
+    data = path.read_bytes()
+    assert data[:8] == b"TLK V1  ", path
+    count = struct.unpack_from("<I", data, 0x0A)[0]
+    text_offset = struct.unpack_from("<I", data, 0x0E)[0]
+    entries: list[bytes] = []
+    for index in range(count):
+        offset = 0x12 + index * 0x1A
+        flags = data[offset : offset + 2]
+        sound = data[offset + 2 : offset + 10]
+        volume_pitch = data[offset + 10 : offset + 18]
+        relative, length = struct.unpack_from("<II", data, offset + 18)
+        text = data[text_offset + relative : text_offset + relative + length]
+        entries.append(flags + sound + volume_pitch + struct.pack("<I", length) + text)
+    return entries
+
+
 root = Path(sys.argv[1])
 baseline = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-for relative, expected in baseline.items():
+for relative, expected in baseline["files"].items():
     path = root / relative
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     assert actual == expected, (relative, expected, actual)
+
+# WeiDU generally does not compact DIALOG.TLK on uninstall. Verify that every
+# original entry is unchanged and in the same position; appended orphan slots
+# are acceptable and will be reused by future installations.
+entries = tlk_entries(root / "lang/en_US/dialog.tlk")
+original_count = baseline["tlk"]["count"]
+assert len(entries) >= original_count, (len(entries), original_count)
+prefix_hash = hashlib.sha256(b"".join(entries[:original_count])).hexdigest()
+assert prefix_hash == baseline["tlk"]["prefix_sha256"], prefix_hash
 
 override = root / "override"
 remaining = [path for path in override.iterdir() if path.is_file()]
@@ -151,7 +204,7 @@ for filename in (
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",
 ):
     assert not (override / filename).exists(), filename
-print("WeiDU fixture uninstall restored the baseline byte-for-byte.")
+print("WeiDU fixture uninstall restored tables and original TLK entries.")
 PY
 }
 
