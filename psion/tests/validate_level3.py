@@ -22,13 +22,22 @@ LEVEL3_REFS = {
 
 
 def section(text: str, resref: str) -> str:
-    start = text.index(f"ps_resref = ~{resref}~")
-    next_starts = [
-        text.find(f"ps_resref = ~{other}~", start + 1)
+    """Return the complete LAF block and following resource patch for a power."""
+    marker = text.index(f"ps_resref = ~{resref}~")
+    start = text.rfind("LAF psion_create_level3_power", 0, marker)
+    assert start >= 0, resref
+
+    next_markers = [
+        text.find(f"ps_resref = ~{other}~", marker + 1)
         for other in LEVEL3_REFS
     ]
-    next_starts = [position for position in next_starts if position >= 0]
-    return text[start : min(next_starts) if next_starts else len(text)]
+    next_markers = [position for position in next_markers if position >= 0]
+    if not next_markers:
+        return text[start:]
+
+    next_marker = min(next_markers)
+    end = text.rfind("LAF psion_create_level3_power", marker + 1, next_marker)
+    return text[start : end if end >= 0 else next_marker]
 
 
 def main() -> None:
