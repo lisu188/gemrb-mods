@@ -97,6 +97,21 @@ def validate_progressions() -> None:
                     assert powers[exclusive[0]]["level"] == maximum
 
 
+def validate_weidu_integer_syntax() -> None:
+    """Reject forms that WeiDU 251 does not accept in INT_VAR expressions."""
+    bare_negative = re.compile(
+        r"\b(?:parameter1|parameter2|duration|timing|target|range|speed|"
+        r"projectile|opcode|resist_dispel|dicenumber|dicesize|savingthrow|special)"
+        r"\s*=\s*-\d+"
+    )
+    negative_long = re.compile(r"\bWRITE_(?:S?LONG)\s+\S+\s+-\d+")
+
+    for path in sorted((ROOT / "lib").glob("*.tpa")):
+        text = path.read_text(encoding="utf-8")
+        assert not bare_negative.search(text), (path.name, bare_negative.search(text).group(0))
+        assert not negative_long.search(text), (path.name, negative_long.search(text).group(0))
+
+
 def validate_builders() -> None:
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     compatibility = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
@@ -121,7 +136,7 @@ def validate_builders() -> None:
         "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
         "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
         "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
-        "PS2AMOR": (level2, "psion_create_level2_power", ("opcode = 65", "parameter1 = -2")),
+        "PS2AMOR": (level2, "psion_create_level2_power", ("opcode = 65", "parameter1 = (0 - 2)")),
         "PS2BIOF": (level2, "psion_create_level2_power", ("ps_resist_opcode = 86", "ps_resist_opcode <= 89")),
         "PS2AAFF": (level2, "psion_create_level2_power", ("opcode = 214", "resource = ~PS2AAFF~")),
         "PS2DSWP": (level2, "psion_create_level2_power", ("opcode = 124", "parameter2 = 3")),
@@ -172,6 +187,7 @@ def validate_installer() -> None:
 def main() -> None:
     validate_tables()
     validate_progressions()
+    validate_weidu_integer_syntax()
     validate_builders()
     validate_augmentation()
     validate_installer()
