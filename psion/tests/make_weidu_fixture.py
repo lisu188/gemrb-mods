@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Build a small, reproducible BGEE-like game directory for WeiDU CI.
+"""Build reproducible BG-family WeiDU installation fixtures.
 
-The fixture starts from GemRB's official demo, overlays GemRB's shipped BG2 and
-BGEE rule tables, adds the BGEE autodetection marker, and regenerates CHITIN.KEY.
-It is intentionally only an installer fixture: it exercises real WeiDU resource
-loading, table patching, SPL/CRE creation, TLK writes, backup and uninstall.
+The fixture starts from GemRB's official demo, overlays pinned GemRB rule data,
+and then selects one of the class-table layouts supported by the installer:
+
+- ``normalized``: released GemRB's six-field split CLASSTEXT layout;
+- ``native``: Enhanced Edition's ten-field split CLASSTEXT layout;
+- ``legacy``: older GemRB's nineteen-field combined CLASSES layout.
+
+The result is an installer fixture, not a playable campaign. It exercises real
+WeiDU resource loading, table patching, SPL/CRE creation, TLK writes, backup,
+uninstall and reinstall without distributing proprietary game data.
 """
 
 from __future__ import annotations
@@ -15,20 +21,16 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+LAYOUTS = ("normalized", "native", "legacy")
+
 
 def lowercase_relative(path: Path) -> Path:
-    """Return a case-normalized relative path for Infinity Engine resources."""
+    """Return a case-normalized relative path for IE resource lookup."""
     return Path(*(part.lower() for part in path.parts))
 
 
 def normalize_tree_case(directory: Path) -> None:
-    """Collapse Linux case variants into one deterministic lowercase tree.
-
-    Infinity Engine resource lookup is case-insensitive, while the Linux CI
-    filesystem is not. GemRB's source tree contains files from several game
-    families whose names may differ only by case. Keeping both lets CHITIN.KEY
-    choose an arbitrary duplicate, so normalize before applying family overlays.
-    """
+    """Collapse Linux case variants into one deterministic lowercase tree."""
     if not directory.is_dir():
         return
 
@@ -78,13 +80,83 @@ def write_2da(
     path.write_text("\n".join(lines) + "\n", encoding="ascii")
 
 
+def read_2da_rows(path: Path) -> list[list[str]]:
+    """Return ordinary data rows, excluding blank and comment lines."""
+    rows: list[list[str]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[3:]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "//")):
+            continue
+        rows.append(stripped.split())
+    return rows
+
+
+def configure_class_layout(override: Path, layout: str) -> None:
+    """Convert the overlaid GemRB tables to the requested compatibility shape."""
+    if layout == "normalized":
+        return
+
+    if layout == "native":
+        source_rows = read_2da_rows(override / "clastext.2da")
+        native_rows: list[tuple[str, ...]] = []
+        for row in source_rows:
+            if len(row) < 6 or not row[1].isdigit():
+                continue
+            # Native EE adds biography, fallen-state, brief-description and
+            # fallen-notice columns after the normalized five data fields.
+            native_rows.append(tuple(row[:6] + ["-1", "0", row[5], "-1"]))
+        if not native_rows:
+            raise RuntimeError("unable to derive native CLASSTEXT fixture rows")
+        write_2da(
+            override / "clastext.2da",
+            (
+                "CLASSID", "KITID", "LOWER", "DESCSTR", "MIXED",
+                "BIOGRAPHY", "FALLEN", "BRIEFDESC", "FALLEN_NOTICE",
+            ),
+            tuple(native_rows),
+            default="*",
+        )
+        return
+
+    if layout == "legacy":
+        # Older GemRB combines text, save, hit-point and usability metadata in
+        # one table. The rows below mirror the released v0.9.3 BG2 schema.
+        for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
+            (override / filename).unlink(missing_ok=True)
+        write_2da(
+            override / "classes.2da",
+            (
+                "NAME_REF", "DESC_REF", "CAP_REF", "SAVE", "MULTI", "ID",
+                "HP", "USABILITY", "MC_WAS_ID", "HUMAN", "ELF", "HALF_ELF",
+                "DWARF", "HALFLING", "GNOME", "HALFORC", "STREXTRA",
+                "CONBONLVL",
+            ),
+            (
+                (
+                    "SORCERER", "45849", "45866", "45856", "SAVEWIZ", "0",
+                    "19", "HPWIZ", "0x40000", "-1", "1", "1", "1", "0",
+                    "0", "0", "0", "0", "10",
+                ),
+                (
+                    "MONK", "45851", "45867", "45858", "SAVEMONK", "0",
+                    "20", "HPMONK", "0x20000000", "-1", "1", "0", "0", "0",
+                    "0", "0", "0", "0", "9",
+                ),
+            ),
+            default="*",
+        )
+        return
+
+    raise ValueError(f"unsupported fixture layout: {layout}")
+
+
 def require_files(root: Path, names: tuple[str, ...]) -> None:
     missing = [name for name in names if not (root / name).is_file()]
     if missing:
         raise RuntimeError(f"fixture is missing required resources: {', '.join(missing)}")
 
 
-def build_fixture(gemrb_root: Path, output: Path) -> None:
+def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     demo = gemrb_root / "demo"
     if not demo.is_dir():
         raise RuntimeError(f"GemRB demo directory not found: {demo}")
@@ -97,10 +169,8 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
     override.mkdir(parents=True, exist_ok=True)
     normalize_tree_case(override)
 
-    # GemRB's normalized BG2 tables expose the split class layout used by
-    # released GemRB versions. BGEE-specific files override the shared/BG2
-    # versions when present. Lowercasing each destination reproduces the game
-    # engine's case-insensitive overwrite behavior on Linux.
+    # Lowercasing destinations reproduces the engine's case-insensitive
+    # overwrite behavior on Linux.
     unhardcoded = gemrb_root / "gemrb" / "unhardcoded"
     for directory in ("shared", "bg2", "bgee"):
         merge_tree(unhardcoded / directory, override)
@@ -117,8 +187,8 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
     # installer-only fixture; the resource only has to exist in CHITIN.KEY.
     (override / "oh1000.are").write_bytes(b"AREAV1.0")
 
-    # Astral Construct currently clones WOLF.CRE. Reuse a valid demo creature
-    # body so WeiDU's CRE name patches operate on a structurally valid resource.
+    # Astral Construct currently clones WOLF.CRE. Reuse a structurally valid
+    # demo creature body for the installation test.
     creature_candidates = sorted(
         path for path in output.rglob("*") if path.is_file() and path.suffix.lower() == ".cre"
     )
@@ -126,9 +196,6 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
         raise RuntimeError("GemRB demo contains no CRE resource for WOLF.CRE")
     shutil.copy2(creature_candidates[0], override / "wolf.cre")
 
-    # These symbols are resolved while the purpose-built powers are generated.
-    # The fixture values only need to be stable and distinct; gameplay values
-    # are supplied by the actual target game's IDS resources.
     write_ids(
         override / "missile.ids",
         (
@@ -141,24 +208,14 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
     )
     write_ids(
         override / "dmgtype.ids",
-        (
-            (0, "MAGIC"),
-            (1, "ELECTRICITY"),
-            (2, "SLASHING"),
-        ),
+        ((0, "MAGIC"), (1, "ELECTRICITY"), (2, "SLASHING")),
     )
 
     # The demo intentionally omits several original-game tables. Supply only
-    # the structural subset required by the class installer. Values are chosen
-    # to exercise APPEND and APPEND_COL, not to model a playable campaign.
+    # the structural subset required by the class installer.
     write_ids(
         override / "class.ids",
-        (
-            (1, "MAGE"),
-            (2, "FIGHTER"),
-            (19, "SORCERER"),
-            (20, "MONK"),
-        ),
+        ((1, "MAGE"), (2, "FIGHTER"), (19, "SORCERER"), (20, "MONK")),
     )
     write_2da(
         override / "alignmnt.2da",
@@ -177,49 +234,36 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
     )
 
     # class-common.tpa appends exactly fifty proficiency values per discipline.
-    # A one-column, fifty-row fixture exercises the full APPEND_COL path.
     write_2da(
         override / "weapprof.2da",
         ("SORCERER",),
         tuple((f"PROF{index:02d}", "0") for index in range(50)),
     )
 
+    configure_class_layout(override, layout)
+
     # A real GemRB run writes this file. Point at the fixture override so WeiDU
-    # also exercises GemRB_Data_Path parsing without depending on host paths.
+    # exercises GemRB_Data_Path parsing without depending on host paths.
     (output / "gemrb_path.txt").write_text(
         f"GemRB_Data_Path = {override.resolve()}\n",
         encoding="utf-8",
     )
 
-    require_files(
-        override,
-        (
-            "classes.2da",
-            "clastext.2da",
-            "clsrcreq.2da",
-            "hpclass.2da",
-            "class.ids",
-            "alignmnt.2da",
-            "weapprof.2da",
-            "profs.2da",
-            "xpcap.2da",
-            "avprefc.2da",
-            "qslots.2da",
-            "clskills.2da",
-            "wolf.cre",
-            "missile.ids",
-            "dmgtype.ids",
-            "oh1000.are",
-        ),
-    )
+    required = [
+        "classes.2da", "class.ids", "alignmnt.2da", "weapprof.2da",
+        "profs.2da", "xpcap.2da", "avprefc.2da", "qslots.2da",
+        "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids", "oh1000.are",
+    ]
+    if layout != "legacy":
+        required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
+    require_files(override, tuple(required))
 
-    # Keep the fixture's class-table shape visible in CI. This is deliberately
-    # concise and turns future upstream table changes into actionable output.
-    class_text_lines = (override / "clastext.2da").read_text(
+    preview_name = "classes.2da" if layout == "legacy" else "clastext.2da"
+    preview_lines = (override / preview_name).read_text(
         encoding="utf-8", errors="replace"
     ).splitlines()
-    print("Fixture CLASSTEXT.2DA preview:")
-    for line in class_text_lines[:10]:
+    print(f"Fixture layout={layout} {preview_name.upper()} preview:")
+    for line in preview_lines[:10]:
         print(f"  {line}")
 
     key_script = gemrb_root / "tools" / "demo_key_file.py"
@@ -232,9 +276,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gemrb-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--layout", choices=LAYOUTS, default="normalized")
     args = parser.parse_args()
-    build_fixture(args.gemrb_root.resolve(), args.output.resolve())
-    print(f"WeiDU BGEE fixture created at {args.output.resolve()}")
+    build_fixture(args.gemrb_root.resolve(), args.output.resolve(), args.layout)
+    print(f"WeiDU {args.layout} fixture created at {args.output.resolve()}")
 
 
 if __name__ == "__main__":
