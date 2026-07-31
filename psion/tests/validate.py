@@ -17,13 +17,46 @@ DISCIPLINE_CLABS = {
 }
 
 
+def table_lines(name):
+    return (ROOT / "tables" / name).read_text(encoding="utf-8").splitlines()
+
+
+def header(name):
+    return table_lines(name)[2].split()
+
+
 def rows(name):
-    data = (ROOT / "tables" / name).read_text(encoding="utf-8").splitlines()
     return [
         line.split()
-        for line in data[3:]
+        for line in table_lines(name)[3:]
         if line.strip() and not line.lstrip().startswith(("#", "//"))
     ]
+
+
+def validate_2da_schemas():
+    expected = {
+        "psionpowers.2da": [
+            "NAME",
+            "LEVEL",
+            "DISCIPLINE",
+            "BASE_COST",
+            "AUGMENT_STEP",
+            "TEMPLATE",
+        ],
+        "psiondisc.2da": ["DISCIPLINE", "SCHOOL", "SPECIAL_SKILL"],
+        "psionskills.2da": [
+            "ABILITY",
+            "ACCESS",
+            "COST",
+            "BREAK1",
+            "BREAK2",
+            "BREAK3",
+        ],
+        "psionfeats.2da": ["MIN_LEVEL", "FOCUS", "PP_SURCHARGE"],
+    }
+    for filename, columns in expected.items():
+        assert header(filename) == columns, (filename, header(filename), columns)
+        assert all(len(row) == len(columns) + 1 for row in rows(filename)), filename
 
 
 def validate_progressions():
@@ -140,6 +173,7 @@ def validate_gui_patcher():
 
 
 def main():
+    validate_2da_schemas()
     validate_progressions()
     validate_installer_references()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
