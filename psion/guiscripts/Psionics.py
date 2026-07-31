@@ -5,6 +5,11 @@ Power points are stored in GemRB's user-defined actor stat 239. Manifestation
 uses a two-phase transaction: the first SpellPressed callback reserves a power,
 while the second callback commits its cost. Selector resources are free; their
 chosen child resources carry the authoritative augmented PP cost.
+
+Opcode 214 places selector children in GemRB's temporary spellinfo list. The
+``filter_spellinfo`` hook removes Psion variants that the selected actor cannot
+currently afford or legally augment to, while leaving unrelated temporary
+spell selectors untouched.
 """
 import GemRB
 
@@ -166,39 +171,74 @@ def power_info(resref):
     return base
 
 
-def can_manifest(actor, resref):
-    """Check class, discipline, ability score, level and pool requirements."""
-    info = power_info(resref)
+def _meets_base_requirements(actor, info):
+    """Check restrictions shared by a selector and all of its child variants."""
     actor_discipline = discipline(actor)
     if not info or not actor_discipline:
         return False
     if info["discipline"] not in ("GENERAL", actor_discipline):
         return False
-    if GemRB.GetPlayerStat(actor, INT_STAT) < 10 + info["level"]:
+    return GemRB.GetPlayerStat(actor, INT_STAT) >= 10 + info["level"]
+
+
+def _variant_is_affordable(actor, info):
+    """Check the D&D 3e spending cap and the actor's current PP reserve."""
+    return (
+        info["cost"] <= manifester_level(actor)
+        and ensure_pool(actor) >= info["cost"]
+    )
+
+
+def can_manifest(actor, resref):
+    """Check class, discipline, ability score, level and pool requirements."""
+    info = power_info(resref)
+    if not _meets_base_requirements(actor, info):
         return False
     if info["selector"]:
-        return True
-    if info["cost"] > manifester_level(actor):
-        return False
-    return ensure_pool(actor) >= info["cost"]
+        # A selector is useful only when at least one child can actually be
+        # manifested. This prevents an empty choice list at zero PP.
+        return bool(available_variants(actor, info["resref"], check_parent=False))
+    return _variant_is_affordable(actor, info)
 
 
-def available_variants(actor, parent):
-    """Return legal child resrefs for a future dedicated augmentation GUI."""
+def available_variants(actor, parent, check_parent=True):
+    """Return legal child resrefs for the selected actor, preserving 2DA order."""
+    parent_info = power_info(parent)
     table = _augment_table()
-    if not table or not can_manifest(actor, parent):
+    if not table or not _meets_base_requirements(actor, parent_info):
         return []
+    if check_parent and not parent_info.get("selector", False):
+        return []
+
     available = []
     try:
         for index in range(table.GetRowCount()):
             resref = table.GetRowName(index)
             if str(table.GetValue(resref, "PARENT")).upper() != parent.upper():
                 continue
-            if can_manifest(actor, resref):
+            info = power_info(resref)
+            if info and _meets_base_requirements(actor, info) and _variant_is_affordable(actor, info):
                 available.append(resref.upper())
     except Exception:
         return []
     return available
+
+
+def filter_spellinfo(actor, resrefs):
+    """Filter temporary opcode-214 choices without affecting other mods.
+
+    Non-Psion resources and ordinary Psion powers are returned unchanged. Only
+    entries registered as children in PSIONAUGMENT.2DA are subject to the
+    current PP, manifester-level, discipline and Intelligence checks.
+    """
+    filtered = []
+    for resref in resrefs:
+        info = power_info(resref)
+        if not info or not info.get("variant", False):
+            filtered.append(resref)
+        elif can_manifest(actor, resref):
+            filtered.append(resref)
+    return filtered
 
 
 def begin_manifest(actor, resref):
