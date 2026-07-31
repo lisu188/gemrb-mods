@@ -1,6 +1,6 @@
 // Allocate six consecutive class IDs above every class already registered by
-// the game or earlier mods. Direct READ_2DA_ENTRY calls avoid cache-name and
-// row-count ambiguity during an actual WeiDU installation.
+// the game or earlier mods. COPY_EXISTING executes in patch scope; values needed
+// by later action code must be exported explicitly through INNER_ACTION.
 OUTER_SET ps_max_id = (0 - 1)
 OUTER_SET ps_split = 0
 OUTER_SET ps_text_cols = 0
@@ -11,26 +11,37 @@ ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
   // layouts keep the numeric CLASSID in data column 1.
   OUTER_SET ps_split = 1
   COPY_EXISTING ~clastext.2da~ ~override~
-    COUNT_2DA_COLS ps_text_cols
-    COUNT_2DA_ROWS ps_text_cols ps_text_rows
+    COUNT_2DA_COLS ps_detect_cols
+    COUNT_2DA_ROWS ps_detect_cols ps_text_rows
+
+    // class-layout.tpa needs the detected shape after this patch block exits.
+    INNER_ACTION BEGIN
+      OUTER_SET ps_text_cols = %ps_detect_cols%
+    END
+
     FOR (ps_i = 0; ps_i < ps_text_rows; ++ps_i) BEGIN
-      READ_2DA_ENTRY ps_i 1 ps_text_cols ps_id
+      READ_2DA_ENTRY ps_i 1 ps_detect_cols ps_id
       PATCH_IF IS_AN_INT ~%ps_id%~ AND ps_id > ps_max_id BEGIN
-        SET ps_max_id = ps_id
+        // SET would update only the current patch context. Export the maximum
+        // immediately so subsequent rows and later action code see it.
+        INNER_ACTION BEGIN
+          OUTER_SET ps_max_id = %ps_id%
+        END
       END
     END
   BUT_ONLY
 END ELSE BEGIN
   // Legacy GemRB stores the class identifier in data column 6 of the combined
   // CLASSES.2DA table.
-  OUTER_SET ps_cols = 0
   COPY_EXISTING ~classes.2da~ ~override~
-    COUNT_2DA_COLS ps_cols
-    COUNT_2DA_ROWS ps_cols ps_class_rows
+    COUNT_2DA_COLS ps_detect_cols
+    COUNT_2DA_ROWS ps_detect_cols ps_class_rows
     FOR (ps_i = 0; ps_i < ps_class_rows; ++ps_i) BEGIN
-      READ_2DA_ENTRY ps_i 6 ps_cols ps_id
+      READ_2DA_ENTRY ps_i 6 ps_detect_cols ps_id
       PATCH_IF IS_AN_INT ~%ps_id%~ AND ps_id > ps_max_id BEGIN
-        SET ps_max_id = ps_id
+        INNER_ACTION BEGIN
+          OUTER_SET ps_max_id = %ps_id%
+        END
       END
     END
   BUT_ONLY
