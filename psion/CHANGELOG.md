@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0-alpha
+
+- Added a backup-safe `Spellbook.py` GUI hook for temporary spell selectors.
+- Filtered Psion augmentation children by current PP, manifester level,
+  discipline and Intelligence before selector buttons are displayed.
+- Preserved all non-Psion opcode-214 choices and their original order.
+- Disabled augmented parent powers when no legal child can be manifested,
+  preventing empty selectors at zero PP.
+- Retained final validation when a child is selected, preventing overspending
+  when PP changes after the selector was opened.
+- Expanded fake-GemRB tests for mixed third-party/Psion spellinfo lists,
+  zero-pool behavior and filtered selector ordering.
+- Expanded GUI patcher fixtures to cover install, idempotence, backup and
+  uninstall behavior for `Spellbook.py`.
+- Documented all four patched GemRB GUI scripts and the selector data flow.
+
 ## 0.3.0-alpha
 
 - Replaced all twelve level-1 template clones with purpose-built SPL resources.
