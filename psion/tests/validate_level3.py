@@ -47,8 +47,8 @@ def main() -> None:
     table = (ROOT / "tables" / "psionpowers.2da").read_text(encoding="utf-8")
 
     assert "level3-powers.tpa" in driver
-    assert "psion_level > 3" in prototype
-    assert "psion_level > 2" not in prototype
+    assert "psion_level > 4" in prototype
+    assert "psion_level > 3" not in prototype
     assert "WRITE_LONG 0x34 3" in builder
     assert "WRITE_LONG 0x18 ps_flags" in builder
 
@@ -85,7 +85,6 @@ def main() -> None:
     for resref in hostile:
         assert "ps_flags = psion_level3_hostile_flags" in section(builder, resref)
 
-    # Buffs that would otherwise stack are protected by opcode 321.
     for resref in ("PS3MBAR", "PS3TSGT", "PS3DANG", "PS3HUST"):
         assert "opcode = 321" in section(builder, resref)
 
