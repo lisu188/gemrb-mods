@@ -10,7 +10,7 @@ Enhanced Edition campaigns running through GemRB:
 - Nomad — Psychoportation
 - Telepath — Telepathy
 
-## Implemented in 0.4.0-alpha
+## Implemented in 0.5.0-alpha
 
 - Six dynamically allocated custom class rows.
 - Released combined and newer split GemRB class-table layouts.
@@ -19,94 +19,100 @@ Enhanced Edition campaigns running through GemRB:
 - Persistent current pool in GemRB actor stat 239.
 - Full restoration after normal or temple rest.
 - Two-phase manifestation accounting: reserve before targeting and charge only
-  after GemRB confirms the casting flow, avoiding cancelled-target costs and
-  duplicate callback charges.
-- Runtime validation of class, discipline, Intelligence, manifester level and
-  available power points.
-- Base costs 1/3/5/7/9 for power levels 1–5.
-- Manifester-level, discipline, skill, feat and augmentation metadata tables.
-- Separate fixed progression for every discipline. Each class knows 19 powers
-  by level 9 and gains its exclusive discipline power at levels 1, 3, 5, 7
-  and 9.
-- Purpose-built level-1 resources for all twelve first-tier powers.
+  after GemRB confirms the casting flow.
+- Runtime validation of discipline, Intelligence, manifester level and current
+  power points.
+- Separate fixed progression for every discipline, reaching 19 powers known at
+  BG1 level 9.
+- Purpose-built resources for all twelve level-1 and all twelve level-2 powers.
 - Point-scaled augmentation for Energy Ray, Mind Thrust and Vigor.
-- Fifty-four augmentation child resources with runtime cost enforcement.
-- Runtime filtering of opcode-214 choice lists so unaffordable Psion variants
-  are hidden without changing unrelated selectors from the base game or other
-  mods.
+- Choice-based Animal Affinity with Strength, Dexterity and Constitution forms.
+- Fifty-seven selector children with authoritative PP costs.
+- Runtime filtering of opcode-214 lists so only currently legal variants are
+  shown, while unrelated base-game and third-party selectors remain unchanged.
+- Backup-safe GUI hooks with uninstall support.
 - Static progression, 2DA schema, SPL-builder, fake-runtime transaction and
   GUI-patcher fixture tests.
 
-## Exact level-1 vertical slice
+## Power-point rules
 
-The following powers no longer inherit unrelated effects from existing wizard
-or priest spells:
+The base costs are 1, 3, 5, 7 and 9 PP for power levels 1–5. A manifestation
+cannot spend more PP than the character's Psion level. Selectors cost nothing;
+the selected child resource carries the full cost and is validated twice:
+when the choice list is built and again when the child is manifested.
 
-- **Energy Ray:** opens an energy/cost selector described below.
-- **Mind Thrust:** opens a 1–9 PP damage and save-DC selector.
-- **Inertial Armor:** +4 Armor Class for one hour, non-stacking.
-- **Vigor:** opens a 1–9 PP temporary-HP-equivalent selector.
-- **Force Screen:** +2 Armor Class and Magic Missile protection for one turn.
+PP are reserved on the first GemRB casting callback and deducted on the matching
+second callback. Cancelling target selection does not intentionally consume PP,
+and a duplicate callback cannot intentionally charge the same manifestation
+twice.
+
+## Purpose-built level-1 powers
+
+- **Energy Ray:** energy and cost selector, 1–9 PP.
+- **Mind Thrust:** 1d10 per PP; save vs spell negates.
+- **Inertial Armor:** +4 Armor Class for one hour.
+- **Vigor:** 5 temporary-HP-equivalent points per PP.
+- **Force Screen:** +2 Armor Class and Magic Missile protection.
 - **Empty Mind:** +2 to all saves for one round.
 - **Precognition:** +1 attack, Armor Class and saves for three rounds.
-- **Astral Construct:** summons a temporary controlled construct prototype.
-- **Energy Push:** 1d6 electrical damage plus save-negated knockback.
+- **Astral Construct:** summons the current construct prototype.
+- **Energy Push:** electrical damage plus save-negated knockback.
 - **Thicken Skin:** +1 Armor Class for one turn.
-- **Burst:** +30% movement speed for one round.
-- **Psionic Charm:** charms one humanoid for one turn, save vs spell negates.
+- **Burst:** +30 percent movement for one round.
+- **Psionic Charm:** one-turn charm, save negates.
 
-Several effects are deliberate Infinity Engine approximations. BG has no
-separate Will save, no native temporary-hit-point pool, and no fully generic
-D&D 3e construct body. Empty Mind therefore modifies all five saves, Vigor
-uses timed maximum/current HP effects, and Astral Construct currently uses a
-renamed wolf-derived creature that will be replaced by a dedicated CRE.
+## Purpose-built level-2 powers
 
-## Implemented augmentation
+- **Concealing Amorpha:** Blur, +2 Armor Class and +1 saves for one turn.
+- **Concussion Blast:** 2d6 magical force damage, no save.
+- **Detect Hostile Intent:** detects invisibility, prevents backstab and grants
+  +2 Armor Class for one turn.
+- **Thought Shield:** +4 saves and 20 percent magical-damage resistance for
+  three rounds.
+- **Biofeedback:** 10 percent resistance to all four physical damage types for
+  one turn.
+- **Swarm of Crystals:** 3d4 slashing damage in a cone, save vs breath for half.
+- **Clairvoyant Sense:** detects invisibility and grants +20 Find Traps for five
+  rounds; quest scripts may add remote information.
+- **Psionic Repair Damage:** heals 3d8+3. Construct-only target filtering remains
+  a runtime task, so the alpha can target any ally.
+- **Energy Missile:** 3d6 electrical damage with a save for half. The current
+  area projectile approximates three discrete tabletop targets.
+- **Animal Affinity:** choose +4 Strength, Dexterity or Constitution for one
+  turn. Changing the choice refreshes the power rather than stacking forms.
+- **Dimension Swap:** exchanges the manifester and target positions using
+  GemRB's extended teleport opcode behavior.
+- **Brain Lock:** holds one target for three rounds, save negates.
 
-Every augmented parent is a free opcode-214 selector. The chosen child resource
-reserves its total cost on the first casting callback and spends it on the
-matching second callback. Total cost cannot exceed manifester level and must be
-available in the current PP pool.
+## Engine approximations
 
-### Energy Ray
+The Infinity Engine does not directly expose every D&D 3e mechanic. These
+approximations are deliberate and documented in the in-game descriptions:
 
-Energy Ray offers four energy types at total costs from 1 through 9 PP:
+- Will saves use save vs spell or all five BG saving throws.
+- Vigor uses timed current/maximum HP effects instead of native temporary HP.
+- Concealment uses Blur plus AC and save bonuses instead of a generic miss
+  chance percentage.
+- Biofeedback uses percentage resistance rather than flat damage reduction.
+- Repair Construct is not yet restricted to construct creatures.
+- Energy Missile currently uses an area burst rather than three individually
+  selected creatures.
+- Astral Construct still uses a temporary wolf-derived body.
 
-- **Fire:** one d6 per PP, plus 1 damage per die.
-- **Cold:** one d6 per PP.
-- **Electricity:** one d6 per PP.
-- **Sonic:** one d4 per PP, represented as magical damage by the engine.
-
-### Mind Thrust
-
-Mind Thrust deals one d10 per PP. A save vs spell negates all damage. The save
-penalty improves by 1 for every 2 PP spent beyond the first, approximating the
-D&D 3e augmentation that raises the power's save DC.
-
-### Vigor
-
-Vigor grants 5 temporary-hit-point-equivalent points per PP for one turn. Every
-variant removes the effects of all nine other Vigor variants before applying
-its own value, so changing the amount refreshes the power instead of stacking
-multiple pools.
-
-### Filtered choice lists
+## Filtered choice lists
 
 GemRB stores opcode-214 choices in a temporary spellinfo list. The installed
 `Spellbook.py` hook passes that list through `Psionics.filter_spellinfo` before
-buttons are created. Only resources registered as children in
-`PSIONAUGMENT.2DA` are filtered. Ordinary temporary spell selectors remain in
-their original order and are not modified.
+buttons are created. Only rows registered in `PSIONAUGMENT.2DA` are filtered.
 
-For a level-3 Psion with 2 PP remaining, the selector therefore displays only
-1- and 2-PP children. At zero PP the augmented parent is rejected instead of
-opening an empty choice list. The final child resource is validated again when
-selected, so a pool change between opening the list and choosing a power cannot
-overspend points.
+For a level-3 Psion with 2 PP remaining, Energy Ray, Mind Thrust and Vigor show
+only their 1- and 2-PP children. Animal Affinity requires 3 PP, so it is hidden
+or rejected when fewer than 3 PP remain. At zero PP an augmented parent does
+not open an empty selector.
 
 ## Current level 1–9 progression
 
-All disciplines share a deliberately conservative set of general powers:
+All disciplines share a conservative fixed alpha progression:
 
 - Level 1: Energy Ray, Inertial Armor, first discipline power
 - Level 2: Mind Thrust, Vigor
@@ -118,25 +124,8 @@ All disciplines share a deliberately conservative set of general powers:
 - Level 8: Freedom of Movement, Intellect Fortress
 - Level 9: Power Resistance, fifth discipline power
 
-This reaches the D&D 3e totals of 3, 5, 7, 9, 11, 13, 15, 17 and 19 powers
-known while keeping every specialist isolated from the other five discipline
-lists.
-
-## Important alpha limitations
-
-Level-1 powers now have dedicated resources, but powers of levels 2–5 still
-clone thematically similar Infinity Engine spells. Most powers still lack
-augmentation variants and several tabletop secondary effects require engine
-approximations.
-
-Power selection is fixed in this alpha. A later level-up interface will allow
-players to choose general powers while enforcing one discipline power whenever
-a new tier becomes available, plus replacement at levels 4/8/12/16/20.
-
-The cancellation-safe point transaction and filtered selector are covered by
-GUI-script and fake-runtime fixtures, but both still require an in-game test
-against the exact GemRB build used by the player. No complete WeiDU/GemRB
-installation was available during development.
+This matches the D&D 3e cumulative totals of 3, 5, 7, 9, 11, 13, 15, 17 and 19
+powers known while preventing access to another specialist's discipline list.
 
 ## Installation
 
@@ -157,13 +146,19 @@ Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE and EET under GemRB.
 Original BG1/TotSC are excluded because they lack native Sorcerer/Monk-era
 class data used by this implementation.
 
+## Important alpha limitations
+
+Powers of levels 3–5 still clone thematically similar game spells. Power
+selection is fixed rather than choice-based. The GUI hooks, extended teleport
+behavior and generated resources still require a complete WeiDU installation
+and in-game test against the intended GemRB build.
+
 ## Development priorities
 
-1. Exact level-2 power resources and their legal augmentation paths.
-2. Add augmentation variants to discipline powers and remaining general powers.
-3. Replace the temporary Astral Construct body with a dedicated CRE and AI.
+1. Automated WeiDU installation fixture and real GemRB smoke test.
+2. Exact level-3 power resources and augmentation.
+3. Construct-only targeting and a dedicated Astral Construct CRE/AI.
 4. Choice-based power learning and replacement at levels 4/8/12/16/20.
-5. Current/max pool display on the action and character-record interfaces.
+5. Current/max PP display on action and character-record interfaces.
 6. Psionic focus, feats and skill allocation UI.
 7. Psicrystal, psionic items and enemy users.
-8. Automated WeiDU installation fixtures and GemRB integration tests.
