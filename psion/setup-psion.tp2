@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~0.4.0-alpha~
+VERSION ~0.5.0-alpha~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -20,6 +20,7 @@ COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
 COPY ~psion/tables/ps1mthr.2da~ ~override/ps1mthr.2da~
 COPY ~psion/tables/ps1vigr.2da~ ~override/ps1vigr.2da~
+COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
 // Fixed alpha power selections. Each discipline learns 19 powers by level 9,
