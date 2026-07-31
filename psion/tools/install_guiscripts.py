@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Install or remove documented GemRB GUI hooks for the Psion subsystem.
 
-The patcher modifies only four shared scripts and stores byte-for-byte backups:
+The patcher modifies four shared scripts and stores byte-for-byte backups:
 ActionsWindow handles PP transactions and reusable Psion innate charges,
 Spellbook filters augmentation choices, and MenuWindow/GUISTORE restore PP after
-ordinary and temple resting.
+ordinary and temple resting. It also installs the standalone Psionics runtime
+module into the selected GemRB GUIScripts directory.
 """
 from pathlib import Path
 import argparse
@@ -158,6 +159,48 @@ def remove(path: Path) -> bool:
     return False
 
 
+def _runtime_paths(target: Path) -> tuple[Path, Path]:
+    return (
+        target.with_suffix(target.suffix + ".psion.bak"),
+        target.with_suffix(target.suffix + ".psion.created"),
+    )
+
+
+def install_runtime(source: Path, target: Path) -> bool:
+    """Install Psionics.py while preserving any pre-existing module."""
+    if not source.is_file():
+        raise RuntimeError(f"Missing Psion runtime source {source}")
+
+    backup, created = _runtime_paths(target)
+    source_bytes = source.read_bytes()
+    if target.is_file() and target.read_bytes() == source_bytes:
+        return False
+
+    if target.exists():
+        if not backup.exists() and not created.exists():
+            shutil.copy2(target, backup)
+    else:
+        created.write_text("created by the Psion mod\n", encoding="utf-8")
+
+    shutil.copy2(source, target)
+    return True
+
+
+def remove_runtime(target: Path) -> bool:
+    """Restore a replaced runtime module or remove one created by this mod."""
+    backup, created = _runtime_paths(target)
+    if backup.exists():
+        shutil.copy2(backup, target)
+        backup.unlink()
+        created.unlink(missing_ok=True)
+        return True
+    if created.exists():
+        target.unlink(missing_ok=True)
+        created.unlink()
+        return True
+    return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("guiscripts", type=Path)
@@ -169,10 +212,25 @@ def main() -> None:
         (args.guiscripts / "MenuWindow.py", "rest"),
         (args.guiscripts / "GUISTORE.py", "rest"),
     ]
-    for path, kind in targets:
+    for path, _ in targets:
         if not path.exists():
             raise SystemExit(f"Missing {path}")
-        changed = remove(path) if args.uninstall else patch(path, kind)
+
+    runtime_source = Path(__file__).resolve().parents[1] / "guiscripts" / "Psionics.py"
+    runtime_target = args.guiscripts / "Psionics.py"
+
+    if args.uninstall:
+        for path, _ in targets:
+            changed = remove(path)
+            print(("updated " if changed else "unchanged ") + str(path))
+        changed = remove_runtime(runtime_target)
+        print(("updated " if changed else "unchanged ") + str(runtime_target))
+        return
+
+    changed = install_runtime(runtime_source, runtime_target)
+    print(("updated " if changed else "unchanged ") + str(runtime_target))
+    for path, kind in targets:
+        changed = patch(path, kind)
         print(("updated " if changed else "unchanged ") + str(path))
 
 
