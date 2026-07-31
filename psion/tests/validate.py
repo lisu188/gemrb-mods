@@ -189,6 +189,7 @@ def validate_augmentation_tables():
 
 def validate_installer_references():
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
+    assert "VERSION ~0.4.0-alpha~" in setup
     for table in (
         "psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
         "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
