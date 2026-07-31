@@ -2,8 +2,9 @@
 """Install or remove documented GemRB GUI hooks for the Psion subsystem.
 
 The patcher modifies only four shared scripts and stores byte-for-byte backups:
-ActionsWindow handles PP transactions, Spellbook filters augmentation choices,
-and MenuWindow/GUISTORE restore PP after ordinary and temple resting.
+ActionsWindow handles PP transactions and reusable Psion innate charges,
+Spellbook filters augmentation choices, and MenuWindow/GUISTORE restore PP after
+ordinary and temple resting.
 """
 from pathlib import Path
 import argparse
@@ -77,10 +78,12 @@ def _patch_cancel_on_open(text: str, function_name: str, action_constant: str) -
         + '\t\treturn\n\n'
         + '\tGemRB.SetVar ("QSpell", None)'
     )
+    before_qspell = '\tPsionics.cancel_pending(GemRB.GameGetFirstSelectedActor ())\n'
+    if function_name == "ActionInnatePressed":
+        before_qspell += '\tPsionics.refresh_innate_charges(GemRB.GameGetFirstSelectedActor ())\n'
     replacement = needle.replace(
         '\tGemRB.SetVar ("QSpell", None)',
-        '\tPsionics.cancel_pending(GemRB.GameGetFirstSelectedActor ())\n'
-        '\tGemRB.SetVar ("QSpell", None)',
+        before_qspell + '\tGemRB.SetVar ("QSpell", None)',
     )
     if needle not in text:
         raise RuntimeError(f"ActionsWindow.py {function_name} layout not recognized")
