@@ -16,6 +16,8 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,25 +31,22 @@ jobs:
       - run: python psion/tests/validate_level5.py
       - name: Install official WeiDU release
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          release="$(curl --fail --silent --show-error --location \
-            "https://api.github.com/repos/WeiDUorg/weidu/releases/tags/v${WEIDU_VERSION}")"
-          asset_url="$(jq -r '
-            [.assets[]
-              | select(.name | test("linux"; "i"))
-              | select(.name | test("source|src"; "i") | not)
-              | .browser_download_url][0] // empty
-          ' <<<"$release")"
-          if [[ -z "$asset_url" ]]; then
-            jq -r '.assets[].name' <<<"$release" >&2
-            exit 1
-          fi
-          curl --fail --silent --show-error --location "$asset_url" --output /tmp/weidu.zip
           archive_dir="$RUNNER_TEMP/weidu-archive"
           bin_dir="$RUNNER_TEMP/weidu-bin"
           mkdir -p "$archive_dir" "$bin_dir"
-          unzip -q /tmp/weidu.zip -d "$archive_dir"
+
+          gh release download "v${WEIDU_VERSION}" \
+            --repo WeiDUorg/weidu \
+            --pattern '*linux*' \
+            --dir "$RUNNER_TEMP"
+          archive="$(find "$RUNNER_TEMP" -maxdepth 1 -type f -iname '*linux*' -print -quit)"
+          test -n "$archive"
+          unzip -q "$archive" -d "$archive_dir"
+
           executable="$(find "$archive_dir" -type f -iname weidu -print -quit)"
           test -n "$executable"
           cp "$executable" "$bin_dir/weidu"
