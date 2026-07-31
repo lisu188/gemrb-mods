@@ -75,7 +75,7 @@ COPY_EXISTING ~PS4FOMV.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS4FOMV~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 162 target = 2 resist_dispel = BIT1 timing = 1 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 163 target = 2 resist_dispel = BIT1 timing = 1 END
-  FOR_EACH ps_blocked_opcode IN 40 109 126 154 155 157 158 175 BEGIN
+  PATCH_FOR_EACH ps_blocked_opcode IN 40 109 126 154 155 157 158 175 BEGIN
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = ps_blocked_opcode timing = 0 duration = 420 END
   END
 BUT_ONLY
@@ -148,7 +148,7 @@ LAF psion_create_level4_power
     ps_icon = ~spwi409~
 END
 COPY_EXISTING ~PS4PLEE.spl~ ~override~
-  FOR_EACH ps_failure_type IN 0 1 2 BEGIN
+  PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 20 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 END
   END
 BUT_ONLY
@@ -238,7 +238,7 @@ COPY_EXISTING ~PS4PFLY.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 150 parameter2 = 2 timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
-  FOR_EACH ps_flight_immunity IN 154 155 157 158 238 BEGIN
+  PATCH_FOR_EACH ps_flight_immunity IN 154 155 157 158 238 BEGIN
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = ps_flight_immunity timing = 0 duration = 60 END
   END
 BUT_ONLY
