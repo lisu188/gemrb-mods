@@ -10,9 +10,15 @@
 - Added a temporary custom Astral Construct creature resource.
 - Corrected two SPL-header bugs from earlier alpha versions: spell level now
   uses offset `0x34`, and cast-while-silenced flags use offset `0x18`.
-- Added an opcode-214 Energy Ray selector with fire, cold, electricity and
-  sonic variants at total costs from 1 through 9 PP.
-- Added 36 point-scaled Energy Ray child resources and augmentation metadata.
+- Added opcode-214 selectors for Energy Ray, Mind Thrust and Vigor.
+- Added 54 point-scaled child resources and augmentation metadata:
+  - 36 Energy Ray energy/cost variants;
+  - 9 Mind Thrust damage/save variants;
+  - 9 Vigor temporary-HP-equivalent variants.
+- Mind Thrust now deals 1d10 per PP and improves its save penalty every 2 PP
+  beyond the first.
+- Vigor now grants 5 points per PP and removes every previous Vigor variant
+  before applying the selected value.
 - Extended the GUI hook to resolve powers from GemRB temporary spellinfo lists.
 - Added fake-GemRB runtime tests for selector cost, reserve/commit accounting,
   manifester-level limits and legal variant filtering.
