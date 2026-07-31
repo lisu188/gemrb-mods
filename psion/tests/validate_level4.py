@@ -45,14 +45,14 @@ def main() -> None:
         "PS4EADP": ("opcode = 321", "ps_energy_opcode = 27", "parameter1 = 25", "duration = 420"),
         "PS4FOMV": ("opcode = 162", "opcode = 163", "PATCH_FOR_EACH ps_blocked_opcode", "opcode = 101"),
         "PS4DDOR": ("opcode = 124", "target = 1", "parameter2 = 1"),
-        "PS4IFOR": ("opcode = 31", "parameter1 = 50", "ps_save_opcode = 33", "duration = 18"),
+        "PS4IFOR": ("opcode = 31", "parameter1 = 50", "parameter1 = (0 - 2)", "ps_save_opcode = 33", "duration = 18"),
         "PS4TKMN": ("opcode = 238", "parameter1 = 8", "opcode = 39", "duration = 6"),
         "PS4PLEE": ("PATCH_FOR_EACH ps_failure_type IN 0 1 2", "opcode = 60", "parameter1 = 20"),
         "PS4RVIE": ("opcode = 193", "opcode = 21", "opcode = 91", "parameter1 = 30"),
         "PS4WECT": ("opcode = 67", "resource = ~PSACON01~", "duration = 60"),
         "PS4EBAL": ("opcode = 12", "ELECTRICITY", "dicenumber = 7", "special = BIT8"),
-        "PS4META": ("opcode = 15", "opcode = 10", "opcode = 1", "ps_resist_opcode = 86"),
-        "PS4PFLY": ("opcode = 126", "parameter1 = 150", "opcode = 292", "PATCH_FOR_EACH ps_flight_immunity"),
+        "PS4META": ("opcode = 15", "opcode = 10", "opcode = 1", "parameter1 = (0 - 2)", "ps_resist_opcode = 86"),
+        "PS4PFLY": ("opcode = 126", "parameter1 = 150", "parameter1 = (0 - 2)", "opcode = 292", "PATCH_FOR_EACH ps_flight_immunity"),
         "PS4COMP": ("opcode = 5", "duration = 30", "savingthrow = BIT0"),
     }
     for resref, fragments in required.items():
