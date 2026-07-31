@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~0.9.0-alpha~
+VERSION ~1.0.0~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -23,7 +23,7 @@ COPY ~psion/tables/ps1vigr.2da~ ~override/ps1vigr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed alpha power selections. Each discipline learns 19 powers by level 9,
+// Fixed initial power selections. Each discipline learns 19 powers by level 9,
 // including its exclusive power whenever a new power level is unlocked.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
