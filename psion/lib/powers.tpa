@@ -3,6 +3,7 @@ INCLUDE ~psion/lib/power-build.tpa~
 INCLUDE ~psion/lib/level1-powers.tpa~
 INCLUDE ~psion/lib/level2-powers.tpa~
 INCLUDE ~psion/lib/level3-powers.tpa~
+INCLUDE ~psion/lib/level4-powers.tpa~
 INCLUDE ~psion/lib/energy-ray-augment.tpa~
 INCLUDE ~psion/lib/mind-vigor-augment.tpa~
 INCLUDE ~psion/lib/animal-affinity.tpa~
