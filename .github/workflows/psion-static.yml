@@ -19,3 +19,4 @@ jobs:
         with:
           python-version: "3.x"
       - run: python psion/tests/validate.py
+      - run: python psion/tests/validate_level3.py
