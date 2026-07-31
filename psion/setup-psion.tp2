@@ -16,6 +16,8 @@ COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
 COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
+COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
+COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
 // Fixed alpha power selections. Each discipline learns 19 powers by level 9,
