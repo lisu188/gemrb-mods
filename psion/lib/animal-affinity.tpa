@@ -5,8 +5,8 @@
 // filtered-selector logic applies without a special-case runtime path.
 
 ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_animal_affinity_stat BEGIN
-  ~PSAASTR~ => 44 // Strength modifier
-  ~PSAADEX~ => 15 // Dexterity modifier
+  ~PSAASTR~ => 15 // Strength modifier
+  ~PSAADEX~ => 44 // Dexterity modifier
   ~PSAACON~ => 10 // Constitution modifier
 END
 
@@ -40,6 +40,3 @@ ACTION_PHP_EACH psion_animal_affinity_stat AS ps_resref => ps_opcode BEGIN
     LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_opcode target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
   BUT_ONLY
 END
-
-// The parent was created in level2-powers.tpa. Remove its ordinary base body
-// only after all child resources exist; the opcode-214 selector remains.
