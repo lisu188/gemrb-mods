@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.0-alpha
+
+- Replaced all twelve level-4 template clones with purpose-built SPL resources.
+- Implemented Energy Adaptation, Freedom of Movement, Dimension Door,
+  Intellect Fortress, Telekinetic Maneuver, Power Leech, Remote Viewing, Wall
+  of Ectoplasm, Energy Ball, Metamorphosis, Psionic Flight and Compulsion.
+- Added explicit portable approximations for broad energy adaptation, a
+  self-only Intellect Fortress, casting-failure Power Leech, single-node Wall
+  of Ectoplasm and one-form Metamorphosis.
+- Added sustained movement protection against hold, slow, entangle, web and
+  grease opcodes.
+- Restricted template spell cloning to level-5 powers only.
+- Audited patch loops and replaced generic `FOR_EACH` spell-patch loops with
+  WeiDU's documented `PATCH_FOR_EACH` syntax.
+- Added a dedicated level-4 resource regression suite covering all twelve
+  resources, hostile flags, durations, teleport, resistances, movement
+  immunities and non-stacking protections.
+- Consolidated the core validator so release-version changes no longer require
+  duplicating stale boundary assertions.
+- Expanded GitHub Actions to run core, level-3 and level-4 suites separately.
+- Reworked the README into an implementation and limitation reference.
+- Updated the installer version to 0.7.0-alpha.
+
 ## 0.6.0-alpha
 
 - Replaced all twelve level-3 template clones with purpose-built SPL resources.
