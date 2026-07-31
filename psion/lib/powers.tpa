@@ -1,2 +1,3 @@
 INCLUDE ~psion/lib/power-data.tpa~
 INCLUDE ~psion/lib/power-build.tpa~
+INCLUDE ~psion/lib/level1-powers.tpa~
