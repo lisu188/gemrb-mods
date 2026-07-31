@@ -153,6 +153,17 @@ def validate_release_infrastructure() -> None:
     ):
         assert fragment in lifecycle, fragment
 
+    runtime = (ROOT / "guiscripts" / "Psionics.py").read_text(encoding="utf-8")
+    patcher = (ROOT / "tools" / "install_guiscripts.py").read_text(encoding="utf-8")
+    for fragment in (
+        "def refresh_innate_charges(actor):",
+        "GemRB.GetKnownSpellsCount",
+        "GemRB.UnmemorizeSpell",
+        "GemRB.MemorizeSpell",
+    ):
+        assert fragment in runtime, fragment
+    assert "Psionics.refresh_innate_charges" in patcher
+
 
 def validate_builders() -> None:
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
@@ -172,12 +183,14 @@ def validate_builders() -> None:
     level1 = (ROOT / "lib" / "level1-powers.tpa").read_text(encoding="utf-8")
     level2 = (ROOT / "lib" / "level2-powers.tpa").read_text(encoding="utf-8")
     affinity = (ROOT / "lib" / "animal-affinity.tpa").read_text(encoding="utf-8")
+    mind_vigor = (ROOT / "lib" / "mind-vigor-augment.tpa").read_text(encoding="utf-8")
 
     checks = {
         "PS1ERAY": (level1, "psion_create_level1_power", ("opcode = 12", "dicesize = 6")),
         "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
         "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
         "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
+        "PS1BRST": (level1, "psion_create_level1_power", ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
         "PS2AMOR": (level2, "psion_create_level2_power", ("opcode = 65", "parameter1 = (0 - 2)")),
         "PS2BIOF": (level2, "psion_create_level2_power", ("ps_resist_opcode = 86", "ps_resist_opcode <= 89")),
         "PS2AAFF": (level2, "psion_create_level2_power", ("opcode = 214", "resource = ~PS2AAFF~")),
@@ -188,9 +201,12 @@ def validate_builders() -> None:
         for fragment in fragments:
             assert fragment in body, (resref, fragment)
 
-    for resref, opcode in (("PSAASTR", "15"), ("PSAADEX", "44"), ("PSAACON", "10")):
+    for resref, opcode in (("PSAASTR", "44"), ("PSAADEX", "15"), ("PSAACON", "10")):
         assert f"~{resref}~ => {opcode}" in affinity
         assert f"resource = ~{resref}~" in affinity
+
+    assert "savebonus = ps_save_penalty" in mind_vigor
+    assert "save_bonus = ps_save_penalty" not in mind_vigor
 
 
 def validate_augmentation() -> None:
