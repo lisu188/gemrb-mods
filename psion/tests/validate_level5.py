@@ -60,7 +60,7 @@ def main() -> None:
         ),
         "PS5TRUE": ("opcode = 193", "opcode = 292", "parameter2 = 74", "duration = 60"),
         "PS5TELE": ("opcode = 124", "target = 1", "parameter2 = 1"),
-        "PS5SCHN": ("opcode = 321", "opcode = 0", "opcode = 54", "parameter1 = -2", "duration = 18"),
+        "PS5SCHN": ("opcode = 321", "opcode = 0", "opcode = 54", "parameter1 = (0 - 2)", "duration = 18"),
         "PS5HOCR": ("opcode = 12", "SLASHING", "dicenumber = 9", "dicesize = 4", "special = BIT8"),
         "PS5ECUR": (
             "dicenumber = 5", "PATCH_FOR_EACH ps_delay IN 6 12 18 24",
