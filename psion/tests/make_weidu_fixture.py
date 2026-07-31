@@ -180,6 +180,15 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
         ),
     )
 
+    # Keep the fixture's class-table shape visible in CI. This is deliberately
+    # concise and turns future upstream table changes into actionable output.
+    class_text_lines = (override / "clastext.2da").read_text(
+        encoding="utf-8", errors="replace"
+    ).splitlines()
+    print("Fixture CLASSTEXT.2DA preview:")
+    for line in class_text_lines[:10]:
+        print(f"  {line}")
+
     key_script = gemrb_root / "tools" / "demo_key_file.py"
     subprocess.run(["python3", str(key_script), str(output)], check=True)
     if (output / "chitin.key").read_bytes()[:8] != b"KEY V1  ":
