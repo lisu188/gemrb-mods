@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~0.1.0-alpha~
+VERSION ~0.2.0-alpha~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -9,6 +9,7 @@ DESIGNATED 0
 REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @1
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 
+// Rules and runtime metadata.
 COPY ~psion/tables/psionpool.2da~ ~override/psionpool.2da~
 COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
@@ -16,9 +17,17 @@ COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
-COPY ~psion/tables/clabpsio.2da~ ~override/clabpsio.2da~
-INCLUDE ~psion/lib/powers.tpa~
 
+// Fixed alpha power selections. Each discipline learns 19 powers by level 9,
+// including its exclusive power whenever a new power level is unlocked.
+COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
+COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
+COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
+COPY ~psion/tables/clabpego.2da~ ~override/clabpego.2da~
+COPY ~psion/tables/clabpnom.2da~ ~override/clabpnom.2da~
+COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
+
+INCLUDE ~psion/lib/powers.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
 INCLUDE ~psion/lib/class-layout.tpa~
