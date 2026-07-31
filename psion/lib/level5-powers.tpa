@@ -1,0 +1,269 @@
+// Purpose-built level-5 Psion powers.
+//
+// These resources complete the BG1-accessible power catalogue. Mechanics that
+// require actor-to-actor PP transfer, arbitrary world-map travel, rerolls, or a
+// maintained concentration channel are represented by documented portable
+// effects until dedicated GemRB runtime support is available.
+
+DEFINE_ACTION_FUNCTION psion_create_level5_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 6
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi503~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 -1
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC -1
+    WRITE_SHORT 0x1c 4 // Innate power granted through a discipline CLAB.
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 5
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level5_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+
+// Adapt Body: poison and disease immunity plus broad environmental resistance.
+// Fatigue immunity remains a runtime task because fatigue opcodes differ across
+// the supported game families.
+LAF psion_create_level5_power
+  STR_VAR
+    ps_resref = ~PS5ADBD~
+    ps_name = ~Adapt Body~
+    ps_description = ~For nine turns the manifester becomes immune to new poison and disease effects and gains 25 percent resistance to acid, cold, electricity, and fire. Fatigue immunity remains a later GemRB enhancement.~
+    ps_icon = ~sppr513~
+END
+COPY_EXISTING ~PS5ADBD.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS5ADBD~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = 25 timing = 0 duration = 540 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = 78 timing = 0 duration = 540 END
+  FOR (ps_energy_opcode = 27; ps_energy_opcode <= 30; ++ps_energy_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_energy_opcode target = 1 resist_dispel = BIT1 parameter1 = 25 timing = 0 duration = 540 END
+  END
+BUT_ONLY
+
+// Catapsi: the tabletop field follows the manifester. The portable resource
+// creates a five-round disruptive burst around the selected point.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 30
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5CATP~
+    ps_name = ~Catapsi~
+    ps_description = ~A disruptive psionic field affects creatures near the selected point for five rounds. A failed save vs spell imposes 30 percent failure on wizard, priest, and innate power use. The portable field is stationary rather than following the manifester.~
+    ps_icon = ~spwi503~
+END
+COPY_EXISTING ~PS5CATP.spl~ ~override~
+  PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 30 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 END
+  END
+BUT_ONLY
+
+// Power Resistance: at the first legal manifestation level the tabletop value
+// is 20 + manifester level = 29. Augmentation will later scale this value.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS5PRES~
+    ps_name = ~Power Resistance~
+    ps_description = ~For nine turns the target gains 29 percent magic and power resistance. This base value corresponds to a ninth-level manifester; later augmentation will scale it with manifester level.~
+    ps_icon = ~sppr508~
+END
+COPY_EXISTING ~PS5PRES.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS5PRES~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 166 target = 2 resist_dispel = BIT1 parameter1 = 29 timing = 0 duration = 540 END
+BUT_ONLY
+
+// Cognitive Overload: psychic damage plus disruption of deliberate action.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5COGL~
+    ps_name = ~Cognitive Overload~
+    ps_description = ~The target suffers 6d6 magical damage, halved by a save vs spell. On a failed save it is also slowed and suffers 50 percent failure when casting or manifesting for three rounds.~
+    ps_icon = ~spwi505~
+END
+COPY_EXISTING ~PS5COGL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 6 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 50 parameter2 = ps_failure_type timing = 0 duration = 18 savingthrow = BIT0 END
+  END
+BUT_ONLY
+
+// True Seeing: actor-local detection and protection. Removing every possible
+// illusion effect requires game-specific spell lists and is intentionally not
+// approximated by a broad dispel.
+LAF psion_create_level5_power
+  STR_VAR
+    ps_resref = ~PS5TRUE~
+    ps_name = ~True Seeing~
+    ps_description = ~For one turn the manifester detects invisible creatures, cannot be backstabbed, and is immune to new blindness effects. Game-specific illusion removal remains a later compatibility component.~
+    ps_icon = ~sppr505~
+END
+COPY_EXISTING ~PS5TRUE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS5TRUE~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = 74 timing = 0 duration = 60 END
+BUT_ONLY
+
+// Teleport: arbitrary visited-area travel needs a destination GUI and campaign
+// safety rules. The portable form is unrestricted current-area relocation.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 0x7fff
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS5TELE~
+    ps_name = ~Teleport~
+    ps_description = ~The manifester teleports to any visible walkable point in the current area. Travel to previously visited areas requires a future destination interface and campaign-specific safety rules.~
+    ps_icon = ~spwi502~
+END
+COPY_EXISTING ~PS5TELE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 1 resist_dispel = BIT1 parameter2 = 1 timing = 1 END
+BUT_ONLY
+
+// Second Chance: the Infinity Engine has no generic reroll callback. A strong,
+// short-lived insight bonus approximates improved odds on the next checks.
+LAF psion_create_level5_power
+  STR_VAR
+    ps_resref = ~PS5SCHN~
+    ps_name = ~Second Chance~
+    ps_description = ~For three rounds the Seer gains +2 to attack rolls, Armor Class, and all saving throws. A later GemRB callback will replace this broad bonus with a true reroll of the next failed check.~
+    ps_icon = ~sppr503~
+END
+COPY_EXISTING ~PS5SCHN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS5SCHN~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 18 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = -2 timing = 0 duration = 18 END
+  END
+BUT_ONLY
+
+// Hail of Crystals: direct area implementation, save vs breath for half.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 40
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5HOCR~
+    ps_name = ~Hail of Crystals~
+    ps_description = ~A violent crystal detonation deals 9d4 slashing damage in a large area. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi512~
+END
+COPY_EXISTING ~PS5HOCR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 9 dicesize = 4 savingthrow = BIT1 special = BIT8 END
+BUT_ONLY
+
+// Energy Current: a full concentration channel requires per-frame GemRB state.
+// The portable version deals an initial strike followed by four delayed pulses.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5ECUR~
+    ps_name = ~Energy Current~
+    ps_description = ~Electrical energy deals 5d6 damage immediately and four additional 2d6 pulses over the next four rounds. A save vs spell halves each packet. The portable resource does not yet end when concentration is broken.~
+    ps_icon = ~spwi510~
+END
+COPY_EXISTING ~PS5ECUR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  PATCH_FOR_EACH ps_delay IN 6 12 18 24 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 timing = 4 duration = ps_delay savingthrow = BIT0 special = BIT8 END
+  END
+BUT_ONLY
+
+// Psychofeedback: direct ability-point transfer requires a configurable source
+// and destination pair. The portable form boosts all physical abilities while
+// imposing a broad saving-throw penalty as the cost of mental overcommitment.
+LAF psion_create_level5_power
+  STR_VAR
+    ps_resref = ~PS5PFDB~
+    ps_name = ~Psychofeedback~
+    ps_description = ~For five rounds the Egoist gains +4 Strength, Dexterity, and Constitution but suffers -2 to all saving throws. A future selector will implement exact transfer between chosen mental and physical abilities.~
+    ps_icon = ~sppr509~
+END
+COPY_EXISTING ~PS5PFDB.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS5PFDB~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 15 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 44 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 10 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 30 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = 2 timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+// Spatial Disruption: damaging partial teleport plus a short spatial drag.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5BALT~
+    ps_name = ~Spatial Disruption~
+    ps_description = ~The target is partially displaced through hostile space, suffering 9d6 magical damage with a save vs spell for half. A failed save also slows it for three rounds.~
+    ps_icon = ~spwi505~
+END
+COPY_EXISTING ~PS5BALT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 9 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+BUT_ONLY
+
+// Mind Probe: viewing a target's full record and scripted memories requires GUI
+// and dialogue integration. The portable effect weakens every saving throw.
+LAF psion_create_level5_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level5_hostile_flags
+  STR_VAR
+    ps_resref = ~PS5MPRB~
+    ps_name = ~Mind Probe~
+    ps_description = ~A failed save vs spell exposes the target's thoughts for five rounds and worsens all saving throws by 2. Full statistic display and quest-specific memories require later GemRB GUI and dialogue integration.~
+    ps_icon = ~spwi513~
+END
+COPY_EXISTING ~PS5MPRB.spl~ ~override~
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 30 savingthrow = BIT0 END
+  END
+BUT_ONLY
