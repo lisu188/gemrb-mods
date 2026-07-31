@@ -1,3 +1,6 @@
+// Spell constructors must be loaded first: every following module creates or
+// patches SPL resources through these self-contained WeiDU functions.
+INCLUDE ~psion/lib/spell-functions.tpa~
 INCLUDE ~psion/lib/power-data.tpa~
 INCLUDE ~psion/lib/power-build.tpa~
 INCLUDE ~psion/lib/level1-powers.tpa~
