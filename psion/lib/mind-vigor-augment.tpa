@@ -36,7 +36,7 @@ BEGIN
         dicenumber = ps_cost
         dicesize = 10
         savingthrow = BIT0
-        save_bonus = ps_save_penalty
+        savebonus = ps_save_penalty
     END
   BUT_ONLY
 END
