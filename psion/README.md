@@ -100,9 +100,9 @@ their original order and are not modified.
 
 For a level-3 Psion with 2 PP remaining, the selector therefore displays only
 1- and 2-PP children. At zero PP the augmented parent is rejected instead of
-opening an empty choice list. The final child resource is still validated again
-when selected, so a pool change between opening the list and choosing a power
-cannot overspend points.
+opening an empty choice list. The final child resource is validated again when
+selected, so a pool change between opening the list and choosing a power cannot
+overspend points.
 
 ## Current level 1–9 progression
 
