@@ -15,7 +15,7 @@ Install it before creating the character and do not uninstall it while a save st
 - Baldur's Gate II: Enhanced Edition
 - EET
 
-The original BG1 and TotSC data sets are not included because they do not provide the Sorcerer and Monk base classes. All supported games must be launched through GemRB.
+Original BG1 and TotSC are not included because they do not provide the Sorcerer and Monk base classes. All supported games must be launched through GemRB.
 
 ## Installation
 
@@ -33,16 +33,15 @@ Use WeiDU 247 or newer.
 
 - Corrects the backup directory.
 - Allocates a free class identifier instead of hardcoding class ID 21.
-- Supports both the combined class table used by released GemRB versions and the split class tables used by current development builds.
-- Supports GemRB-normalized and native Enhanced Edition `CLASSTEXT.2DA` layouts.
-- Supports compact BG1-style and extended BG2/EE proficiency tables.
-- Handles all three relevant `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
+- Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
+- Handles both normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
+- Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
 - Uses multiclass save and hit-point handling instead of priest saves and full Monk hit points.
 - Restricts the class to humans, matching the intersection of Sorcerer and Monk race rules.
 - Combines Mage/Sorcerer and Monk item-usability restrictions.
-- Adds the dynamically allocated class identifier to `CLASS.IDS`.
-- Avoids modifying ToB starting-equipment and HLA tables in games where those tables do not exist.
-- Restores compatibility with the older `SKILLS.2DA` layout as well as the newer `THIEFSCL.2DA`/`THIEFSKL.2DA` pair.
+- Adds the allocated class identifier to `CLASS.IDS`.
+- Avoids modifying ToB starting-equipment and HLA tables in games where those tables are absent.
+- Supports both the older `SKILLS.2DA` layout and the newer `THIEFSCL.2DA`/`THIEFSKL.2DA` pair.
 
 ## Gameplay model
 
@@ -56,6 +55,6 @@ Use WeiDU 247 or newer.
 
 ## Compatibility notes
 
-The installer contains documented compatibility branches for released and development GemRB table layouts. Native Enhanced Edition `CLASSTEXT.2DA` files contain four additional fields—`BIOGRAPHY`, `FALLEN`, `BRIEFDESC` and `FALLEN_NOTICE`—which are appended only when present.
+The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in either its normalized six-column form or the native EE ten-column form.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
