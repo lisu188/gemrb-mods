@@ -33,7 +33,10 @@ def main() -> None:
         assert module.patch(spellbook, "spellbook")
         assert module.patch(menu, "rest")
         assert module.patch(store, "rest")
-        assert "Psionics.begin_manifest" in actions.read_text(encoding="utf-8")
+        patched_actions = actions.read_text(encoding="utf-8")
+        assert "Psionics.begin_manifest" in patched_actions
+        assert "Psionics.refresh_innate_charges" in patched_actions
+        assert patched_actions.count("Psionics.refresh_innate_charges") == 1
         assert "Psionics.filter_spellinfo" in spellbook.read_text(encoding="utf-8")
         assert not module.patch(actions, "actions")
         assert module.remove(actions)
