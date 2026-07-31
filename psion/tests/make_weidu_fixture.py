@@ -12,17 +12,48 @@ from __future__ import annotations
 import argparse
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 
+def lowercase_relative(path: Path) -> Path:
+    """Return a case-normalized relative path for Infinity Engine resources."""
+    return Path(*(part.lower() for part in path.parts))
+
+
+def normalize_tree_case(directory: Path) -> None:
+    """Collapse Linux case variants into one deterministic lowercase tree.
+
+    Infinity Engine resource lookup is case-insensitive, while the Linux CI
+    filesystem is not. GemRB's source tree contains files from several game
+    families whose names may differ only by case. Keeping both lets CHITIN.KEY
+    choose an arbitrary duplicate, so normalize before applying family overlays.
+    """
+    if not directory.is_dir():
+        return
+
+    with tempfile.TemporaryDirectory(prefix="psion-fixture-") as temporary:
+        normalized = Path(temporary) / "normalized"
+        normalized.mkdir()
+        for path in sorted(directory.rglob("*"), key=lambda item: str(item).lower()):
+            if not path.is_file():
+                continue
+            target = normalized / lowercase_relative(path.relative_to(directory))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+
+        shutil.rmtree(directory)
+        shutil.copytree(normalized, directory)
+
+
 def merge_tree(source: Path, destination: Path) -> None:
-    """Copy every regular file from source over destination."""
+    """Copy files with case-insensitive overwrite semantics."""
     if not source.is_dir():
         return
-    for path in source.rglob("*"):
+    for path in sorted(source.rglob("*"), key=lambda item: str(item).lower()):
         if not path.is_file():
             continue
-        target = destination / path.relative_to(source)
+        target = destination / lowercase_relative(path.relative_to(source))
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
 
@@ -64,10 +95,12 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
 
     override = output / "override"
     override.mkdir(parents=True, exist_ok=True)
+    normalize_tree_case(override)
 
     # GemRB's normalized BG2 tables expose the split class layout used by
     # released GemRB versions. BGEE-specific files override the shared/BG2
-    # versions when present.
+    # versions when present. Lowercasing each destination reproduces the game
+    # engine's case-insensitive overwrite behavior on Linux.
     unhardcoded = gemrb_root / "gemrb" / "unhardcoded"
     for directory in ("shared", "bg2", "bgee"):
         merge_tree(unhardcoded / directory, override)
@@ -82,7 +115,7 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
 
     # WeiDU detects BGEE from OH1000.ARE. Its contents are irrelevant for this
     # installer-only fixture; the resource only has to exist in CHITIN.KEY.
-    (override / "OH1000.ARE").write_bytes(b"AREAV1.0")
+    (override / "oh1000.are").write_bytes(b"AREAV1.0")
 
     # Astral Construct currently clones WOLF.CRE. Reuse a valid demo creature
     # body so WeiDU's CRE name patches operate on a structurally valid resource.
@@ -91,13 +124,13 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
     )
     if not creature_candidates:
         raise RuntimeError("GemRB demo contains no CRE resource for WOLF.CRE")
-    shutil.copy2(creature_candidates[0], override / "WOLF.CRE")
+    shutil.copy2(creature_candidates[0], override / "wolf.cre")
 
     # These symbols are resolved while the purpose-built powers are generated.
     # The fixture values only need to be stable and distinct; gameplay values
     # are supplied by the actual target game's IDS resources.
     write_ids(
-        override / "MISSILE.IDS",
+        override / "missile.ids",
         (
             (0, "None"),
             (1, "Fireball_Just_Projectile"),
@@ -107,7 +140,7 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
         ),
     )
     write_ids(
-        override / "DMGTYPE.IDS",
+        override / "dmgtype.ids",
         (
             (0, "MAGIC"),
             (1, "ELECTRICITY"),
@@ -173,10 +206,10 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
             "avprefc.2da",
             "qslots.2da",
             "clskills.2da",
-            "WOLF.CRE",
-            "MISSILE.IDS",
-            "DMGTYPE.IDS",
-            "OH1000.ARE",
+            "wolf.cre",
+            "missile.ids",
+            "dmgtype.ids",
+            "oh1000.are",
         ),
     )
 
