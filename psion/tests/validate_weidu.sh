@@ -21,18 +21,25 @@ grep -Eq '(^|[^0-9])0([^0-9]|$)' <<<"$output"
 grep -Fqi 'Psion' <<<"$output"
 
 # Component listing parses the TP2 but does not execute INCLUDE actions. Parse
-# every installer module independently with WeiDU's own TPA parser so malformed
-# action functions, patch blocks, loops, and effect builders fail CI.
+# every installer module independently with WeiDU's own TPA parser. Continue
+# after failures so one CI run reports the complete set of malformed modules.
 parse_dir="$(mktemp -d)"
 trap 'rm -rf "$parse_dir"' EXIT
+status=0
 
 while IFS= read -r file; do
   target="$parse_dir/$(basename "$file").parsed"
   echo "Parsing $file"
   if ! parse_output="$(weidu --nogame --forceify "$file" --out "$target" 2>&1)"; then
     printf '%s\n' "$parse_output" >&2
-    exit 1
+    status=1
+    continue
   fi
   printf '%s\n' "$parse_output"
-  test -s "$target"
+  if [[ ! -s "$target" ]]; then
+    echo "WeiDU produced no parsed output for $file" >&2
+    status=1
+  fi
 done < <(find psion/lib -maxdepth 1 -type f -name '*.tpa' -print | sort)
+
+exit "$status"
