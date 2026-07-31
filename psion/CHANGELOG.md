@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0-alpha
+
+- Replaced all twelve level-2 template clones with purpose-built SPL resources.
+- Implemented Concealing Amorpha, Concussion Blast, Detect Hostile Intent,
+  Thought Shield, Biofeedback, Swarm of Crystals, Clairvoyant Sense, Psionic
+  Repair Damage, Energy Missile, Animal Affinity, Dimension Swap and Brain Lock.
+- Added documented Infinity Engine approximations for miss chance, flat damage
+  reduction, construct-only healing and discrete multi-target selection.
+- Added Animal Affinity's Strength, Dexterity and Constitution selector forms.
+- Registered three new 3-PP child resources, increasing the augmentation set
+  from 54 to 57 resources.
+- Reused the filtered selector and two-phase PP transaction for Animal Affinity.
+- Prevented Strength, Dexterity and Constitution forms from stacking with one
+  another.
+- Corrected an audit-discovered Strength/Dexterity opcode inversion and added a
+  regression check for the correct opcode mapping.
+- Restricted template spell cloning to powers of level 3 and above.
+- Expanded validation to cover every level-2 power, selector-table consistency,
+  exact resource ownership and the new runtime choices.
+
 ## 0.4.0-alpha
 
 - Added a backup-safe `Spellbook.py` GUI hook for temporary spell selectors.
