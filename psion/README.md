@@ -12,15 +12,19 @@ The six selectable discipline classes are:
 - **Nomad** — Psychoportation
 - **Telepath** — Telepathy
 
-## Status: 0.8.0-alpha
+## Status: 0.9.0-alpha
 
 Class registration, progression, persistent power points, filtered augmentation
 selectors and all sixty level 1–5 powers are implemented. Every power is built
 from an empty SPL resource; the mod no longer clones or depends on wizard and
 priest spells for its power catalogue.
 
-The project remains an alpha until it completes a real WeiDU installation and
-in-game GemRB smoke test.
+The complete TP2 and every included TPA module are parsed in CI with the
+official Linux build of WeiDU 251. This uncovered and fixed invalid negative
+integer syntax that the earlier source-text tests could not detect.
+
+The project remains an alpha until it completes an installation against actual
+BG-family game data and an in-game GemRB smoke test.
 
 ## Implemented systems
 
@@ -172,14 +176,22 @@ Sorcerer/Monk-era class data.
 GitHub Actions runs:
 
 - version-neutral table, progression, builder and installer checks;
+- a parser-safety guard rejecting bare negative WeiDU argument values and
+  negative long-write sentinels;
 - fake-GemRB PP, selector and transaction tests;
 - GUI patch, idempotence, backup and uninstall fixtures;
 - dedicated level-3, level-4 and level-5 resource regression suites;
-- Python compilation checks.
+- Python compilation checks;
+- official WeiDU 251 component parsing for `setup-psion.tp2`;
+- independent WeiDU 251 parsing of every `psion/lib/*.tpa` module.
+
+The WeiDU stage validates grammar and module structure. It does not yet prove
+that every resource and table mutation succeeds against a real game install.
 
 ## Remaining development priorities
 
-1. Automated WeiDU parsing and installation fixture.
+1. Automated WeiDU installation against a representative BG-family fixture or
+   test installation.
 2. Real GemRB in-game smoke test.
 3. Construct-only targeting for Psionic Repair Damage.
 4. Dedicated Astral Construct creature and AI.
