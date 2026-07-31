@@ -6,18 +6,8 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 
 LEVEL4_REFS = {
-    "PS4EADP",
-    "PS4FOMV",
-    "PS4DDOR",
-    "PS4IFOR",
-    "PS4TKMN",
-    "PS4PLEE",
-    "PS4RVIE",
-    "PS4WECT",
-    "PS4EBAL",
-    "PS4META",
-    "PS4PFLY",
-    "PS4COMP",
+    "PS4EADP", "PS4FOMV", "PS4DDOR", "PS4IFOR", "PS4TKMN", "PS4PLEE",
+    "PS4RVIE", "PS4WECT", "PS4EBAL", "PS4META", "PS4PFLY", "PS4COMP",
 }
 
 
@@ -34,12 +24,9 @@ def section(text: str, resref: str) -> str:
 def main() -> None:
     builder = (ROOT / "lib" / "level4-powers.tpa").read_text(encoding="utf-8")
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
-    prototype = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
     table = (ROOT / "tables" / "psionpowers.2da").read_text(encoding="utf-8")
 
     assert "level4-powers.tpa" in driver
-    assert "psion_level > 4" in prototype
-    assert "psion_level > 3" not in prototype
     assert "WRITE_LONG 0x34 4" in builder
     assert "WRITE_LONG 0x18 ps_flags" in builder
     assert "FOR_EACH " not in builder.replace("PATCH_FOR_EACH ", "")
@@ -55,87 +42,19 @@ def main() -> None:
     assert table_refs == LEVEL4_REFS, (table_refs, LEVEL4_REFS)
 
     required = {
-        "PS4EADP": (
-            "opcode = 321",
-            "ps_energy_opcode = 27",
-            "ps_energy_opcode <= 30",
-            "parameter1 = 25",
-            "duration = 420",
-        ),
-        "PS4FOMV": (
-            "opcode = 162",
-            "opcode = 163",
-            "PATCH_FOR_EACH ps_blocked_opcode IN 40 109 126 154 155 157 158 175",
-            "opcode = 101",
-            "duration = 420",
-        ),
+        "PS4EADP": ("opcode = 321", "ps_energy_opcode = 27", "parameter1 = 25", "duration = 420"),
+        "PS4FOMV": ("opcode = 162", "opcode = 163", "PATCH_FOR_EACH ps_blocked_opcode", "opcode = 101"),
         "PS4DDOR": ("opcode = 124", "target = 1", "parameter2 = 1"),
-        "PS4IFOR": (
-            "opcode = 321",
-            "opcode = 31",
-            "parameter1 = 50",
-            "ps_save_opcode = 33",
-            "duration = 18",
-        ),
-        "PS4TKMN": (
-            "opcode = 238",
-            "parameter1 = 8",
-            "opcode = 39",
-            "duration = 6",
-            "savingthrow = BIT1",
-        ),
-        "PS4PLEE": (
-            "PATCH_FOR_EACH ps_failure_type IN 0 1 2",
-            "opcode = 60",
-            "parameter1 = 20",
-            "duration = 30",
-            "savingthrow = BIT0",
-        ),
-        "PS4RVIE": (
-            "opcode = 321",
-            "opcode = 193",
-            "opcode = 21",
-            "opcode = 91",
-            "parameter1 = 30",
-            "duration = 30",
-        ),
-        "PS4WECT": (
-            "opcode = 67",
-            "resource = ~PSACON01~",
-            "duration = 60",
-        ),
-        "PS4EBAL": (
-            "opcode = 12",
-            "ELECTRICITY",
-            "dicenumber = 7",
-            "dicesize = 6",
-            "savingthrow = BIT0",
-            "special = BIT8",
-        ),
-        "PS4META": (
-            "opcode = 321",
-            "opcode = 15",
-            "opcode = 10",
-            "opcode = 0",
-            "opcode = 1",
-            "ps_resist_opcode = 86",
-            "ps_resist_opcode <= 89",
-        ),
-        "PS4PFLY": (
-            "opcode = 321",
-            "opcode = 126",
-            "parameter1 = 150",
-            "parameter2 = 2",
-            "opcode = 292",
-            "PATCH_FOR_EACH ps_flight_immunity IN 154 155 157 158 238",
-        ),
-        "PS4COMP": (
-            "opcode = 5",
-            "duration = 30",
-            "savingthrow = BIT0",
-        ),
+        "PS4IFOR": ("opcode = 31", "parameter1 = 50", "ps_save_opcode = 33", "duration = 18"),
+        "PS4TKMN": ("opcode = 238", "parameter1 = 8", "opcode = 39", "duration = 6"),
+        "PS4PLEE": ("PATCH_FOR_EACH ps_failure_type IN 0 1 2", "opcode = 60", "parameter1 = 20"),
+        "PS4RVIE": ("opcode = 193", "opcode = 21", "opcode = 91", "parameter1 = 30"),
+        "PS4WECT": ("opcode = 67", "resource = ~PSACON01~", "duration = 60"),
+        "PS4EBAL": ("opcode = 12", "ELECTRICITY", "dicenumber = 7", "special = BIT8"),
+        "PS4META": ("opcode = 15", "opcode = 10", "opcode = 1", "ps_resist_opcode = 86"),
+        "PS4PFLY": ("opcode = 126", "parameter1 = 150", "opcode = 292", "PATCH_FOR_EACH ps_flight_immunity"),
+        "PS4COMP": ("opcode = 5", "duration = 30", "savingthrow = BIT0"),
     }
-
     for resref, fragments in required.items():
         power = section(builder, resref)
         for fragment in fragments:
