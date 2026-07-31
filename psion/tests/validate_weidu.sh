@@ -29,6 +29,10 @@ trap 'rm -rf "$parse_dir"' EXIT
 while IFS= read -r file; do
   target="$parse_dir/$(basename "$file").parsed"
   echo "Parsing $file"
-  weidu --nogame --forceify "$file" --out "$target" >/dev/null
+  if ! parse_output="$(weidu --nogame --forceify "$file" --out "$target" 2>&1)"; then
+    printf '%s\n' "$parse_output" >&2
+    exit 1
+  fi
+  printf '%s\n' "$parse_output"
   test -s "$target"
 done < <(find psion/lib -maxdepth 1 -type f -name '*.tpa' -print | sort)
