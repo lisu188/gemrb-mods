@@ -40,9 +40,13 @@ BEGIN
 END
 
 OUTER_SET psion_level2_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
-OUTER_SET psion_cone_projectile = game_is_iwdee
-  ? IDS_OF_SYMBOL (~missile~ ~Cone_Of_Cold~)
-  : IDS_OF_SYMBOL (~missile~ ~New_Cone_Of_Cold~)
+
+// BG-family games use New_Cone_Of_Cold, while IWDEE retains the older symbol.
+// Use WeiDU's game predicate instead of relying on an undeclared helper variable.
+OUTER_SET psion_cone_projectile = IDS_OF_SYMBOL (~missile~ ~New_Cone_Of_Cold~)
+ACTION_IF GAME_IS ~iwdee~ THEN BEGIN
+  OUTER_SET psion_cone_projectile = IDS_OF_SYMBOL (~missile~ ~Cone_Of_Cold~)
+END
 
 // Concealing Amorpha: BG has no generic percentage miss-chance opcode. Blur,
 // +2 AC and +1 saves are a stable approximation of the 20% concealment.
