@@ -28,11 +28,23 @@ def merge_tree(source: Path, destination: Path) -> None:
 
 
 def write_ids(path: Path, rows: tuple[tuple[int, str], ...]) -> None:
-    """Write the small symbol subset used while constructing Psion SPL files."""
+    """Write a stable IDS symbol subset used by the installer."""
     path.write_text(
         "\n".join(f"0x{number:04x} {symbol}" for number, symbol in rows) + "\n",
         encoding="ascii",
     )
+
+
+def write_2da(
+    path: Path,
+    columns: tuple[str, ...],
+    rows: tuple[tuple[str, ...], ...],
+    default: str = "0",
+) -> None:
+    """Write a conventional whitespace-delimited 2DA V1.0 table."""
+    lines = ["2DA V1.0", default, "        " + " ".join(columns)]
+    lines.extend(" ".join(row) for row in rows)
+    path.write_text("\n".join(lines) + "\n", encoding="ascii")
 
 
 def require_files(root: Path, names: tuple[str, ...]) -> None:
@@ -101,6 +113,42 @@ def build_fixture(gemrb_root: Path, output: Path) -> None:
             (1, "ELECTRICITY"),
             (2, "SLASHING"),
         ),
+    )
+
+    # The demo intentionally omits several original-game tables. Supply only
+    # the structural subset required by the class installer. Values are chosen
+    # to exercise APPEND and APPEND_COL, not to model a playable campaign.
+    write_ids(
+        override / "class.ids",
+        (
+            (1, "MAGE"),
+            (2, "FIGHTER"),
+            (19, "SORCERER"),
+            (20, "MONK"),
+        ),
+    )
+    write_2da(
+        override / "alignmnt.2da",
+        ("LG", "NG", "CG", "LN", "TN", "CN", "LE", "NE", "CE"),
+        (("SORCERER", "1", "1", "1", "1", "1", "1", "1", "1", "1"),),
+    )
+    write_2da(
+        override / "profs.2da",
+        ("FIRST_LEVEL", "OTHER_LEVELS"),
+        (("SORCERER", "2", "4"),),
+    )
+    write_2da(
+        override / "xpcap.2da",
+        ("VALUE",),
+        (("SORCERER", "8000000"),),
+    )
+
+    # class-common.tpa appends exactly fifty proficiency values per discipline.
+    # A one-column, fifty-row fixture exercises the full APPEND_COL path.
+    write_2da(
+        override / "weapprof.2da",
+        ("SORCERER",),
+        tuple((f"PROF{index:02d}", "0") for index in range(50)),
     )
 
     # A real GemRB run writes this file. Point at the fixture override so WeiDU
