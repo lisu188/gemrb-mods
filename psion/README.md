@@ -10,7 +10,7 @@ Enhanced Edition campaigns running through GemRB:
 - Nomad — Psychoportation
 - Telepath — Telepathy
 
-## Implemented in 0.5.0-alpha
+## Implemented in 0.6.0-alpha
 
 - Six dynamically allocated custom class rows.
 - Released combined and newer split GemRB class-table layouts.
@@ -24,7 +24,7 @@ Enhanced Edition campaigns running through GemRB:
   power points.
 - Separate fixed progression for every discipline, reaching 19 powers known at
   BG1 level 9.
-- Purpose-built resources for all twelve level-1 and all twelve level-2 powers.
+- Purpose-built resources for all twelve powers at each of levels 1, 2 and 3.
 - Point-scaled augmentation for Energy Ray, Mind Thrust and Vigor.
 - Choice-based Animal Affinity with Strength, Dexterity and Constitution forms.
 - Fifty-seven selector children with authoritative PP costs.
@@ -32,7 +32,7 @@ Enhanced Edition campaigns running through GemRB:
   shown, while unrelated base-game and third-party selectors remain unchanged.
 - Backup-safe GUI hooks with uninstall support.
 - Static progression, 2DA schema, SPL-builder, fake-runtime transaction and
-  GUI-patcher fixture tests.
+  GUI-patcher fixture tests, plus dedicated level-3 resource regression checks.
 
 ## Power-point rules
 
@@ -80,9 +80,30 @@ twice.
   area projectile approximates three discrete tabletop targets.
 - **Animal Affinity:** choose +4 Strength, Dexterity or Constitution for one
   turn. Changing the choice refreshes the power rather than stacking forms.
-- **Dimension Swap:** exchanges the manifester and target positions using
-  GemRB's extended teleport opcode behavior.
+- **Dimension Swap:** exchanges the manifester and target positions.
 - **Brain Lock:** holds one target for three rounds, save negates.
+
+## Purpose-built level-3 powers
+
+- **Dispel Psionics:** area dispel using an effective level of 5. A later GemRB
+  check will use manifester level and Psicraft.
+- **Body Adjustment:** heals 1d12+5 hit points.
+- **Energy Bolt:** 5d6 electrical damage in a line, save vs breath for half.
+- **Mental Barrier:** +4 Armor Class, +2 saves and backstab immunity for one
+  round; recasting refreshes instead of stacking.
+- **Touchsight:** detects invisibility, blocks backstab and prevents new
+  blindness effects for one turn.
+- **Time Hop:** temporarily removes a target through the engine Maze effect;
+  save vs spell negates.
+- **Danger Sense:** +20 Find Traps, +2 Armor Class, +2 saves and backstab
+  immunity for one turn.
+- **Ectoplasmic Cocoon:** holds a target and grants it 50 percent physical
+  resistance for three rounds. This approximates a destructible cocoon shell.
+- **Energy Cone:** 5d6 electrical damage in a cone, save vs breath for half.
+- **Hustle:** double movement and one extra attack for one round.
+- **Spatial Step:** teleports the Nomad to a selected point within 30 feet.
+- **Mental Stasis:** holds, silences and slows one target for three rounds;
+  save vs spell negates.
 
 ## Engine approximations
 
@@ -97,6 +118,10 @@ approximations are deliberate and documented in the in-game descriptions:
 - Repair Construct is not yet restricted to construct creatures.
 - Energy Missile currently uses an area burst rather than three individually
   selected creatures.
+- Dispel Psionics currently uses a fixed engine dispel level.
+- Time Hop uses Maze as the portable temporary-removal effect.
+- Ectoplasmic Cocoon is not yet a destructible hit-point shell.
+- Mental Barrier is manually activated rather than an immediate reaction.
 - Astral Construct still uses a temporary wolf-derived body.
 
 ## Filtered choice lists
@@ -148,15 +173,15 @@ class data used by this implementation.
 
 ## Important alpha limitations
 
-Powers of levels 3–5 still clone thematically similar game spells. Power
-selection is fixed rather than choice-based. The GUI hooks, extended teleport
-behavior and generated resources still require a complete WeiDU installation
-and in-game test against the intended GemRB build.
+Only powers of levels 4 and 5 still clone thematically similar game spells.
+Power selection is fixed rather than choice-based. The GUI hooks, extended
+teleport behavior and generated resources still require a complete WeiDU
+installation and in-game test against the intended GemRB build.
 
 ## Development priorities
 
 1. Automated WeiDU installation fixture and real GemRB smoke test.
-2. Exact level-3 power resources and augmentation.
+2. Exact level-4 power resources and augmentation.
 3. Construct-only targeting and a dedicated Astral Construct CRE/AI.
 4. Choice-based power learning and replacement at levels 4/8/12/16/20.
 5. Current/max PP display on action and character-record interfaces.
