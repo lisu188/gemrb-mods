@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Install or remove small GemRB GUI hooks for Psion point accounting."""
+"""Install or remove documented GemRB GUI hooks for the Psion subsystem.
+
+The patcher modifies only four shared scripts and stores byte-for-byte backups:
+ActionsWindow handles PP transactions, Spellbook filters augmentation choices,
+and MenuWindow/GUISTORE restore PP after ordinary and temple resting.
+"""
 from pathlib import Path
 import argparse
 import re
@@ -82,6 +87,39 @@ def _patch_cancel_on_open(text: str, function_name: str, action_constant: str) -
     return text.replace(needle, replacement, 1)
 
 
+def _patch_spellinfo_filter(text: str) -> str:
+    """Filter only Psion augmentation children in temporary spell selectors."""
+    needle = (
+        'def GetSpellinfoSpells(actor, BookType):\n'
+        '\tmemorizedSpells = []\n'
+        '\tspellResRefs = GemRB.GetSpelldata (actor)\n'
+    )
+    replacement = (
+        needle
+        + '\t' + MARK_BEGIN + '\n'
+        + '\t# Preserve unrelated opcode-214 selectors; Psionics filters only\n'
+        + '\t# resources registered as augmentation children.\n'
+        + '\tspellResRefs = Psionics.filter_spellinfo(actor, spellResRefs)\n'
+        + '\t' + MARK_END + '\n'
+    )
+    if needle not in text:
+        raise RuntimeError("Spellbook.py GetSpellinfoSpells layout not recognized")
+    return text.replace(needle, replacement, 1)
+
+
+def _patch_rest(text: str, path: Path) -> str:
+    match = re.search(r"(GemRB\.RestParty\([^\n]*\)\n)", text)
+    if not match:
+        raise RuntimeError(f"{path.name} rest call not found")
+    hook = (
+        match.group(1)
+        + "\t" + MARK_BEGIN + "\n"
+        + "\tPsionics.restore_party()\n"
+        + "\t" + MARK_END + "\n"
+    )
+    return text[: match.start()] + hook + text[match.end() :]
+
+
 def patch(path: Path, kind: str) -> bool:
     text = path.read_text(encoding="utf-8")
     if MARK_BEGIN in text:
@@ -97,17 +135,12 @@ def patch(path: Path, kind: str) -> bool:
         text = _patch_spell_pressed(text)
         text = _patch_cancel_on_open(text, "ActionCastPressed", "ACT_CAST")
         text = _patch_cancel_on_open(text, "ActionInnatePressed", "ACT_INNATE")
+    elif kind == "spellbook":
+        text = _patch_spellinfo_filter(text)
+    elif kind == "rest":
+        text = _patch_rest(text, path)
     else:
-        match = re.search(r"(GemRB\.RestParty\([^\n]*\)\n)", text)
-        if not match:
-            raise RuntimeError(f"{path.name} rest call not found")
-        hook = (
-            match.group(1)
-            + "\t" + MARK_BEGIN + "\n"
-            + "\tPsionics.restore_party()\n"
-            + "\t" + MARK_END + "\n"
-        )
-        text = text[: match.start()] + hook + text[match.end() :]
+        raise ValueError(f"Unknown patch kind: {kind}")
 
     path.write_text(text, encoding="utf-8")
     return True
@@ -129,6 +162,7 @@ def main() -> None:
     args = parser.parse_args()
     targets = [
         (args.guiscripts / "ActionsWindow.py", "actions"),
+        (args.guiscripts / "Spellbook.py", "spellbook"),
         (args.guiscripts / "MenuWindow.py", "rest"),
         (args.guiscripts / "GUISTORE.py", "rest"),
     ]
