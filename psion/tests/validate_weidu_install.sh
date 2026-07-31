@@ -97,13 +97,25 @@ for filename in (
 ):
     assert (override / filename).is_file(), filename
 
-spells = list(override.glob("PS*.SPL")) + list(override.glob("ps*.spl"))
-assert len({path.name.lower() for path in spells}) >= 117, len(spells)
-assert (override / "PSACON01.CRE").is_file()
+# WeiDU preserves the source resource's filename case, which differs between
+# platforms and fixture inputs. Inspect names semantically instead of relying on
+# case-sensitive glob patterns.
+generated = [path for path in override.iterdir() if path.is_file()]
+spells = {
+    path.name.lower()
+    for path in generated
+    if path.suffix.lower() == ".spl" and path.stem.lower().startswith("ps")
+}
+assert len(spells) >= 117, len(spells)
+assert any(path.name.lower() == "psacon01.cre" for path in generated)
 
-log = (root / "weidu.log").read_text(encoding="utf-8", errors="replace")
-assert "PSION/SETUP-PSION.TP2" in log.upper()
-assert "#0 #0" in log
+log = next(
+    path for path in root.iterdir()
+    if path.is_file() and path.name.lower() == "weidu.log"
+)
+log_text = log.read_text(encoding="utf-8", errors="replace")
+assert "PSION/SETUP-PSION.TP2" in log_text.upper()
+assert "#0 #0" in log_text
 print("WeiDU fixture installation validation passed.")
 PY
 }
@@ -124,9 +136,12 @@ for relative, expected in baseline.items():
     assert actual == expected, (relative, expected, actual)
 
 override = root / "override"
-assert not any(override.glob("PS*.SPL"))
-assert not any(override.glob("ps*.spl"))
-assert not (override / "PSACON01.CRE").exists()
+remaining = [path for path in override.iterdir() if path.is_file()]
+assert not any(
+    path.suffix.lower() == ".spl" and path.stem.lower().startswith("ps")
+    for path in remaining
+)
+assert not any(path.name.lower() == "psacon01.cre" for path in remaining)
 for filename in (
     "psionpool.2da", "psionknown.2da", "psiondisc.2da",
     "psionskills.2da", "psionfeats.2da", "psionpowers.2da",
