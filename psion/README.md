@@ -29,14 +29,16 @@ Enhanced Edition campaigns running through GemRB:
   by level 9 and gains its exclusive discipline power at levels 1, 3, 5, 7
   and 9.
 - Purpose-built level-1 resources for all twelve first-tier powers.
-- Static progression, 2DA schema, SPL-builder and GUI-patcher fixture tests.
+- Energy Ray energy selection and point-scaled augmentation from 1 to 9 PP.
+- Static progression, 2DA schema, SPL-builder, runtime-transaction and
+  GUI-patcher fixture tests.
 
 ## Exact level-1 vertical slice
 
 The following powers no longer inherit unrelated effects from existing wizard
 or priest spells:
 
-- **Energy Ray:** 1d6 magical damage, magic resistance, no save.
+- **Energy Ray:** opens an energy/cost selector described below.
 - **Mind Thrust:** 1d10 magical damage, save vs spell negates.
 - **Inertial Armor:** +4 Armor Class for one hour, non-stacking.
 - **Vigor:** +5 temporary-HP approximation for one turn, non-stacking.
@@ -54,6 +56,26 @@ separate Will save, no native temporary-hit-point pool, and no fully generic
 D&D 3e construct body. Empty Mind therefore modifies all five saves, Vigor
 uses timed maximum/current HP effects, and Astral Construct currently uses a
 renamed wolf-derived creature that will be replaced by a dedicated CRE.
+
+## Energy Ray augmentation
+
+Selecting Energy Ray opens an opcode-214 choice table containing four energy
+types at total costs from 1 through 9 PP:
+
+- **Fire:** one d6 per PP, plus 1 damage per die.
+- **Cold:** one d6 per PP.
+- **Electricity:** one d6 per PP.
+- **Sonic:** one d4 per PP, represented as magical damage by the engine.
+
+The parent selector costs no PP. The selected child resource reserves its full
+cost on the first casting callback and spends it on the matching second
+callback. Total cost cannot exceed manifester level and must be available in
+the current PP pool. For example, a level-3 Psion can use any 1–3 PP Energy Ray
+but is rejected when selecting a 4–9 PP variant.
+
+The current generic selector lists all 36 variants. Illegal choices are blocked
+by the runtime; a later dedicated augmentation panel will hide choices above
+the current manifester-level and PP limits.
 
 ## Current level 1–9 progression
 
@@ -76,18 +98,18 @@ lists.
 ## Important alpha limitations
 
 Level-1 powers now have dedicated resources, but powers of levels 2–5 still
-clone thematically similar Infinity Engine spells. Exact augmentation choices,
-energy-type selection and most higher-level tabletop effects still require
-individual SPL implementation.
+clone thematically similar Infinity Engine spells. Most powers still lack
+augmentation variants and several tabletop secondary effects require engine
+approximations.
 
 Power selection is fixed in this alpha. A later level-up interface will allow
 players to choose general powers while enforcing one discipline power whenever
 a new tier becomes available, plus replacement at levels 4/8/12/16/20.
 
 The cancellation-safe point transaction follows GemRB's documented two-callback
-spell flow and is covered by a GUI-script fixture, but it still requires an
-in-game test against the exact GemRB build used by the player. No complete
-WeiDU/GemRB installation was available during development.
+spell flow and is covered by GUI-script and fake-runtime fixtures, but it still
+requires an in-game test against the exact GemRB build used by the player. No
+complete WeiDU/GemRB installation was available during development.
 
 ## Installation
 
@@ -108,11 +130,12 @@ class data used by this implementation.
 
 ## Development priorities
 
-1. Level-1 augmentation variants and energy-type selection.
-2. Replace the temporary Astral Construct body with a dedicated CRE and AI.
-3. Exact level-2 power resources.
-4. Choice-based power learning and replacement at levels 4/8/12/16/20.
-5. Current/max pool display on the action and character-record interfaces.
-6. Psionic focus, feats and skill allocation UI.
-7. Psicrystal, psionic items and enemy users.
-8. Automated WeiDU installation fixtures and GemRB integration tests.
+1. Dedicated augmentation panel that filters variants by current PP and level.
+2. Add augmentation variants to Vigor, Mind Thrust and discipline powers.
+3. Replace the temporary Astral Construct body with a dedicated CRE and AI.
+4. Exact level-2 power resources.
+5. Choice-based power learning and replacement at levels 4/8/12/16/20.
+6. Current/max pool display on the action and character-record interfaces.
+7. Psionic focus, feats and skill allocation UI.
+8. Psicrystal, psionic items and enemy users.
+9. Automated WeiDU installation fixtures and GemRB integration tests.
