@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Backup, idempotence, runtime ownership, and uninstall checks."""
+"""Backup, idempotence, runtime ownership, and preflight checks."""
 
 from pathlib import Path
 import importlib.util
+import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -77,7 +79,35 @@ def main() -> None:
         assert not created.exists()
         assert not module.remove_runtime(runtime)
 
-    print("Psion GUI patcher and runtime lifecycle validation passed.")
+    # Main performs a full read-only preflight before copying the runtime or
+    # modifying any shared script. One incompatible layout must leave the whole
+    # target directory byte-for-byte untouched and create no backup sidecars.
+    with tempfile.TemporaryDirectory() as folder_name:
+        folder = Path(folder_name)
+        originals = {
+            "ActionsWindow.py": actions_text,
+            "Spellbook.py": spellbook_text,
+            "MenuWindow.py": rest_text,
+            "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tpass\n",
+        }
+        for name, text in originals.items():
+            (folder / name).write_text(text, encoding="utf-8")
+
+        result = subprocess.run(
+            [sys.executable, str(path), str(folder)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode != 0
+        assert "GUISTORE.py rest call not found" in (result.stdout + result.stderr)
+        assert not (folder / "Psionics.py").exists()
+        for name, text in originals.items():
+            target = folder / name
+            assert target.read_text(encoding="utf-8") == text
+            assert not target.with_suffix(target.suffix + ".psion.bak").exists()
+
+    print("Psion GUI patcher, runtime lifecycle, and preflight validation passed.")
 
 
 if __name__ == "__main__":
