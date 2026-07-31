@@ -1,4 +1,4 @@
-OUTER_SET ps_max_id = -1
+OUTER_SET ps_max_id = (0 - 1)
 OUTER_SET ps_split = 0
 OUTER_SET ps_text_cols = 0
 ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
