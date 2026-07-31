@@ -1,4 +1,4 @@
-name: Psion static checks
+name: Psion validation
 
 on:
   pull_request:
@@ -12,6 +12,7 @@ on:
 
 env:
   WEIDU_VERSION: "251.00"
+  GEMRB_FIXTURE_COMMIT: "8c853a764ab489eee7e990a713eeb24dc8cc2d53"
 
 jobs:
   validate:
@@ -19,16 +20,26 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out Psion branch
+        uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      - run: python psion/tests/validate.py
-      - run: python psion/tests/validate_runtime.py
-      - run: python psion/tests/validate_patcher.py
-      - run: python psion/tests/validate_level3.py
-      - run: python psion/tests/validate_level4.py
-      - run: python psion/tests/validate_level5.py
+
+      - name: Validate tables, installer source and Python
+        run: python psion/tests/validate.py
+      - name: Validate fake-GemRB runtime
+        run: python psion/tests/validate_runtime.py
+      - name: Validate GUI patch lifecycle
+        run: python psion/tests/validate_patcher.py
+      - name: Validate level-3 powers
+        run: python psion/tests/validate_level3.py
+      - name: Validate level-4 powers
+        run: python psion/tests/validate_level4.py
+      - name: Validate level-5 powers
+        run: python psion/tests/validate_level5.py
+
       - name: Install official WeiDU release
         shell: bash
         env:
@@ -52,5 +63,17 @@ jobs:
           cp "$executable" "$bin_dir/weidu"
           chmod +x "$bin_dir/weidu"
           echo "$bin_dir" >> "$GITHUB_PATH"
+
       - name: Parse complete WeiDU installer
         run: bash psion/tests/validate_weidu.sh
+
+      - name: Check out pinned GemRB fixture data
+        uses: actions/checkout@v4
+        with:
+          repository: gemrb/gemrb
+          ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
+          path: vendor/gemrb
+          fetch-depth: 1
+
+      - name: Install, uninstall and reinstall with WeiDU
+        run: bash psion/tests/validate_weidu_install.sh vendor/gemrb
