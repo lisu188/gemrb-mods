@@ -50,7 +50,7 @@ def main() -> None:
         "PS3DANG": ("opcode = 91", "parameter1 = 20", "parameter1 = (0 - 2)", "opcode = 292"),
         "PS3COCO": ("opcode = 175", "parameter1 = 50", "duration = 18"),
         "PS3ECON": ("psion_cone_projectile", "dicenumber = 5", "savingthrow = BIT1"),
-        "PS3HUST": ("opcode = 321", "parameter1 = 200", "opcode = 1", "duration = 6"),
+        "PS3HUST": ("opcode = 321", "parameter1 = 200", "parameter2 = 2", "opcode = 1", "duration = 6"),
         "PS3SSTP": ("opcode = 124", "parameter2 = 1", "ps_target = 4"),
         "PS3MSTL": ("opcode = 175", "opcode = 38", "opcode = 40", "duration = 18"),
     }
