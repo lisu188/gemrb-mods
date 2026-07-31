@@ -10,7 +10,7 @@ Enhanced Edition campaigns running through GemRB:
 - Nomad — Psychoportation
 - Telepath — Telepathy
 
-## Implemented in 0.2.0-alpha
+## Implemented in 0.3.0-alpha
 
 - Six dynamically allocated custom class rows.
 - Released combined and newer split GemRB class-table layouts.
@@ -25,11 +25,35 @@ Enhanced Edition campaigns running through GemRB:
   available power points.
 - Base costs 1/3/5/7/9 for power levels 1–5.
 - Manifester-level, discipline, skill, feat and augmentation metadata tables.
-- Sixty installer-generated prototype powers across levels 1–5.
 - Separate fixed progression for every discipline. Each class knows 19 powers
   by level 9 and gains its exclusive discipline power at levels 1, 3, 5, 7
   and 9.
-- Static progression validation and GUI-patcher fixture tests.
+- Purpose-built level-1 resources for all twelve first-tier powers.
+- Static progression, 2DA schema, SPL-builder and GUI-patcher fixture tests.
+
+## Exact level-1 vertical slice
+
+The following powers no longer inherit unrelated effects from existing wizard
+or priest spells:
+
+- **Energy Ray:** 1d6 magical damage, magic resistance, no save.
+- **Mind Thrust:** 1d10 magical damage, save vs spell negates.
+- **Inertial Armor:** +4 Armor Class for one hour, non-stacking.
+- **Vigor:** +5 temporary-HP approximation for one turn, non-stacking.
+- **Force Screen:** +2 Armor Class and Magic Missile protection for one turn.
+- **Empty Mind:** +2 to all saves for one round.
+- **Precognition:** +1 attack, Armor Class and saves for three rounds.
+- **Astral Construct:** summons a temporary controlled construct prototype.
+- **Energy Push:** 1d6 electrical damage plus save-negated knockback.
+- **Thicken Skin:** +1 Armor Class for one turn.
+- **Burst:** +30% movement speed for one round.
+- **Psionic Charm:** charms one humanoid for one turn, save vs spell negates.
+
+Several effects are deliberate Infinity Engine approximations. BG has no
+separate Will save, no native temporary-hit-point pool, and no fully generic
+D&D 3e construct body. Empty Mind therefore modifies all five saves, Vigor
+uses timed maximum/current HP effects, and Astral Construct currently uses a
+renamed wolf-derived creature that will be replaced by a dedicated CRE.
 
 ## Current level 1–9 progression
 
@@ -51,10 +75,9 @@ lists.
 
 ## Important alpha limitations
 
-This is a playable architecture and content prototype, not the final rules
-implementation. Power resources currently clone thematically similar Infinity
-Engine spells. The table names, costs, levels and discipline metadata are
-custom, but exact augmentation choices and every tabletop effect still require
+Level-1 powers now have dedicated resources, but powers of levels 2–5 still
+clone thematically similar Infinity Engine spells. Exact augmentation choices,
+energy-type selection and most higher-level tabletop effects still require
 individual SPL implementation.
 
 Power selection is fixed in this alpha. A later level-up interface will allow
@@ -85,11 +108,11 @@ class data used by this implementation.
 
 ## Development priorities
 
-1. Exact SPL effects for the level 1 vertical slice: Energy Ray, Mind Thrust,
-   Inertial Armor, Vigor and all six first-tier discipline powers.
-2. Per-power augmentation variants and a dedicated cost-selection panel.
-3. Choice-based power learning and replacement at levels 4/8/12/16/20.
-4. Current/max pool display on the action and character-record interfaces.
-5. Psionic focus, feats and skill allocation UI.
-6. Psicrystal, psionic items and enemy users.
-7. Automated WeiDU installation fixtures and GemRB integration tests.
+1. Level-1 augmentation variants and energy-type selection.
+2. Replace the temporary Astral Construct body with a dedicated CRE and AI.
+3. Exact level-2 power resources.
+4. Choice-based power learning and replacement at levels 4/8/12/16/20.
+5. Current/max pool display on the action and character-record interfaces.
+6. Psionic focus, feats and skill allocation UI.
+7. Psicrystal, psionic items and enemy users.
+8. Automated WeiDU installation fixtures and GemRB integration tests.
