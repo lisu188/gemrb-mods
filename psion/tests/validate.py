@@ -93,10 +93,12 @@ def validate_builders():
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     prototype = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
 
-    for include in ("level1-powers.tpa", "level2-powers.tpa", "energy-ray-augment.tpa",
-                    "mind-vigor-augment.tpa", "animal-affinity.tpa"):
+    for include in ("level1-powers.tpa", "level2-powers.tpa", "level3-powers.tpa",
+                    "energy-ray-augment.tpa", "mind-vigor-augment.tpa",
+                    "animal-affinity.tpa"):
         assert include in driver
-    assert "psion_level > 2" in prototype and "psion_level > 1" not in prototype
+    assert "psion_level > 3" in prototype
+    assert "psion_level > 2" not in prototype and "psion_level > 1" not in prototype
     assert "WRITE_LONG 0x34 psion_level" in prototype
     assert set(re.findall(r"ps_resref = ~(PS1[A-Z0-9]+)~", l1)) == LEVEL1
     assert set(re.findall(r"ps_resref = ~(PS2[A-Z0-9]+)~", l2)) == LEVEL2
@@ -150,7 +152,7 @@ def validate_augmentation():
 
 def validate_installer():
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
-    assert "VERSION ~0.5.0-alpha~" in setup
+    assert "VERSION ~0.6.0-alpha~" in setup
     for name in ("psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
                  "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
                  "ps2aaff", "mxpsion", "clabpsee", "clabpsha", "clabpkin",
@@ -232,7 +234,7 @@ def main():
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)
     validate_runtime(); validate_patcher()
-    print("Psion 0.5 level-2, 57-variant, runtime, and GUI-hook validation passed.")
+    print("Psion 0.6 level-1/2 core, 57-variant, runtime, and GUI-hook validation passed.")
 
 
 if __name__ == "__main__":
