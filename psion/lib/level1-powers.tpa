@@ -166,7 +166,7 @@ END
 COPY_EXISTING ~PS1PREC.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1PREC~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 18 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
