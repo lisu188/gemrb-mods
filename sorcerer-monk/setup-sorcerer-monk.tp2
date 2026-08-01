@@ -168,6 +168,10 @@ APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
 APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
   UNLESS ~SORCERER_MONK~
 
+// Both component classes use the same starting-gold formula.
+APPEND ~strtgold.2da~ ~SORCERER_MONK 4 1 1 10~
+  UNLESS ~SORCERER_MONK~
+
 // GemRB exposes NUMWSLOT to all supported games. Standard multiclasses use the
 // more restrictive component slot count, so Sorcerer/Monk follows Sorcerer's 2.
 APPEND ~numwslot.2da~ ~SORCERER_MONK 2~
