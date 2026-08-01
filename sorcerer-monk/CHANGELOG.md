@@ -16,4 +16,6 @@
 - Added `CLASS.IDS` registration using the allocated class ID.
 - Limited file-existence checks to genuinely optional or version-dependent tables.
 - Restored explanatory comments and the legacy `SKILLS.2DA` fallback.
+- Corrected GemRB 0.9.5+ Monk skill progression to 0 starting points and 10 points per Monk level.
+- Added regression tests for class registration, multiclass metadata, combined class features and gameplay restrictions.
 - Removed the stale version number and redundant engine warning from translated component text.
