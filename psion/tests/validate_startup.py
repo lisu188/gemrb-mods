@@ -64,7 +64,17 @@ def main() -> None:
             in startup
         ), discipline
 
-    print("Psion character-generation startup table validation passed.")
+    # ToB LevelUp.py indexes LUNUMAB by exact class name even before opening the
+    # HLA picker and divides by RATE. Version 1.0 has no Psion HLA subsystem, so
+    # every discipline needs a nonzero RATE and an unreachable FIRST_LEVEL.
+    assert "FILE_EXISTS_IN_GAME ~lunumab.2da~" in startup
+    for discipline in DISCIPLINES:
+        assert (
+            f"APPEND ~lunumab.2da~ ~{discipline} 99 1 99 1~"
+            in startup
+        ), discipline
+
+    print("Psion character-generation and ToB level-up table validation passed.")
 
 
 if __name__ == "__main__":
