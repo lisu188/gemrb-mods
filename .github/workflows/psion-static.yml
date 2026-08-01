@@ -31,6 +31,8 @@ jobs:
         run: python psion/tests/validate.py
       - name: Validate class XP and THAC0 progression
         run: python psion/tests/validate_class_progression.py
+      - name: Validate character-generation startup tables
+        run: python psion/tests/validate_startup.py
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
       - name: Validate GUI patch lifecycle
