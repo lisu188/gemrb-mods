@@ -95,14 +95,14 @@ class InstallerTests(unittest.TestCase):
 
     def test_xp_cap_is_inherited_from_components(self):
         self.assertNotIn("SORCERER_MONK 8000000", TP2)
-        self.assertIn("OUTER_SET sm_xpcap = -2", TP2)
+        self.assertIn("OUTER_SET sm_xpcap = (0 - 2)", TP2)
         self.assertIn("STRING_EQUAL_CASE ~SORCERER~", TP2)
         self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
-        self.assertIn("sm_xpcap_value = -1", TP2)
-        self.assertIn("SET sm_xpcap = -1", TP2)
+        self.assertIn("sm_xpcap_value = (0 - 1)", TP2)
+        self.assertIn("SET sm_xpcap = (0 - 1)", TP2)
         self.assertIn("sm_xpcap_value < sm_xpcap", TP2)
         self.assertIn("SORCERER_MONK %sm_xpcap%", payloads("APPEND", "xpcap.2da"))
-        self.assertIn("ACTION_IF sm_xpcap < -1", TP2)
+        self.assertIn("ACTION_IF sm_xpcap < (0 - 1)", TP2)
         self.assertIn("FAIL @14", TP2)
 
     def test_starting_gold_matches_components(self):
