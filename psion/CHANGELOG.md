@@ -17,6 +17,9 @@
 - Added explicit Psion class progression: dynamic inheritance of the installed
   Mage XP row, half-rate THAC0 progression, Lore 5/level, Intelligence 15
   chargen minimum, two starting proficiency points and one every four levels.
+- Added a dedicated `SAVEPSI` table cloned from the installed game's Mage saving
+  throws, preserving death/polymorph/breath progression while improving wand
+  and spell saves by 2 across every available level column.
 - Added exact one-pip weapon proficiency columns for dagger, club, spear,
   quarterstaff, crossbow, dart and sling, while disabling other weapon/style
   rows.
@@ -32,6 +35,9 @@
   data and GemRB's official CHITIN.KEY generator.
 - Added full install, verification, uninstall and reinstall lifecycles for all
   three class-table layouts.
+- Added a dedicated real-WeiDU saving-throw lifecycle across 20-, 41- and
+  40-column tables, including `SAVEWIZ` preservation, `SAVEPSI` removal on
+  uninstall and clean reinstall.
 - Added a dedicated real-WeiDU BG2/ToB startup lifecycle covering starting gold,
   starter equipment, HLA safety rows and byte-for-byte uninstall restoration.
 - Added semantic ITM fixtures proving exact item-usability restrictions and
