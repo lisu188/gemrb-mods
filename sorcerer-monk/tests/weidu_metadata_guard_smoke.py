@@ -47,6 +47,43 @@ def assert_rejected(result, message):
     assert message.casefold() in result.stdout.casefold(), result.stdout
 
 
+def exercise_duplicate_clskills_rows(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-duplicate-clskills-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        clskills_path = override / "clskills.2da"
+        duplicate = "SORCERER_MONK * * MXSPLSRC 89000 * SKILLS * 0 2 * CLABMO01 -3 2500000 * 0 *\n"
+        with clskills_path.open("a", encoding="utf-8") as handle:
+            handle.write(duplicate)
+            handle.write(duplicate)
+        originals = snapshot(override)
+
+        result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
+        assert_rejected(result, "Multiple SORCERER_MONK identity rows already exist")
+        assert_snapshot(override, originals, "duplicate CLSKILLS rejection")
+        print("duplicate CLSKILLS identity rows: rejected safely", flush=True)
+
+
+def exercise_duplicate_class_table_rows(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-duplicate-classes-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        with (override / "clskills.2da").open("a", encoding="utf-8") as handle:
+            handle.write("SORCERER_MONK * * MXSPLSRC 89000 * SKILLS * 0 2 * CLABMO01 -3 2500000 * 0 *\n")
+        duplicate = "SORCERER_MONK 1 2 3 * 786432 21 * 0x20040000 -1 1 0 0 0 0 0 0 0 9\n"
+        with (override / "classes.2da").open("a", encoding="utf-8") as handle:
+            handle.write(duplicate)
+            handle.write(duplicate)
+        originals = snapshot(override)
+
+        result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
+        assert_rejected(result, "Multiple SORCERER_MONK identity rows already exist")
+        assert_snapshot(override, originals, "duplicate CLASSES rejection")
+        print("duplicate active class-table identity rows: rejected safely", flush=True)
+
+
 def exercise_stale_class_ids_symbol(weidu):
     with tempfile.TemporaryDirectory(prefix="sorcerer-monk-stale-class-ids-symbol-") as tmp:
         game = Path(tmp)
@@ -147,6 +184,8 @@ def main():
     if not weidu:
         raise SystemExit("WeiDU executable not found")
 
+    exercise_duplicate_clskills_rows(weidu)
+    exercise_duplicate_class_table_rows(weidu)
     exercise_stale_class_ids_symbol(weidu)
     exercise_class_ids_numeric_collision(weidu)
     exercise_noncanonical_component_class_id(weidu)
