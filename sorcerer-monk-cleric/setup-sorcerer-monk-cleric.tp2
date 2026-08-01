@@ -11,18 +11,14 @@ BEGIN ~Sorcerer/monk/cleric multiclass for gemrb~
 // number. Installing both components would make uninstall restoration unsafe.
 REQUIRE_PREDICATE !MOD_IS_INSTALLED ~sorcerer-monk/setup-sorcerer-monk.tp2~ 0 @4
 
-OUTER_SET smc_lower = RESOLVE_STR_REF (@1)
-OUTER_SET smc_desc = RESOLVE_STR_REF (@2)
-OUTER_SET smc_mixed = RESOLVE_STR_REF (@3)
-OUTER_SET smc_brief = RESOLVE_STR_REF (@5)
 OUTER_SET smc_split_class_tables = 0
 OUTER_SET smc_classes_cols = 0
 OUTER_SET smc_clastext_cols = 0
 OUTER_SET smc_clskills_cols = 0
 
-// Preflight the active GemRB schemas before modifying any table. HPCLASS.2DA
-// can exist alongside the released combined CLASSES.2DA layout, so its mere
-// presence is not a safe split/combined discriminator.
+// Preflight the active GemRB schemas before modifying any table or allocating
+// translated TLK strings. HPCLASS.2DA can exist alongside the released combined
+// CLASSES.2DA layout, so its mere presence is not a safe layout discriminator.
 COPY_EXISTING ~classes.2da~ ~override~
   COUNT_2DA_COLS smc_classes_cols
 BUT_ONLY
@@ -52,6 +48,11 @@ BUT_ONLY
 ACTION_IF (smc_clskills_cols != 16) AND (smc_clskills_cols != 17) THEN BEGIN
   FAIL @8
 END
+
+OUTER_SET smc_lower = RESOLVE_STR_REF (@1)
+OUTER_SET smc_desc = RESOLVE_STR_REF (@2)
+OUTER_SET smc_mixed = RESOLVE_STR_REF (@3)
+OUTER_SET smc_brief = RESOLVE_STR_REF (@5)
 
 // ******************************************
 // first all the game table changes
