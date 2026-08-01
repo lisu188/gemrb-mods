@@ -383,13 +383,21 @@ def tlk_entries(path: Path) -> list[bytes]:
     return entries
 
 
+def casefold_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    matches = [candidate for candidate in path.parent.iterdir() if candidate.name.lower() == path.name.lower()]
+    assert len(matches) == 1, (path, matches)
+    return matches[0]
+
+
 root = Path(sys.argv[1])
 baseline = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 layout = sys.argv[3]
 for relative, expected in baseline["files"].items():
-    path = root / relative
+    path = casefold_path(root / relative)
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    assert actual == expected, (layout, relative, expected, actual)
+    assert actual == expected, (layout, relative, expected, actual, path)
 
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
 original_count = baseline["tlk"]["count"]
