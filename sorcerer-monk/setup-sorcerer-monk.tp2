@@ -160,7 +160,9 @@ APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
 APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
   UNLESS ~SORCERER_MONK~
 
-APPEND ~profs.2da~ ~SORCERER_MONK 2 5~
+// Match the fastest component proficiency progression (Monk: one point every
+// four levels) while retaining the Monk starting allotment of two points.
+APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
   UNLESS ~SORCERER_MONK~
 
 APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
