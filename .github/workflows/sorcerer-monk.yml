@@ -2,8 +2,6 @@ name: Sorcerer Monk
 
 on:
   push:
-    branches:
-      - improve-sorcerer-monk-v2
     paths:
       - sorcerer-monk/**
       - .github/workflows/sorcerer-monk.yml
