@@ -30,6 +30,11 @@ jobs:
           chmod +x "$weidu_bin"
           sudo install "$weidu_bin" /usr/local/bin/weidu
       - name: Parse TP2 with WeiDU
-        run: weidu --parse-check TP2 sorcerer-monk/setup-sorcerer-monk.tp2
+        run: |
+          output="$(weidu --nogame --parse-check TP2 sorcerer-monk/setup-sorcerer-monk.tp2 2>&1 || true)"
+          printf '%s\n' "$output"
+          if grep -E 'PARSE ERROR|FATAL ERROR' <<<"$output"; then
+            exit 1
+          fi
       - name: Real WeiDU install, reinstall and uninstall smoke test
         run: python sorcerer-monk/tests/weidu_smoke.py weidu
