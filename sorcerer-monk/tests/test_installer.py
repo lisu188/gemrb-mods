@@ -30,11 +30,16 @@ class InstallerTests(unittest.TestCase):
             self.assertIn("MXSPLSRC", row)
             self.assertIn("SKILLS", row)
             self.assertIn("CLABMO01", row)
-        self.assertIn("SORCERER_MONK 0 0 1 1 1 0 0", payloads("APPEND_COL", "thiefscl.2da"))
+        self.assertIn("$ $ SORCERER_MONK 0 0 1 1 1 0 0", payloads("APPEND_COL", "thiefscl.2da"))
 
     def test_modern_monk_skill_progression(self):
         self.assertIn("SORCERER_MONK 0 10", payloads("APPEND", "thiefskl.2da"))
         self.assertNotIn("SORCERER_MONK 10 5", payloads("APPEND", "thiefskl.2da"))
+
+    def test_legacy_monk_skill_progression(self):
+        legacy_rows = payloads("APPEND_COL", "skills.2da")
+        self.assertIn("$ $ SORCERER_MONK 10 10 -1 -1 -1 1 1 -1 -1", legacy_rows)
+        self.assertNotIn("$ $ SORCERER_MONK 10 5 -1 -1 -1 1 1 -1 -1", legacy_rows)
 
     def test_gameplay_restrictions(self):
         self.assertIn("SORCERER_MONK 1 1 1 0 0 0 0 0 0", payloads("APPEND", "alignmnt.2da"))
