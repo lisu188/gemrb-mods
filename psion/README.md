@@ -41,10 +41,15 @@ for a manual full-campaign playthrough on every supported game configuration.
 
   `floor(Intelligence modifier × Psion level / 2)`
 
-- Persistent PP state stored exclusively in GemRB's user-defined actor stat 239.
-  A Psion signature occupies the high word and current PP the low word, so no
-  ordinary Infinity Engine gameplay stat is repurposed as an initialization
-  marker.
+- Save-safe PP state stored in a private permanent `Protection:Spell` actor
+  effect. GemRB serializes ordinary actor effects in CRE saves, including when
+  using original game CRE formats. The record targets a private nonexistent
+  resource, carries current PP in `Param1`, and uses resistance mode 0, so it is
+  neither resistible nor dispellable and has no effect on real game resources.
+- GemRB user stat 239 is retained only as a fast runtime PP cache. A Psion
+  signature occupies the high word and current PP the low word; after save/load,
+  a missing cache is reconstructed from the serialized actor effect.
+- No ordinary Infinity Engine gameplay stat is repurposed as Psion state.
 - Full PP restoration after ordinary and temple resting.
 - Base costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
 - Maximum PP expenditure per manifestation equal to Psion level.
@@ -52,6 +57,11 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Cancellation-safe two-phase PP transactions.
 - Quickslot/action-bar configuration is excluded from PP transactions, so
   assigning a Psion power cannot reserve or spend points.
+- Registered Psion quickspells are routed back through `SpellPressed` instead of
+  GemRB's direct `SpellCast(-2, slot)` path. Each fresh quickslot attempt clears
+  that actor's stale reservation first, so canceling target selection and trying
+  again cannot make the retry commit PP on its first callback. Non-Psion
+  quickspells retain the stock GemRB path.
 - Runtime-filtered augmentation and choice lists.
 - Collision-safe temporary selector resolution: GemRB's synthetic spellinfo
   type 255 is resolved exclusively from the temporary spell list before any
@@ -95,7 +105,8 @@ chosen. Manifestation therefore uses a transaction:
 
 1. The first matching callback validates and reserves the manifestation.
 2. A matching confirmation callback deducts PP exactly once.
-3. Cancelling target selection clears the pending transaction.
+3. Cancelling target selection clears the pending transaction when a fresh
+   spell/innate/quickslot attempt begins.
 4. Repeated callbacks cannot intentionally charge the same manifestation twice.
 
 The runtime revalidates selected child resources at confirmation time, so a
@@ -249,12 +260,15 @@ GitHub Actions runs:
   item-usability regression checks;
 - parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
-- single-stat PP initialization, zero-pool and rest-refill state tests;
+- save/load PP-persistence tests that clear stat 239 while retaining the private
+  serialized actor effect, including a true zero-PP state and rest refill;
 - temporary type-255 selector-index collision tests;
 - selector filtering tests that hide an earlier choice and verify later entries
   retain their original non-compacted `SpellIndex` values;
 - confirmation-time raw-spellinfo revalidation when PP changes after selection;
 - quickslot/action-bar configuration tests proving PP is not reserved or spent;
+- Psion quickslot cancel/retry routing tests proving a canceled first phase
+  cannot cause the next quickslot attempt to commit on its first callback;
 - positive THAC0-bonus regression checks for Precognition and Second Chance;
 - GUI patch install, idempotence, backup and uninstall fixtures;
 - nested-rest indentation and rendered-Python compilation checks;
