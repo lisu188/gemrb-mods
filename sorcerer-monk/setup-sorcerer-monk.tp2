@@ -172,10 +172,24 @@ APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
 APPEND ~strtgold.2da~ ~SORCERER_MONK 4 1 1 10~
   UNLESS ~SORCERER_MONK~
 
+// BGEE defaults to a quarterstaff for classes missing from STWEAPON. Keep the
+// Monk component's intended unarmed start instead.
+ACTION_IF FILE_EXISTS_IN_GAME ~stweapon.2da~ THEN BEGIN
+  APPEND ~stweapon.2da~ ~SORCERER_MONK~
+    UNLESS ~SORCERER_MONK~
+END
+
 // GemRB exposes NUMWSLOT to all supported games. Standard multiclasses use the
 // more restrictive component slot count, so Sorcerer/Monk follows Sorcerer's 2.
 APPEND ~numwslot.2da~ ~SORCERER_MONK 2~
   UNLESS ~SORCERER_MONK~
+
+// Preserve Monk fist APR and the better component non-proficiency penalty on
+// engines that externalize these combat bonuses.
+ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
+  APPEND ~clswpbon.2da~ ~SORCERER_MONK 1 3 2~
+    UNLESS ~SORCERER_MONK~
+END
 
 // ToB starting equipment and HLA tables are absent from some supported games.
 ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
