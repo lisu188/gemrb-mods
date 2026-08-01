@@ -33,6 +33,11 @@ OUTER_SET smc_ids_class_id = (0 - 1)
 OUTER_SET smc_ids_numeric_conflict = 0
 OUTER_SET smc_fistweap_cols = 0
 OUTER_SET smc_fistweap_id_conflict = 0
+OUTER_SET smc_xpcap = (0 - 2)
+OUTER_SET smc_xpcap_cols = 0
+OUTER_SET smc_found_cleric_xpcap = 0
+OUTER_SET smc_found_sorcerer_xpcap = 0
+OUTER_SET smc_found_monk_xpcap = 0
 OUTER_SPRINT smc_ids_class_symbol ~~
 
 // Preflight the active GemRB schemas before modifying any table or allocating
@@ -219,6 +224,43 @@ ACTION_IF smc_fistweap_id_conflict = 1 THEN BEGIN
   FAIL @13
 END
 
+// XP caps are campaign-specific. Inherit the most restrictive cap among the
+// three component classes. -1 is the conventional uncapped value and behaves
+// as infinity when another component has a finite cap.
+COPY_EXISTING ~xpcap.2da~ ~override~
+  COUNT_2DA_COLS smc_xpcap_cols
+  READ_2DA_ENTRIES_NOW ~smc_xpcaps~ smc_xpcap_cols
+  FOR (smc_i = 0; smc_i < smc_xpcaps; ++smc_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~smc_xpcaps~ smc_i 0 smc_xpcap_class
+    PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~CLERIC~) OR (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      READ_2DA_ENTRY_FORMER ~smc_xpcaps~ smc_i 1 smc_xpcap_value
+      PATCH_IF IS_AN_INT ~%smc_xpcap_value%~ BEGIN
+        PATCH_IF smc_xpcap_value >= (0 - 1) BEGIN
+          PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~CLERIC~) BEGIN
+            SET smc_found_cleric_xpcap = 1
+          END ELSE PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+            SET smc_found_sorcerer_xpcap = 1
+          END ELSE BEGIN
+            SET smc_found_monk_xpcap = 1
+          END
+          PATCH_IF smc_xpcap_value = (0 - 1) BEGIN
+            PATCH_IF smc_xpcap = (0 - 2) BEGIN
+              SET smc_xpcap = (0 - 1)
+            END
+          END ELSE PATCH_IF smc_xpcap_value >= 0 BEGIN
+            PATCH_IF (smc_xpcap < 0) OR (smc_xpcap_value < smc_xpcap) BEGIN
+              SET smc_xpcap = smc_xpcap_value
+            END
+          END
+        END
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF (smc_found_cleric_xpcap != 1) OR (smc_found_sorcerer_xpcap != 1) OR (smc_found_monk_xpcap != 1) OR (smc_xpcap < (0 - 1)) THEN BEGIN
+  FAIL @15
+END
+
 OUTER_SET smc_lower = RESOLVE_STR_REF (@1)
 OUTER_SET smc_desc = RESOLVE_STR_REF (@2)
 OUTER_SET smc_mixed = RESOLVE_STR_REF (@3)
@@ -235,7 +277,7 @@ UNLESS ~SORCERER_MONK_CLERIC ~
 APPEND ~profs.2da~ ~SORCERER_MONK_CLERIC  2 5~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
-APPEND ~xpcap.2da~ ~SORCERER_MONK_CLERIC  8000000~
+APPEND ~xpcap.2da~ ~SORCERER_MONK_CLERIC %smc_xpcap%~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
 APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK_CLERIC  * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
@@ -263,8 +305,9 @@ APPEND ~lunumab.2da~ ~SORCERER_MONK_CLERIC 14          1          99           1
 // avatar class value (partial Animation ID)
 APPEND ~avprefc.2da~ ~SORCERER_MONK_CLERIC          0x500~
 
-// Class details. Current GemRB split tables use the class name as the
-// CLASSTEXT row label; native EE variants add biography/brief/fallen fields.
+// True multiclasses derive saving throws and hit points from their component
+// classes. The combined metadata therefore uses '*' rather than selecting
+// Cleric saves or full Monk hit points. The race intersection is human-only.
 ACTION_IF smc_split_class_tables = 1 THEN BEGIN
   ACTION_IF smc_clastext_cols = 6 THEN BEGIN
     OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC %smc_class_id% * %smc_lower% %smc_desc% %smc_mixed%~
@@ -278,14 +321,14 @@ ACTION_IF smc_split_class_tables = 1 THEN BEGIN
 
   APPEND ~clastext.2da~ ~%smc_classtext_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~clsrcreq.2da~ ~SORCERER_MONK_CLERIC  1 1 1 0 0 2 0~
+  APPEND ~clsrcreq.2da~ ~SORCERER_MONK_CLERIC 1 0 0 0 0 0 0~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~hpclass.2da~ ~SORCERER_MONK_CLERIC  HPMONK~
+  APPEND ~hpclass.2da~ ~SORCERER_MONK_CLERIC *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC  SAVEPRS 786436 0x40000 -1 0 9~
+  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC * 786436 0x40000 -1 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0 0 9~
+  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 0 0 0 0 0 0 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END
 
