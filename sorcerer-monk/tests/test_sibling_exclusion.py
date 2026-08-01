@@ -26,6 +26,14 @@ class SiblingExclusionTests(unittest.TestCase):
         self.assertIn(r"UNLESS ~^[ %TAB%]*MULTI2SORCERER\([ %TAB%]\|$\)~", SM)
         self.assertIn(r"UNLESS ~^[ %TAB%]*MULTI2MONK\([ %TAB%]\|$\)~", SM)
 
+    def test_triple_class_lunumab_guards_do_not_match_multi2_rows(self):
+        for component in ("SORCERER", "MONK", "CLERIC"):
+            self.assertNotIn(f"UNLESS ~MULTI2{component}~", SMC)
+            self.assertIn(
+                rf"UNLESS ~^[ %TAB%]*MULTI3{component}\([ %TAB%]\|$\)~",
+                SMC,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
