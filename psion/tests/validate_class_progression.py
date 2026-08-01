@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fast static checks for Psion XP, THAC0, Lore, and proficiency progression."""
+"""Fast static checks for Psion class progression and chargen semantics."""
 
 from pathlib import Path
 
@@ -47,11 +47,34 @@ def main() -> None:
     ):
         assert fragment in progression, fragment
 
+    # Class-common owns chargen minima, proficiency limits and the campaign cap.
+    for fragment in (
+        "COPY_EXISTING ~weapprof.2da~ ~override~",
+        "READ_2DA_ENTRY ps_i 0 ps_weapprof_cols ps_prof_name",
+        "STRING_EQUAL_CASE ~DAGGER~",
+        "STRING_EQUAL_CASE ~CLUB~",
+        "STRING_EQUAL_CASE ~SPEAR~",
+        "STRING_EQUAL_CASE ~QUARTERSTAFF~",
+        "STRING_EQUAL_CASE ~CROSSBOW~",
+        "STRING_EQUAL_CASE ~DART~",
+        "STRING_EQUAL_CASE ~SLING~",
+        "COPY_EXISTING ~abclasrq.2da~ ~override~",
+        "PATCH_IF ps_abclasrq_cols = 7",
+        "COPY_EXISTING ~xpcap.2da~ ~override~",
+        "OUTER_SET ps_xpcap_value = ps_cap",
+        "could not locate the MAGE cap in XPCAP.2DA",
+    ):
+        assert fragment in class_common, fragment
+    assert "8000000" not in class_common
+
     for discipline in DISCIPLINES:
         assert f"APPEND ~xplevel.2da~ ~{discipline}%ps_xp_values%~" in progression
         assert f"APPEND ~thac0.2da~ ~{discipline}%ps_thac0_values%~" in progression
         assert f"APPEND ~lore.2da~ ~{discipline} 5~" in progression
         assert f"APPEND ~profs.2da~ ~{discipline} 2 4~" in class_common
+        assert f"APPEND ~abclasrq.2da~ ~{discipline} 0 0 0 15 0 0~" in class_common
+        assert f"APPEND ~xpcap.2da~ ~{discipline} %ps_xpcap_value%~" in class_common
+        assert f"APPEND_COL ~weapprof.2da~ ~$ $ {discipline}%ps_weapprof_values%~" in class_common
 
     layout_pos = setup.index("INCLUDE ~psion/lib/class-layout.tpa~")
     progression_pos = setup.index("INCLUDE ~psion/lib/class-progression.tpa~")
@@ -66,14 +89,21 @@ def main() -> None:
         'override / "thac0.2da"',
         'override / "lore.2da"',
         'override / "profs.2da"',
-        '("FIRST_LEVEL", "RATE")',
+        'override / "abclasrq.2da"',
+        'override / "weapprof.2da"',
+        '("MIN_STR", "MIN_DEX", "MIN_CON", "MIN_INT", "MIN_WIS", "MIN_CHR")',
+        '("ID", "NAME_REF", "DESC_REF", "MAGE", "SORCERER")',
+        '"QUARTERSTAFF"',
+        '"CROSSBOW"',
         '135000',
         '("RATE",)',
     ):
         assert fragment in fixture, fragment
 
     for fragment in (
-        '"xplevel.2da", "thac0.2da", "lore.2da"',
+        '"abclasrq.2da", "weapprof.2da"',
+        'ability_rows.get(discipline) == ["0", "0", "0", "15", "0", "0"]',
+        'allowed = {"DAGGER", "CLUB", "SPEAR", "QUARTERSTAFF", "CROSSBOW", "DART", "SLING"}',
         'xp_rows.get(discipline) == xp_rows["MAGE"]',
         '20 - (level // 2)',
         'assert xp_rows["MAGE"][8] == "135000"',
@@ -87,7 +117,7 @@ def main() -> None:
     assert expected[19] == 10
     assert expected[-1] == 0
 
-    print("Psion XP, THAC0, Lore, and proficiency progression validation passed.")
+    print("Psion XP, THAC0, Lore, weapon, chargen, and cap validation passed.")
 
 
 if __name__ == "__main__":
