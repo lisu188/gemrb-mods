@@ -42,6 +42,7 @@ Use WeiDU 247 or newer.
 - Adds the allocated class identifier to `CLASS.IDS`.
 - Avoids modifying ToB starting-equipment and HLA tables in games where those tables are absent.
 - Supports both the older `SKILLS.2DA` layout and the newer `THIEFSCL.2DA`/`THIEFSKL.2DA` pair.
+- Matches Monk skill-point progression in both skill-table layouts: legacy `10/10` and current split `0/10`.
 
 ## Gameplay model
 
