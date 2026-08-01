@@ -58,7 +58,7 @@ out = Path(sys.argv[2])
 candidates = (
     "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
     "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
-    "xpcap.2da", "xplevel.2da", "thac0.2da", "avprefc.2da",
+    "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da", "avprefc.2da",
     "qslots.2da", "clskills.2da",
 )
 paths = [root / "override" / name for name in candidates if (root / "override" / name).is_file()]
@@ -161,6 +161,15 @@ expected_thac0 = [str(max(0, 20 - (level // 2))) for level in range(1, len(thac0
 for discipline in disciplines:
     assert thac0_rows.get(discipline) == expected_thac0, (
         layout, discipline, thac0_rows.get(discipline), expected_thac0
+    )
+
+# GemRB's LUCommon.SetupLore indexes LORE.2DA by class row name. All custom
+# disciplines therefore need an explicit RATE matching the Psion design.
+lore_columns, lore_rows = read_2da(override / "lore.2da")
+assert lore_columns == ["RATE"], (layout, lore_columns)
+for discipline in disciplines:
+    assert lore_rows.get(discipline) == ["5"], (
+        layout, discipline, lore_rows.get(discipline)
     )
 
 for filename in (
