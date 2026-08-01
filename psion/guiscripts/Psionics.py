@@ -19,6 +19,7 @@ INT_STAT = 38
 LEVEL_STAT = 34
 INNATE_TYPE = 2
 INNATE_LEVEL = 0
+TEMPORARY_SPELLINFO_TYPE = 255
 
 PSION_CLASSES = {
     "PSION_SEER": "SEER",
@@ -171,6 +172,38 @@ def power_info(resref):
         base["selector"] = True
         base["cost"] = 0
     return base
+
+
+def resolve_power_entry(spellbook, actor, raw_spell):
+    """Resolve a GemRB spell token to a registered Psion resource.
+
+    Opcode-214 selector children use GemRB's synthetic spellinfo type 255. Their
+    small list indices overlap ordinary spellbook indices, so type 255 must be
+    resolved exclusively from the temporary spellinfo list before any ordinary
+    memorized spell lookup is attempted.
+    """
+    encoded_type = raw_spell // 1000
+    spell_index = raw_spell % 1000
+
+    if encoded_type == TEMPORARY_SPELLINFO_TYPE:
+        sources = [spellbook.GetSpellinfoSpells(actor, encoded_type)]
+    else:
+        book_types = [i for i in range(16) if encoded_type & (1 << i)]
+        if not book_types:
+            book_types = range(16)
+        sources = [
+            spellbook.GetUsableMemorizedSpells(actor, book_type)
+            for book_type in book_types
+        ]
+
+    for candidates in sources:
+        for candidate in candidates:
+            if candidate.get("SpellIndex", -1) % 1000 != spell_index:
+                continue
+            resref = candidate.get("SpellResRef", "")
+            if power_info(resref):
+                return candidate
+    return None
 
 
 def _meets_base_requirements(actor, info):
