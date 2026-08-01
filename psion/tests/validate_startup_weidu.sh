@@ -17,8 +17,8 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --layout normalized
 
 # The generic installer fixture intentionally contains only tables required by
-# every supported campaign. Add BG2-family chargen tables here so the optional
-# STRTGOLD and ToB 25STWEAP branches execute under real WeiDU.
+# every supported campaign. Add BG2-family chargen and ToB level-up tables here
+# so all optional startup/epic-safety branches execute under real WeiDU.
 python3 - "$game" "$baseline" <<'PY'
 from __future__ import annotations
 import hashlib
@@ -68,7 +68,23 @@ write_2da(
     rows,
 )
 
-files = (override / "strtgold.2da", override / "25stweap.2da")
+# Missing custom-class rows in LUNUMAB are dangerous in GemRB because the level
+# up script divides HLA count by RATE. The fixture default is deliberately zero.
+write_2da(
+    override / "lunumab.2da",
+    ("FIRST_LEVEL", "RATE", "CHANGE_LEVEL", "NEW_RATE"),
+    (
+        ("MAGE", "18", "1", "99", "1"),
+        ("FIGHTER", "20", "1", "99", "1"),
+    ),
+    default="0",
+)
+
+files = (
+    override / "strtgold.2da",
+    override / "25stweap.2da",
+    override / "lunumab.2da",
+)
 Path(sys.argv[2]).write_text(
     json.dumps(
         {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
@@ -145,7 +161,16 @@ for discipline in disciplines:
             discipline, row[0], row[1 + discipline_column], row[1 + mage_column]
         )
 
-print("Psion startup tables installed with Mage-equivalent data.")
+columns, rows = read_2da(root / "lunumab.2da")
+by_name = {row[0]: row[1:] for row in rows}
+for discipline in disciplines:
+    assert by_name.get(discipline) == ["99", "1", "99", "1"], (
+        discipline, by_name.get(discipline)
+    )
+    # RATE must stay nonzero because GemRB divides by it during ToB level-up.
+    assert int(by_name[discipline][1]) > 0
+
+print("Psion startup and ToB level-up safety tables installed correctly.")
 PY
 }
 
@@ -161,7 +186,7 @@ baseline = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 for name, expected in baseline.items():
     actual = hashlib.sha256((root / name).read_bytes()).hexdigest()
     assert actual == expected, (name, actual, expected)
-print("Psion startup tables restored byte-for-byte after uninstall.")
+print("Psion startup/HLA safety tables restored byte-for-byte after uninstall.")
 PY
 }
 
