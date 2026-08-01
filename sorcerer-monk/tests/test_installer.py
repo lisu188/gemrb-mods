@@ -22,6 +22,18 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SORCERER_MONK 1 0 0 0 0 0 0", payloads("APPEND", "clsrcreq.2da"))
         self.assertIn("SORCERER_MONK *", payloads("APPEND", "hpclass.2da"))
 
+    def test_native_ee_clastext_variants(self):
+        self.assertIn("ACTION_IF sm_clastext_cols = 9", TP2)
+        self.assertIn("ACTION_IF sm_clastext_cols = 10", TP2)
+        self.assertIn(
+            "SORCERER_MONK %sm_class_id% 16384 %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief%",
+            TP2,
+        )
+        self.assertIn(
+            "SORCERER_MONK %sm_class_id% 16384 %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief% -1",
+            TP2,
+        )
+
     def test_released_class_metadata(self):
         class_rows = payloads("APPEND", "classes.2da")
         self.assertIn(
