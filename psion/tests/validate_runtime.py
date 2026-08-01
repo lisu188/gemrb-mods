@@ -58,6 +58,7 @@ def main() -> None:
         {"SpellResRef": "PS1VIGR", "Flags": 1},
         {"SpellResRef": "SPCL900", "Flags": 0},
     ]
+    raw_spellinfo = ["PSMT03", "PSNOTMOD"]
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
     gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
@@ -65,6 +66,7 @@ def main() -> None:
     gemrb.LoadTable = lambda name, *_: tables[name.lower()]
     gemrb.DisplayString = lambda *_: None
     gemrb.Log = lambda *_: None
+    gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)
     gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
     gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[index])
     gemrb.GetMemorizedSpellsCount = (
@@ -122,9 +124,9 @@ def main() -> None:
         mixed = ["SPWI112", "PSRF01", "PSRF04", "PSAADEX"]
         assert module.filter_spellinfo(1, mixed) == ["SPWI112", "PSRF01", "PSAADEX"]
 
-        # Temporary opcode-214 choices use synthetic type 255. Their index can
-        # equal an ordinary innate index, so type 255 must never inspect the
-        # memorized spellbook before resolving the selector child.
+        # Temporary opcode-214 choices use synthetic type 255. Resolve them from
+        # GemRB's raw spellinfo array, never from the affordability-filtered UI
+        # list or an ordinary memorized spellbook with colliding small indexes.
         class CollisionSpellbook:
             def __init__(self):
                 self.memorized_calls = 0
@@ -132,10 +134,7 @@ def main() -> None:
 
             def GetSpellinfoSpells(self, actor, book_type):
                 self.spellinfo_calls += 1
-                return [
-                    {"SpellIndex": 255000, "SpellResRef": "PSMT03"},
-                    {"SpellIndex": 255001, "SpellResRef": "PSNOTMOD"},
-                ]
+                return []
 
             def GetUsableMemorizedSpells(self, actor, book_type):
                 self.memorized_calls += 1
@@ -143,17 +142,31 @@ def main() -> None:
 
         collision = CollisionSpellbook()
         entry = module.resolve_power_entry(collision, 1, 255000)
-        assert entry["SpellResRef"] == "PSMT03", entry
-        assert collision.spellinfo_calls == 1
+        assert entry == {"SpellIndex": 255000, "SpellResRef": "PSMT03"}, entry
+        assert collision.spellinfo_calls == 0
         assert collision.memorized_calls == 0
         # A PS-prefixed resource from another mod is not intercepted merely by
         # its name; only resources registered in the Psion power tables count.
         assert module.resolve_power_entry(collision, 1, 255001) is None
+        assert collision.spellinfo_calls == 0
         assert collision.memorized_calls == 0
 
         ordinary = module.resolve_power_entry(collision, 1, 4000)
         assert ordinary["SpellResRef"] == "PS1VIGR", ordinary
         assert collision.memorized_calls == 1
+
+        # If PP changes after the selector button was built, confirmation must
+        # still resolve the original raw child and reject it rather than letting
+        # the engine cast a now-unaffordable manifestation for free.
+        module.ensure_pool(1, True)
+        selected = module.resolve_power_entry(collision, 1, 255000)
+        assert module.begin_manifest(1, selected["SpellResRef"])
+        module._write_pool_state(1, 0)
+        confirmed = module.resolve_power_entry(collision, 1, 255000)
+        assert confirmed["SpellResRef"] == "PSMT03"
+        assert not module.begin_manifest(1, confirmed["SpellResRef"])
+        assert module.ensure_pool(1) == 0
+        module.ensure_pool(1, True)
 
         before = module.ensure_pool(1)
         assert module.begin_manifest(1, "PSAADEX")
