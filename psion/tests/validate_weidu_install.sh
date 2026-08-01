@@ -153,7 +153,20 @@ def read_class_ids(path: Path) -> dict[str, int]:
     return result
 
 
+def casefold_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    matches = [
+        candidate
+        for candidate in path.parent.iterdir()
+        if candidate.name.lower() == path.name.lower()
+    ]
+    assert len(matches) == 1, (layout, path, matches)
+    return matches[0]
+
+
 def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
+    path = casefold_path(path)
     data = path.read_bytes()
     assert data[:8] == b"ITM V1  ", (layout, path.name, data[:8])
     assert len(data) >= 0x72, (layout, path.name, len(data))
