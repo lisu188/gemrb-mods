@@ -166,7 +166,7 @@ END
 COPY_EXISTING ~PS5SCHN.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS5SCHN~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 18 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 2 timing = 0 duration = 18 END
   FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
     LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 18 END
   END
