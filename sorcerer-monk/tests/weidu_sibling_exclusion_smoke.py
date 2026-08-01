@@ -48,14 +48,18 @@ def run_component(weidu, game, tp2, *args, check=True):
         *args,
     ]
     print("+", " ".join(command), flush=True)
-    return subprocess.run(
+    result = subprocess.run(
         command,
         cwd=game,
-        check=check,
+        check=False,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    if check and result.returncode:
+        print(result.stdout, flush=True)
+        raise subprocess.CalledProcessError(result.returncode, command, output=result.stdout)
+    return result
 
 
 def assert_blocked(result, expected_message):
