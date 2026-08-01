@@ -148,11 +148,11 @@ def write_item_fixture(path: Path, item_type: int, usability: int, proficiency: 
     struct.pack_into("<H", data, 0x1C, item_type)
     struct.pack_into("<I", data, 0x1E, usability)
     data[0x31] = proficiency
-    struct.pack_into("<I", data, 0x64, 0x72)  # extended-header offset
-    struct.pack_into("<H", data, 0x68, 0)     # extended-header count
-    struct.pack_into("<I", data, 0x6A, 0x72)  # effect-table offset
-    struct.pack_into("<H", data, 0x6E, 0)     # equipping-effect byte index
-    struct.pack_into("<H", data, 0x70, 0)     # equipping-effect count
+    struct.pack_into("<I", data, 0x64, 0x72)
+    struct.pack_into("<H", data, 0x68, 0)
+    struct.pack_into("<I", data, 0x6A, 0x72)
+    struct.pack_into("<H", data, 0x6E, 0)
+    struct.pack_into("<H", data, 0x70, 0)
     path.write_bytes(data)
 
 
@@ -162,7 +162,6 @@ def configure_item_usability_fixtures(override: Path) -> None:
 
 
 def read_2da_rows(path: Path) -> list[list[str]]:
-    """Return ordinary data rows, excluding blank and comment lines."""
     rows: list[list[str]] = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[3:]:
         stripped = line.strip()
@@ -173,7 +172,6 @@ def read_2da_rows(path: Path) -> list[list[str]]:
 
 
 def mage_xp_values(level_count: int) -> tuple[str, ...]:
-    """Return a deterministic Mage progression with BG1's level-9 threshold."""
     values = [
         0, 2500, 5000, 10000, 20000, 40000, 60000, 90000, 135000,
         250000, 375000,
@@ -184,7 +182,6 @@ def mage_xp_values(level_count: int) -> tuple[str, ...]:
 
 
 def configure_progression_tables(override: Path, layout: str) -> None:
-    """Create width-varying XP/THAC0 and standard Lore progression fixtures."""
     level_count = PROGRESSION_LEVELS[layout]
     columns = tuple(str(level) for level in range(1, level_count + 1))
     mage_xp = mage_xp_values(level_count)
@@ -199,8 +196,6 @@ def configure_progression_tables(override: Path, layout: str) -> None:
         default="0",
     )
 
-    # Seed rows need only be structurally valid. The Psion installer must not
-    # clone either one: it generates the explicit half-rate Psion progression.
     write_2da(
         override / "thac0.2da",
         columns,
@@ -211,8 +206,6 @@ def configure_progression_tables(override: Path, layout: str) -> None:
         default="20",
     )
 
-    # GemRB's level-up code reads LORE.2DA by exact class row name. The fixture
-    # deliberately omits Psion rows so the installer must add +5 Lore/level.
     write_2da(
         override / "lore.2da",
         ("RATE",),
@@ -226,7 +219,6 @@ def configure_progression_tables(override: Path, layout: str) -> None:
 
 
 def configure_class_rule_tables(override: Path) -> None:
-    """Create semantic ability-requirement and proficiency fixtures."""
     write_2da(
         override / "abclasrq.2da",
         ("MIN_STR", "MIN_DEX", "MIN_CON", "MIN_INT", "MIN_WIS", "MIN_CHR"),
@@ -263,7 +255,6 @@ def configure_class_rule_tables(override: Path) -> None:
 
 
 def configure_class_layout(override: Path, layout: str) -> None:
-    """Convert the overlaid GemRB tables to the requested compatibility shape."""
     if layout == "normalized":
         return
 
@@ -273,8 +264,6 @@ def configure_class_layout(override: Path, layout: str) -> None:
         for row in source_rows:
             if len(row) < 6 or not row[1].isdigit():
                 continue
-            # Native EE adds biography, fallen-state, brief-description and
-            # fallen-notice columns after the normalized five data fields.
             native_rows.append(tuple(row[:6] + ["-1", "0", row[5], "-1"]))
         if not native_rows:
             raise RuntimeError("unable to derive native CLASSTEXT fixture rows")
@@ -290,8 +279,6 @@ def configure_class_layout(override: Path, layout: str) -> None:
         return
 
     if layout == "legacy":
-        # Older GemRB combines text, save, hit-point and usability metadata in
-        # one table. The rows below mirror the released v0.9.3 BG2 schema.
         for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
             (override / filename).unlink(missing_ok=True)
         write_2da(
@@ -340,8 +327,6 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     override.mkdir(parents=True, exist_ok=True)
     normalize_tree_case(override)
 
-    # Lowercasing destinations reproduces the engine's case-insensitive
-    # overwrite behavior on Linux.
     unhardcoded = gemrb_root / "gemrb" / "unhardcoded"
     for directory in ("shared", "bg2", "bgee"):
         merge_tree(unhardcoded / directory, override)
@@ -354,12 +339,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     language.mkdir(parents=True, exist_ok=True)
     shutil.copy2(dialog, language / "dialog.tlk")
 
-    # WeiDU detects BGEE from OH1000.ARE. Its contents are irrelevant for this
-    # installer-only fixture; the resource only has to exist in CHITIN.KEY.
     (override / "oh1000.are").write_bytes(b"AREAV1.0")
 
-    # Astral Construct currently clones WOLF.CRE. Reuse a structurally valid
-    # demo creature body for the installation test.
     creature_candidates = sorted(
         path for path in output.rglob("*") if path.is_file() and path.suffix.lower() == ".cre"
     )
@@ -382,8 +363,6 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         ((0, "MAGIC"), (1, "ELECTRICITY"), (2, "SLASHING")),
     )
 
-    # The demo intentionally omits several original-game tables. Supply only
-    # the structural subset required by the class installer.
     write_ids(
         override / "class.ids",
         ((1, "MAGE"), (2, "FIGHTER"), (19, "SORCERER"), (20, "MONK")),
@@ -405,11 +384,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     )
     configure_progression_tables(override, layout)
     configure_class_rule_tables(override)
-    configure_item_usability_fixtures(override)
     configure_class_layout(override, layout)
 
-    # A real GemRB run writes this file. Point at the fixture override so WeiDU
-    # exercises GemRB_Data_Path parsing without depending on host paths.
     (output / "gemrb_path.txt").write_text(
         f"GemRB_Data_Path = {override.resolve()}\n",
         encoding="utf-8",
@@ -420,7 +396,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         "weapprof.2da", "profs.2da", "xpcap.2da", "xplevel.2da",
         "thac0.2da", "lore.2da", "avprefc.2da", "qslots.2da",
         "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids",
-        "oh1000.are", *ITEM_USABILITY_FIXTURES,
+        "oh1000.are",
     ]
     if layout != "legacy":
         required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -435,13 +411,24 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         print(f"  {line}")
     print(
         f"Fixture progression columns={PROGRESSION_LEVELS[layout]} "
-        f"for XPLEVEL.2DA and THAC0.2DA; semantic WEAPPROF/ABCLASRQ/ITM fixtures enabled"
+        f"for XPLEVEL.2DA and THAC0.2DA; semantic WEAPPROF/ABCLASRQ enabled"
     )
 
+    # GemRB's demo KEY intentionally contains no BIFFs and assigns locator 0 to
+    # every scanned override resource. WeiDU can read those resources, but a
+    # same-name COPY_EXISTING_REGEXP backup can then treat the KEY locator as a
+    # zero-byte BIFF resource. Build CHITIN.KEY before the synthetic ITMs.
+    # WeiDU GLOB explicitly merges override files with KEY resources, so these
+    # late-created ITMs are still enumerated and patched like normal override
+    # resources while retaining correct backup bytes.
     key_script = gemrb_root / "tools" / "demo_key_file.py"
     subprocess.run(["python3", str(key_script), str(output)], check=True)
     if (output / "chitin.key").read_bytes()[:8] != b"KEY V1  ":
         raise RuntimeError("generated chitin.key is invalid")
+
+    configure_item_usability_fixtures(override)
+    require_files(override, tuple(ITEM_USABILITY_FIXTURES))
+    print("Added override-only semantic ITM fixtures after CHITIN.KEY generation")
 
 
 def main() -> None:
