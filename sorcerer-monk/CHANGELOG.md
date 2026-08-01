@@ -6,6 +6,7 @@
 - Prevented simultaneous installation with Sorcerer/Monk/Cleric because the two legacy packages share the same WeiDU backup namespace and the older triple-class installer can also collide on class ID 22.
 - Replaced hardcoded class ID 21 with an ID derived from the Sorcerer/Monk `CLSKILLS.2DA` row index.
 - Added explicit checks for conflicting class IDs and GemRB's below-32 class-mask limit.
+- Rejected duplicate `SORCERER_MONK` identity rows in `CLSKILLS.2DA` and the active class table instead of allowing lookup order to select an ambiguous class ID.
 - Added canonical base-class checks requiring Sorcerer ID/row 19 and Monk ID/row 20 before using the fixed Sorcerer/Monk multiclass mask.
 - Added bidirectional `CLASS.IDS` consistency checks so neither the `SORCERER_MONK` symbol nor its allocated numeric ID can conflict with another registration.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
@@ -41,6 +42,6 @@
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
 - Added real WeiDU smoke coverage for released combined, current split, and native EE nine-/ten-column class-text layouts.
 - Added real WeiDU tests proving both sibling installation orders are rejected before table changes and that uninstall restores the first component's original fixture state byte-for-byte.
-- Added real WeiDU metadata-guard tests for stale/reversed `CLASS.IDS`, noncanonical component class IDs, incomplete `XPCAP.2DA`, and pre-existing `FISTWEAP.2DA` numeric collisions.
+- Added real WeiDU metadata-guard tests for duplicate identity rows, stale/reversed `CLASS.IDS`, noncanonical component class IDs, incomplete `XPCAP.2DA`, and pre-existing `FISTWEAP.2DA` numeric collisions.
 - Added WeiDU syntax validation to CI for both sibling TP2 installers.
 - Removed the stale version number and redundant engine warning from translated component text.
