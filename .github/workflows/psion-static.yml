@@ -33,6 +33,8 @@ jobs:
         run: python psion/tests/validate_class_progression.py
       - name: Validate character-generation startup tables
         run: python psion/tests/validate_startup.py
+      - name: Validate Psion action-bar slots
+        run: python psion/tests/validate_qslots.py
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
       - name: Validate GUI patch lifecycle
