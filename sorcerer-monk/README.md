@@ -50,6 +50,7 @@ Use WeiDU 247 or newer.
 - Restricts quick-weapon slots to two, matching the more restrictive Sorcerer component.
 - Preserves Monk fist APR progression and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Keeps BGEE character generation unarmed rather than falling back to the default quarterstaff.
+- Adjusts the custom `FISTWEAP.2DA` row for GemRB's rounded multiclass-level lookup so fist tiers are not granted before the Monk component earns them and the final tier remains reachable under the normal XP cap.
 
 ## Gameplay model
 
@@ -66,5 +67,7 @@ Use WeiDU 247 or newer.
 The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in either its normalized six-column form or the native EE ten-column form.
 
 GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The installer fails instead of creating a character whose class metadata would be interpreted incorrectly at runtime.
+
+GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier and the top fist remains attainable before the 8,000,000 XP cap.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
