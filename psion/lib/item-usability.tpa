@@ -1,0 +1,87 @@
+// Translate the Psion's custom equipment rules into item-local opcode 319
+// restrictions. A new class has no free legacy ITM usability bit, so reusing
+// the Mage/Sorcerer bit would also inherit their weapon restrictions. Instead
+// the class table uses USABILITY 0 and affected items explicitly reject all six
+// Psion class IDs through CLASS.IDS targeting.
+//
+// For non-weapons, Psions preserve the ordinary Mage/Sorcerer usability rule.
+// Legal Psion weapons are explicit exceptions even when their ITM header blocks
+// Mages. All other weapon proficiencies, armor, and shields are rejected.
+// GemRB evaluates opcode 319 in Actor::Unusable, so this is an engine-level
+// restriction rather than a GUI-only approximation.
+
+COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
+  PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
+    READ_ASCII 0 ps_item_signature (8)
+    PATCH_IF ~%ps_item_signature%~ STRING_EQUAL_CASE ~ITM V1  ~ BEGIN
+      READ_SHORT 0x1c ps_item_type
+      READ_LONG 0x1e ps_item_usability
+      READ_BYTE 0x31 ps_item_proficiency
+
+      SET ps_item_is_weapon = 0
+      PATCH_IF (ps_item_type = 5)
+        OR (ps_item_type = 14)
+        OR (ps_item_type = 15)
+        OR (ps_item_type = 16)
+        OR (ps_item_type = 17)
+        OR (ps_item_type = 18)
+        OR (ps_item_type = 19)
+        OR (ps_item_type = 20)
+        OR (ps_item_type = 21)
+        OR (ps_item_type = 22)
+        OR (ps_item_type = 23)
+        OR (ps_item_type = 24)
+        OR (ps_item_type = 25)
+        OR (ps_item_type = 26)
+        OR (ps_item_type = 27)
+        OR (ps_item_type = 29)
+        OR (ps_item_type = 30)
+        OR (ps_item_type = 31)
+        OR (ps_item_type = 57)
+        OR (ps_item_type = 69) BEGIN
+        SET ps_item_is_weapon = 1
+      END
+
+      // The allowed weapon proficiency IDs are dagger, spear, quarterstaff,
+      // crossbow, dart, sling, and club. Item type 17 contains both clubs and
+      // maces, so the proficiency byte—not the broad item type—must decide it.
+      SET ps_item_is_legal_weapon = 0
+      PATCH_IF (ps_item_proficiency = 0x60)
+        OR (ps_item_proficiency = 0x62)
+        OR (ps_item_proficiency = 0x66)
+        OR (ps_item_proficiency = 0x67)
+        OR (ps_item_proficiency = 0x6a)
+        OR (ps_item_proficiency = 0x6b)
+        OR (ps_item_proficiency = 0x73) BEGIN
+        SET ps_item_is_legal_weapon = 1
+      END
+
+      // Ammunition required by the two allowed launchers remains usable.
+      PATCH_IF (ps_item_type = 14) OR (ps_item_type = 31) BEGIN
+        SET ps_item_is_legal_weapon = 1
+      END
+
+      // Hand-to-hand item type 28 is intentionally not force-restricted. This
+      // preserves the engine's ordinary fist/unarmed resource. Any special fist
+      // item carrying the Mage unusability bit is still rejected below.
+      SET ps_item_restrict_psion = 0
+      PATCH_IF ps_item_is_legal_weapon = 0 BEGIN
+        PATCH_IF ((ps_item_usability BAND 0x40000) = 0x40000)
+          OR (ps_item_is_weapon = 1)
+          OR (ps_item_type = 2)
+          OR (ps_item_type = 12) BEGIN
+          SET ps_item_restrict_psion = 1
+        END
+      END
+
+      PATCH_IF ps_item_restrict_psion = 1 BEGIN
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_seer_id parameter2 = 5 power = 0 END
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_shaper_id parameter2 = 5 power = 0 END
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_kineticist_id parameter2 = 5 power = 0 END
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_egoist_id parameter2 = 5 power = 0 END
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_nomad_id parameter2 = 5 power = 0 END
+        LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_telepath_id parameter2 = 5 power = 0 END
+      END
+    END
+  END
+BUT_ONLY
