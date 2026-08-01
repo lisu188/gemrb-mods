@@ -48,12 +48,38 @@ ACTION_IF ps_abclasrq_valid != 1 THEN BEGIN
   FAIL ~The Psion mod requires the standard six-ability ABCLASRQ.2DA layout.~
 END
 
+// Preserve the campaign's active experience ceiling. BG1/TotSC-family games
+// use a much lower cap than BG2/ToB, so a hard-coded 8,000,000 row would let a
+// custom Psion advance beyond the campaign's intended limit.
+OUTER_SET ps_xpcap_found = 0
+OUTER_SET ps_xpcap_value = 0
+COPY_EXISTING ~xpcap.2da~ ~override~
+  COUNT_2DA_COLS ps_xpcap_cols
+  COUNT_2DA_ROWS ps_xpcap_cols ps_xpcap_rows
+  PATCH_IF ps_xpcap_cols >= 2 BEGIN
+    FOR (ps_i = 0; ps_i < ps_xpcap_rows; ++ps_i) BEGIN
+      READ_2DA_ENTRY ps_i 0 ps_xpcap_cols ps_xpcap_class
+      PATCH_IF ~%ps_xpcap_class%~ STRING_EQUAL_CASE ~MAGE~ BEGIN
+        READ_2DA_ENTRY ps_i 1 ps_xpcap_cols ps_cap
+        INNER_ACTION BEGIN
+          OUTER_SET ps_xpcap_value = ps_cap
+          OUTER_SET ps_xpcap_found = 1
+        END
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF ps_xpcap_found != 1 THEN BEGIN
+  FAIL ~The Psion mod could not locate the MAGE cap in XPCAP.2DA.~
+END
+
 APPEND ~class.ids~ ~%ps_seer_id% PSION_SEER~ UNLESS ~PSION_SEER~
 APPEND ~alignmnt.2da~ ~PSION_SEER 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_SEER~
 APPEND ~abclasrq.2da~ ~PSION_SEER 0 0 0 15 0 0~ UNLESS ~PSION_SEER~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_SEER%ps_weapprof_values%~ UNLESS ~PSION_SEER~
 APPEND ~profs.2da~ ~PSION_SEER 2 4~ UNLESS ~PSION_SEER~
-APPEND ~xpcap.2da~ ~PSION_SEER 8000000~ UNLESS ~PSION_SEER~
+APPEND ~xpcap.2da~ ~PSION_SEER %ps_xpcap_value%~ UNLESS ~PSION_SEER~
 APPEND ~avprefc.2da~ ~PSION_SEER 0x600~ UNLESS ~PSION_SEER~
 APPEND ~qslots.2da~ ~PSION_SEER 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_SEER~
 APPEND ~class.ids~ ~%ps_shaper_id% PSION_SHAPER~ UNLESS ~PSION_SHAPER~
@@ -61,7 +87,7 @@ APPEND ~alignmnt.2da~ ~PSION_SHAPER 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_SHAPER~
 APPEND ~abclasrq.2da~ ~PSION_SHAPER 0 0 0 15 0 0~ UNLESS ~PSION_SHAPER~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_SHAPER%ps_weapprof_values%~ UNLESS ~PSION_SHAPER~
 APPEND ~profs.2da~ ~PSION_SHAPER 2 4~ UNLESS ~PSION_SHAPER~
-APPEND ~xpcap.2da~ ~PSION_SHAPER 8000000~ UNLESS ~PSION_SHAPER~
+APPEND ~xpcap.2da~ ~PSION_SHAPER %ps_xpcap_value%~ UNLESS ~PSION_SHAPER~
 APPEND ~avprefc.2da~ ~PSION_SHAPER 0x600~ UNLESS ~PSION_SHAPER~
 APPEND ~qslots.2da~ ~PSION_SHAPER 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_SHAPER~
 APPEND ~class.ids~ ~%ps_kineticist_id% PSION_KINETICIST~ UNLESS ~PSION_KINETICIST~
@@ -69,7 +95,7 @@ APPEND ~alignmnt.2da~ ~PSION_KINETICIST 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_KINETIC
 APPEND ~abclasrq.2da~ ~PSION_KINETICIST 0 0 0 15 0 0~ UNLESS ~PSION_KINETICIST~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_KINETICIST%ps_weapprof_values%~ UNLESS ~PSION_KINETICIST~
 APPEND ~profs.2da~ ~PSION_KINETICIST 2 4~ UNLESS ~PSION_KINETICIST~
-APPEND ~xpcap.2da~ ~PSION_KINETICIST 8000000~ UNLESS ~PSION_KINETICIST~
+APPEND ~xpcap.2da~ ~PSION_KINETICIST %ps_xpcap_value%~ UNLESS ~PSION_KINETICIST~
 APPEND ~avprefc.2da~ ~PSION_KINETICIST 0x600~ UNLESS ~PSION_KINETICIST~
 APPEND ~qslots.2da~ ~PSION_KINETICIST 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_KINETICIST~
 APPEND ~class.ids~ ~%ps_egoist_id% PSION_EGOIST~ UNLESS ~PSION_EGOIST~
@@ -77,7 +103,7 @@ APPEND ~alignmnt.2da~ ~PSION_EGOIST 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_EGOIST~
 APPEND ~abclasrq.2da~ ~PSION_EGOIST 0 0 0 15 0 0~ UNLESS ~PSION_EGOIST~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_EGOIST%ps_weapprof_values%~ UNLESS ~PSION_EGOIST~
 APPEND ~profs.2da~ ~PSION_EGOIST 2 4~ UNLESS ~PSION_EGOIST~
-APPEND ~xpcap.2da~ ~PSION_EGOIST 8000000~ UNLESS ~PSION_EGOIST~
+APPEND ~xpcap.2da~ ~PSION_EGOIST %ps_xpcap_value%~ UNLESS ~PSION_EGOIST~
 APPEND ~avprefc.2da~ ~PSION_EGOIST 0x600~ UNLESS ~PSION_EGOIST~
 APPEND ~qslots.2da~ ~PSION_EGOIST 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_EGOIST~
 APPEND ~class.ids~ ~%ps_nomad_id% PSION_NOMAD~ UNLESS ~PSION_NOMAD~
@@ -85,7 +111,7 @@ APPEND ~alignmnt.2da~ ~PSION_NOMAD 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_NOMAD~
 APPEND ~abclasrq.2da~ ~PSION_NOMAD 0 0 0 15 0 0~ UNLESS ~PSION_NOMAD~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_NOMAD%ps_weapprof_values%~ UNLESS ~PSION_NOMAD~
 APPEND ~profs.2da~ ~PSION_NOMAD 2 4~ UNLESS ~PSION_NOMAD~
-APPEND ~xpcap.2da~ ~PSION_NOMAD 8000000~ UNLESS ~PSION_NOMAD~
+APPEND ~xpcap.2da~ ~PSION_NOMAD %ps_xpcap_value%~ UNLESS ~PSION_NOMAD~
 APPEND ~avprefc.2da~ ~PSION_NOMAD 0x600~ UNLESS ~PSION_NOMAD~
 APPEND ~qslots.2da~ ~PSION_NOMAD 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_NOMAD~
 APPEND ~class.ids~ ~%ps_telepath_id% PSION_TELEPATH~ UNLESS ~PSION_TELEPATH~
@@ -93,6 +119,6 @@ APPEND ~alignmnt.2da~ ~PSION_TELEPATH 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_TELEPATH~
 APPEND ~abclasrq.2da~ ~PSION_TELEPATH 0 0 0 15 0 0~ UNLESS ~PSION_TELEPATH~
 APPEND_COL ~weapprof.2da~ ~$ $ PSION_TELEPATH%ps_weapprof_values%~ UNLESS ~PSION_TELEPATH~
 APPEND ~profs.2da~ ~PSION_TELEPATH 2 4~ UNLESS ~PSION_TELEPATH~
-APPEND ~xpcap.2da~ ~PSION_TELEPATH 8000000~ UNLESS ~PSION_TELEPATH~
+APPEND ~xpcap.2da~ ~PSION_TELEPATH %ps_xpcap_value%~ UNLESS ~PSION_TELEPATH~
 APPEND ~avprefc.2da~ ~PSION_TELEPATH 0x600~ UNLESS ~PSION_TELEPATH~
 APPEND ~qslots.2da~ ~PSION_TELEPATH 0 3 4 2 8 9 11 12 13~ UNLESS ~PSION_TELEPATH~
