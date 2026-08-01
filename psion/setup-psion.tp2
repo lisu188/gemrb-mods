@@ -36,5 +36,6 @@ INCLUDE ~psion/lib/powers.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
 INCLUDE ~psion/lib/class-layout.tpa~
+INCLUDE ~psion/lib/class-progression.tpa~
 INCLUDE ~psion/lib/class-common.tpa~
 INCLUDE ~psion/lib/class-skills.tpa~
