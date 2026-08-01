@@ -17,6 +17,9 @@ DISCIPLINES = (
 def main() -> None:
     progression = (ROOT / "lib" / "class-progression.tpa").read_text(encoding="utf-8")
     class_common = (ROOT / "lib" / "class-common.tpa").read_text(encoding="utf-8")
+    class_layout = (ROOT / "lib" / "class-layout.tpa").read_text(encoding="utf-8")
+    item_usability = (ROOT / "lib" / "item-usability.tpa").read_text(encoding="utf-8")
+    spell_helpers = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     fixture = (ROOT / "tests" / "make_weidu_fixture.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "tests" / "validate_weidu_install.sh").read_text(encoding="utf-8")
@@ -76,10 +79,43 @@ def main() -> None:
         assert f"APPEND ~xpcap.2da~ ~{discipline} %ps_xpcap_value%~" in class_common
         assert f"APPEND_COL ~weapprof.2da~ ~$ $ {discipline}%ps_weapprof_values%~" in class_common
 
+    # Psion class rows use neutral legacy usability. Item-local opcode 319 rules
+    # are required because the Mage/Sorcerer bit also rejects legal Psion arms.
+    assert "0x40000" not in class_layout
+    assert class_layout.count(" SAVEWIZ 0 0 ") >= 6
+    assert "DEFINE_PATCH_FUNCTION ~ADD_ITEM_EQEFFECT~" in spell_helpers
+    assert "ITM V1" in spell_helpers
+    for fragment in (
+        "COPY_EXISTING_REGEXP GLOB ~.*\\.itm~ ~override~",
+        "READ_SHORT 0x1c ps_item_type",
+        "READ_LONG 0x1e ps_item_usability",
+        "READ_BYTE 0x31 ps_item_proficiency",
+        "ps_item_usability BAND 0x40000",
+        "ps_item_type = 2",
+        "ps_item_type = 12",
+        "ps_item_type = 14",
+        "ps_item_type = 31",
+        "ps_item_proficiency = 0x60",
+        "ps_item_proficiency = 0x62",
+        "ps_item_proficiency = 0x66",
+        "ps_item_proficiency = 0x67",
+        "ps_item_proficiency = 0x6a",
+        "ps_item_proficiency = 0x6b",
+        "ps_item_proficiency = 0x73",
+    ):
+        assert fragment in item_usability, fragment
+    for variable in (
+        "ps_seer_id", "ps_shaper_id", "ps_kineticist_id",
+        "ps_egoist_id", "ps_nomad_id", "ps_telepath_id",
+    ):
+        fragment = f"opcode = 319 target = 2 timing = 2 parameter1 = {variable} parameter2 = 5 power = 0"
+        assert fragment in item_usability, fragment
+
     layout_pos = setup.index("INCLUDE ~psion/lib/class-layout.tpa~")
     progression_pos = setup.index("INCLUDE ~psion/lib/class-progression.tpa~")
     common_pos = setup.index("INCLUDE ~psion/lib/class-common.tpa~")
-    assert layout_pos < progression_pos < common_pos
+    usability_pos = setup.index("INCLUDE ~psion/lib/item-usability.tpa~")
+    assert layout_pos < progression_pos < common_pos < usability_pos
 
     for fragment in (
         '"normalized": 20',
@@ -95,6 +131,11 @@ def main() -> None:
         '("ID", "NAME_REF", "DESC_REF", "MAGE", "SORCERER")',
         '"QUARTERSTAFF"',
         '"CROSSBOW"',
+        '"MAGE", "161000"',
+        'ITEM_USABILITY_FIXTURES',
+        '"psspear.itm": (29, 0x40000, 0x62)',
+        '"psclub.itm": (17, 0x40000, 0x73)',
+        '"psmace.itm": (17, 0, 0x65)',
         '135000',
         '("RATE",)',
     ):
@@ -104,6 +145,10 @@ def main() -> None:
         '"abclasrq.2da", "weapprof.2da"',
         'ability_rows.get(discipline) == ["0", "0", "0", "15", "0", "0"]',
         'allowed = {"DAGGER", "CLUB", "SPEAR", "QUARTERSTAFF", "CROSSBOW", "DART", "SLING"}',
+        'xpcap_rows["MAGE"] == ["161000"]',
+        'restricted_items = {',
+        'legal_items = {',
+        '(319, 2, 0, 5, 2)',
         'xp_rows.get(discipline) == xp_rows["MAGE"]',
         '20 - (level // 2)',
         'assert xp_rows["MAGE"][8] == "135000"',
@@ -117,7 +162,7 @@ def main() -> None:
     assert expected[19] == 10
     assert expected[-1] == 0
 
-    print("Psion XP, THAC0, Lore, weapon, chargen, and cap validation passed.")
+    print("Psion XP, THAC0, Lore, weapon, chargen, cap, and item usability validation passed.")
 
 
 if __name__ == "__main__":
