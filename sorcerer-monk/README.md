@@ -29,9 +29,12 @@ weidu sorcerer-monk/setup-sorcerer-monk.tp2
 
 Use WeiDU 247 or newer.
 
+Sorcerer/Monk and the legacy Sorcerer/Monk/Cleric mod are intentionally mutually exclusive. Uninstall one before installing the other.
+
 ## Version 2.0 corrections
 
 - Retains the historical `sorcerer-monk-cleric/backup` location so existing 1.9 installations can still be reinstalled or uninstalled safely by WeiDU.
+- Prevents simultaneous installation with Sorcerer/Monk/Cleric because both legacy packages share the same WeiDU backup namespace and the older triple-class installer hardcodes a class ID that can collide on EE layouts.
 - Derives the Sorcerer/Monk class ID from its `CLSKILLS.2DA` row instead of hardcoding class ID 21.
 - Rejects conflicting class-table layouts and class IDs above 31, matching GemRB's runtime row-index and class-mask constraints.
 - Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
@@ -56,6 +59,7 @@ Use WeiDU 247 or newer.
 - Keeps BGEE character generation unarmed rather than falling back to the default quarterstaff.
 - Adjusts the custom `FISTWEAP.2DA` row for GemRB's rounded multiclass-level lookup so fist tiers are not granted before the Monk component earns them and high-tier fists remain reachable when the campaign cap permits them.
 - Uses exact class-token guards so `SORCERER_MONK_CLERIC` rows and columns do not suppress Sorcerer/Monk installation.
+- Uses exact row-name guards for the `MULTI2SORCERER` and `MULTI2MONK` HLA metadata.
 
 ## Gameplay model
 
@@ -78,6 +82,6 @@ GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, 
 
 The apparently misplaced backup directory is intentional in version 2.0. Version 1.9 stored its uninstall data under `sorcerer-monk-cleric/backup`; changing the `BACKUP` directive after users have already installed 1.9 would prevent WeiDU from finding those restoration files during an upgrade. A future backup-path migration requires an explicit transition strategy rather than a direct path rename.
 
-Because Sorcerer/Monk and Sorcerer/Monk/Cleric historically share that backup directory, table coexistence is now protected by exact row/column guards, but uninstall/reinstall interoperability between both mods still deserves a dedicated runtime migration test before claiming completely independent co-installation support.
+Sorcerer/Monk and Sorcerer/Monk/Cleric cannot be installed together. They historically use the same WeiDU backup directory and component number, so simultaneous installation would make uninstall restoration order-dependent. The old triple-class installer also hardcodes class ID 22, which can collide with Sorcerer/Monk on EE layouts with Shaman present. Both installers now reject the second installation before modifying game files.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
