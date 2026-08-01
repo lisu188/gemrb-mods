@@ -38,6 +38,9 @@ Use WeiDU 247 or newer.
 - Handles both normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
 - Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
 - Uses the more restrictive Sorcerer/Monk experience cap from the active game's `XPCAP.2DA` instead of forcing the BG2/ToB 8,000,000 cap on every supported campaign.
+- Preserves the conventional `XPCAP=-1` uncapped configuration used by XP-cap remover mods: two uncapped components stay uncapped, while a finite component cap remains the restrictive result.
+- Adds the standard combined ability prerequisites: DEX 9, CON 9, INT 9, WIS 9 and CHA 9; STR remains unrestricted.
+- Adds a matching zero `ABCLSMOD.2DA` row so GemRB's ability-requirement and modifier tables remain aligned.
 - Uses multiclass save and hit-point handling instead of priest saves and full Monk hit points.
 - Restricts the class to humans, matching the intersection of Sorcerer and Monk race rules.
 - Combines Mage/Sorcerer and Monk item-usability restrictions.
@@ -60,6 +63,7 @@ Use WeiDU 247 or newer.
 - Monk fists and class abilities
 - Lawful alignments only
 - Human only
+- Minimum DEX 9, CON 9, INT 9, WIS 9 and CHA 9
 - Combined Sorcerer/Mage and Monk equipment restrictions
 - No dual-classing
 - Custom merged action bar
@@ -73,5 +77,7 @@ GemRB uses class IDs as indices into several class tables and tracks class categ
 GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier. Lower-cap campaigns naturally stop at lower fist tiers; BG2/ToB progression can still reach the final tier.
 
 The apparently misplaced backup directory is intentional in version 2.0. Version 1.9 stored its uninstall data under `sorcerer-monk-cleric/backup`; changing the `BACKUP` directive after users have already installed 1.9 would prevent WeiDU from finding those restoration files during an upgrade. A future backup-path migration requires an explicit transition strategy rather than a direct path rename.
+
+Because Sorcerer/Monk and Sorcerer/Monk/Cleric historically share that backup directory, table coexistence is now protected by exact row/column guards, but uninstall/reinstall interoperability between both mods still deserves a dedicated runtime migration test before claiming completely independent co-installation support.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
