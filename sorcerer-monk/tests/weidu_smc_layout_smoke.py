@@ -71,6 +71,11 @@ def add_cleric_identity(override):
     if "3 CLERIC" not in text:
         class_ids.write_text("3 CLERIC\n" + text, encoding="utf-8")
 
+    xpcap = override / "xpcap.2da"
+    if not has_row(xpcap, "CLERIC"):
+        with xpcap.open("a", encoding="utf-8") as handle:
+            handle.write("CLERIC 8000000\n")
+
 
 def prepare_smc(game, builder):
     builder(game)
@@ -141,6 +146,7 @@ def verify_common(game, expected_clskills_width, expected_id):
     assert skill_row[3] == "MXSPLSRC", skill_row
     assert skill_row[11] == "CLABMO01", skill_row
     assert f"{expected_id} SORCERER_MONK_CLERIC" in (override / "class.ids").read_text(encoding="utf-8")
+    assert row(override / "xpcap.2da", "SORCERER_MONK_CLERIC") == ["SORCERER_MONK_CLERIC", "8000000"]
     fist_rows = [
         line.split()
         for line in (override / "fistweap.2da").read_text(encoding="utf-8").splitlines()
@@ -157,7 +163,10 @@ def verify_released_combined(game, expected_id):
     verify_common(game, 17, expected_id)
     class_row = row(override / "classes.2da", "SORCERER_MONK_CLERIC")
     assert len(class_row) == 19, class_row
+    assert class_row[4] == "*", class_row
     assert class_row[6] == str(expected_id), class_row
+    assert class_row[7] == "*", class_row
+    assert class_row[10:17] == ["1", "0", "0", "0", "0", "0", "0"], class_row
     if (override / "hpclass.2da").exists():
         assert count_token(override / "hpclass.2da", "SORCERER_MONK_CLERIC") == 0
     assert not (override / "clastext.2da").exists()
@@ -169,6 +178,7 @@ def verify_split(game, expected_clastext_width, expected_id):
     verify_common(game, 16, expected_id)
     class_row = row(override / "classes.2da", "SORCERER_MONK_CLERIC")
     assert len(class_row) == 7, class_row
+    assert class_row[1] == "*", class_row
     assert class_row[2] == "786436", class_row
     class_text = row(override / "clastext.2da", "SORCERER_MONK_CLERIC")
     assert len(class_text) == expected_clastext_width, class_text
@@ -178,8 +188,10 @@ def verify_split(game, expected_clastext_width, expected_id):
     else:
         assert class_text[2] == "16384", class_text
     assert "PLACEHOLDER" not in " ".join(class_text)
-    assert count_token(override / "hpclass.2da", "SORCERER_MONK_CLERIC") == 1
-    assert count_token(override / "clsrcreq.2da", "SORCERER_MONK_CLERIC") == 1
+    assert row(override / "hpclass.2da", "SORCERER_MONK_CLERIC") == ["SORCERER_MONK_CLERIC", "*"]
+    assert row(override / "clsrcreq.2da", "SORCERER_MONK_CLERIC") == [
+        "SORCERER_MONK_CLERIC", "1", "0", "0", "0", "0", "0", "0"
+    ]
 
 
 def exercise(weidu, builder, verifier, label):
