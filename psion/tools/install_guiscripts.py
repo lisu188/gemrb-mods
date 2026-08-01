@@ -74,23 +74,32 @@ def _patch_cancel_on_open(text: str, function_name: str, action_constant: str) -
 
 
 def _patch_spellinfo_filter(text: str) -> str:
-    """Filter only Psion augmentation children in temporary spell selectors."""
-    needle = (
+    """Hide illegal Psion children without renumbering GemRB spellinfo slots."""
+    function_needle = (
         'def GetSpellinfoSpells(actor, BookType):\n'
         '\tmemorizedSpells = []\n'
         '\tspellResRefs = GemRB.GetSpelldata (actor)\n'
     )
-    replacement = (
-        needle
-        + '\t' + MARK_BEGIN + '\n'
-        + '\t# Preserve unrelated opcode-214 selectors; Psionics filters only\n'
-        + '\t# resources registered as augmentation children.\n'
-        + '\tspellResRefs = Psionics.filter_spellinfo(actor, spellResRefs)\n'
-        + '\t' + MARK_END + '\n'
-    )
-    if needle not in text:
+    start = text.find(function_needle)
+    if start < 0:
         raise RuntimeError("Spellbook.py GetSpellinfoSpells layout not recognized")
-    return text.replace(needle, replacement, 1)
+
+    return_needle = '\treturn memorizedSpells'
+    return_pos = text.find(return_needle, start + len(function_needle))
+    next_def = text.find('\ndef ', start + len(function_needle))
+    if return_pos < 0 or (next_def >= 0 and return_pos > next_def):
+        raise RuntimeError("Spellbook.py GetSpellinfoSpells return not recognized")
+
+    # GemRB assigns synthetic type-255 SpellIndex values while iterating the
+    # original spellResRefs list. Filter only after that construction so hidden
+    # children leave gaps instead of compacting indices used by SpellCast.
+    hook = (
+        '\t' + MARK_BEGIN + '\n'
+        '\t# Keep original synthetic SpellIndex values; hide only completed entries.\n'
+        '\tmemorizedSpells = Psionics.filter_spellinfo_entries(actor, memorizedSpells)\n'
+        '\t' + MARK_END + '\n'
+    )
+    return text[:return_pos] + hook + text[return_pos:]
 
 
 def _patch_rest(text: str, path: Path) -> str:
