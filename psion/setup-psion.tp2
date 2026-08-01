@@ -35,6 +35,7 @@ COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
 INCLUDE ~psion/lib/powers.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
+INCLUDE ~psion/lib/class-saves.tpa~
 INCLUDE ~psion/lib/class-layout.tpa~
 INCLUDE ~psion/lib/class-progression.tpa~
 INCLUDE ~psion/lib/class-common.tpa~
