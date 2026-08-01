@@ -34,6 +34,7 @@ OUTER_SET sm_brief = RESOLVE_STR_REF (@8)
 OUTER_SET sm_class_id = (0 - 1)
 OUTER_SET sm_expected_class_id = (0 - 1)
 OUTER_SET sm_clskills_id = (0 - 1)
+OUTER_SET sm_ids_class_id = (0 - 1)
 OUTER_SET sm_class_id_conflict = 0
 OUTER_SET sm_valid_class_ids = 0
 OUTER_SET sm_split_class_tables = 0
@@ -43,6 +44,8 @@ OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
 OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
+OUTER_SET sm_found_sorcerer_xpcap = 0
+OUTER_SET sm_found_monk_xpcap = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
@@ -157,6 +160,14 @@ ACTION_IF sm_class_id < 0 THEN BEGIN
   OUTER_SET sm_class_id = sm_expected_class_id
 END
 
+// CLASS.IDS can survive partial/manual custom-class changes independently of
+// the class 2DA tables. Refuse to keep an existing SORCERER_MONK symbol that
+// points at a different numeric class ID.
+OUTER_SET sm_ids_class_id = IDS_OF_SYMBOL (~class~ ~SORCERER_MONK~)
+ACTION_IF (sm_ids_class_id >= 0) AND (sm_ids_class_id != sm_class_id) THEN BEGIN
+  FAIL @17
+END
+
 // XPCAP is campaign-specific. Use the more restrictive cap from the two
 // component rows rather than applying the BG2/ToB 8M cap to every game. -1 is
 // the conventional uncapped value and is treated as infinity for this merge.
@@ -168,13 +179,20 @@ COPY_EXISTING ~xpcap.2da~ ~override~
     PATCH_IF (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_xpcaps~ sm_i 1 sm_xpcap_value
       PATCH_IF IS_AN_INT ~%sm_xpcap_value%~ BEGIN
-        PATCH_IF sm_xpcap_value = (0 - 1) BEGIN
-          PATCH_IF sm_xpcap = (0 - 2) BEGIN
-            SET sm_xpcap = (0 - 1)
+        PATCH_IF sm_xpcap_value >= (0 - 1) BEGIN
+          PATCH_IF (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+            SET sm_found_sorcerer_xpcap = 1
+          END ELSE BEGIN
+            SET sm_found_monk_xpcap = 1
           END
-        END ELSE PATCH_IF sm_xpcap_value >= 0 BEGIN
-          PATCH_IF (sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap) BEGIN
-            SET sm_xpcap = sm_xpcap_value
+          PATCH_IF sm_xpcap_value = (0 - 1) BEGIN
+            PATCH_IF sm_xpcap = (0 - 2) BEGIN
+              SET sm_xpcap = (0 - 1)
+            END
+          END ELSE PATCH_IF sm_xpcap_value >= 0 BEGIN
+            PATCH_IF (sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap) BEGIN
+              SET sm_xpcap = sm_xpcap_value
+            END
           END
         END
       END
@@ -182,7 +200,7 @@ COPY_EXISTING ~xpcap.2da~ ~override~
   END
 BUT_ONLY
 
-ACTION_IF sm_xpcap < (0 - 1) THEN BEGIN
+ACTION_IF (sm_found_sorcerer_xpcap != 1) OR (sm_found_monk_xpcap != 1) OR (sm_xpcap < (0 - 1)) THEN BEGIN
   FAIL @14
 END
 
@@ -324,7 +342,7 @@ END
 // without granting a fist tier before the Monk side reaches it, while moving
 // the final tier early enough to remain reachable under the campaign cap.
 APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
-  UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]+MFIST1~
+  UNLESS ~^[ %TAB%]*%sm_class_id%\([ %TAB%]\|$\)~
 
 // Custom merged action bar: spellcasting, thieving/monk abilities and items.
 APPEND ~qslots.2da~ ~SORCERER_MONK 0 3 4 2 8 9 11 12 13~
