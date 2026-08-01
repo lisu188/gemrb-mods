@@ -87,3 +87,7 @@ jobs:
             echo "Validating $layout class-table layout"
             bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
           done
+
+      - name: Install, uninstall and reinstall BG2 startup tables
+        shell: bash
+        run: bash psion/tests/validate_startup_weidu.sh vendor/gemrb
