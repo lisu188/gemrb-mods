@@ -160,9 +160,15 @@ def validate_release_infrastructure() -> None:
         "GemRB.GetKnownSpellsCount",
         "GemRB.UnmemorizeSpell",
         "GemRB.MemorizeSpell",
+        "POOL_STATE_SIGNATURE = 0x50530000",
+        "CURRENT_POOL_STAT = 239",
+        "def resolve_power_entry(spellbook, actor, raw_spell):",
     ):
         assert fragment in runtime, fragment
+    assert "POOL_READY_STAT" not in runtime
     assert "Psionics.refresh_innate_charges" in patcher
+    assert "spellResRefs = Psionics.filter_spellinfo" not in patcher
+    assert "memorizedSpells = [entry for entry in memorizedSpells if entry[\"SpellResRef\"] in psionAllowedResRefs]" in patcher
 
 
 def validate_builders() -> None:
@@ -189,6 +195,7 @@ def validate_builders() -> None:
         "PS1ERAY": (level1, "psion_create_level1_power", ("opcode = 12", "dicesize = 6")),
         "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
         "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
+        "PS1PREC": (level1, "psion_create_level1_power", ("opcode = 54", "parameter1 = 1", "parameter1 = (0 - 1)")),
         "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
         "PS1BRST": (level1, "psion_create_level1_power", ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
         "PS2AMOR": (level2, "psion_create_level2_power", ("opcode = 65", "parameter1 = (0 - 2)")),
@@ -200,6 +207,10 @@ def validate_builders() -> None:
         body = section(text, function, resref)
         for fragment in fragments:
             assert fragment in body, (resref, fragment)
+
+    precognition = section(level1, "psion_create_level1_power", "PS1PREC")
+    assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 1" in precognition
+    assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1)" not in precognition
 
     for resref, opcode in (("PSAASTR", "44"), ("PSAADEX", "15"), ("PSAACON", "10")):
         assert f"~{resref}~ => {opcode}" in affinity
