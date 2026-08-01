@@ -114,7 +114,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SET sm_xpcap = (0 - 1)", TP2)
         self.assertIn("sm_xpcap_value < sm_xpcap", TP2)
         self.assertIn("SORCERER_MONK %sm_xpcap%", payloads("APPEND", "xpcap.2da"))
-        self.assertIn("ACTION_IF sm_xpcap < (0 - 1)", TP2)
+        self.assertIn("sm_found_sorcerer_xpcap != 1", TP2)
+        self.assertIn("sm_found_monk_xpcap != 1", TP2)
+        self.assertIn("sm_xpcap < (0 - 1)", TP2)
         self.assertIn("FAIL @14", TP2)
 
     def test_starting_gold_matches_components(self):
