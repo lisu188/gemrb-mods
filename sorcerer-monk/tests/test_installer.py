@@ -64,6 +64,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SORCERER_MONK 2 4", prof_rows)
         self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
 
+    def test_quick_weapon_slots_use_restrictive_component(self):
+        self.assertIn("SORCERER_MONK 2", payloads("APPEND", "numwslot.2da"))
+
     def test_merged_action_bar(self):
         self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
 
