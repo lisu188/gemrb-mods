@@ -30,6 +30,6 @@ jobs:
           chmod +x "$weidu_bin"
           sudo install "$weidu_bin" /usr/local/bin/weidu
       - name: Parse TP2 with WeiDU
-        run: weidu sorcerer-monk/setup-sorcerer-monk.tp2 --nogame --language 0 --force-install-list 0
+        run: weidu --parse-check TP2 sorcerer-monk/setup-sorcerer-monk.tp2
       - name: Real WeiDU install, reinstall and uninstall smoke test
         run: python sorcerer-monk/tests/weidu_smoke.py weidu
