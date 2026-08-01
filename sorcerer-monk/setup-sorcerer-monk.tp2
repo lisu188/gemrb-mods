@@ -312,6 +312,6 @@ ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
   APPEND ~thiefskl.2da~ ~SORCERER_MONK 0 10~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 10 -1 -1 -1 1 1 -1 -1~
+  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 10 -1 -1 1 1 1 -1 -1~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
