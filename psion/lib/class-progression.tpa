@@ -7,6 +7,10 @@
 // THAC0 follows the Psion design's half-rate attack progression:
 //     THAC0(level) = max(0, 20 - floor(level / 2))
 // and is generated for every level column exposed by the active game.
+//
+// GemRB's level-up script reads LORE.2DA directly by class row name and has no
+// generic fallback for custom classes, so each discipline receives the design's
+// explicit +5 Lore per level rate.
 
 OUTER_SET ps_xp_found = 0
 OUTER_SPRINT ps_xp_values ~~
@@ -73,3 +77,24 @@ APPEND ~thac0.2da~ ~PSION_KINETICIST%ps_thac0_values%~ UNLESS ~PSION_KINETICIST~
 APPEND ~thac0.2da~ ~PSION_EGOIST%ps_thac0_values%~ UNLESS ~PSION_EGOIST~
 APPEND ~thac0.2da~ ~PSION_NOMAD%ps_thac0_values%~ UNLESS ~PSION_NOMAD~
 APPEND ~thac0.2da~ ~PSION_TELEPATH%ps_thac0_values%~ UNLESS ~PSION_TELEPATH~
+
+OUTER_SET ps_lore_valid = 0
+COPY_EXISTING ~lore.2da~ ~override~
+  COUNT_2DA_COLS ps_lore_cols
+  PATCH_IF ps_lore_cols = 2 BEGIN
+    INNER_ACTION BEGIN
+      OUTER_SET ps_lore_valid = 1
+    END
+  END
+BUT_ONLY
+
+ACTION_IF ps_lore_valid != 1 THEN BEGIN
+  FAIL ~The Psion mod requires the standard single-RATE LORE.2DA layout.~
+END
+
+APPEND ~lore.2da~ ~PSION_SEER 5~ UNLESS ~PSION_SEER~
+APPEND ~lore.2da~ ~PSION_SHAPER 5~ UNLESS ~PSION_SHAPER~
+APPEND ~lore.2da~ ~PSION_KINETICIST 5~ UNLESS ~PSION_KINETICIST~
+APPEND ~lore.2da~ ~PSION_EGOIST 5~ UNLESS ~PSION_EGOIST~
+APPEND ~lore.2da~ ~PSION_NOMAD 5~ UNLESS ~PSION_NOMAD~
+APPEND ~lore.2da~ ~PSION_TELEPATH 5~ UNLESS ~PSION_TELEPATH~
