@@ -54,6 +54,8 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Collision-safe temporary selector resolution: GemRB's synthetic spellinfo
   type 255 is resolved exclusively from the temporary spell list before any
   ordinary memorized-spell lookup.
+- Selector filtering happens after GemRB assigns synthetic `SpellIndex` values,
+  so hidden choices leave index gaps instead of renumbering later legal choices.
 - Separate fixed level 1–9 progression for every discipline.
 - Nineteen known powers at level 9, including one exclusive discipline power
   whenever a new power tier becomes available.
@@ -87,6 +89,12 @@ small selector indices can numerically overlap ordinary spellbook indices. The
 Psion runtime therefore resolves type 255 exclusively from GemRB's temporary
 spellinfo list, preventing an augmented child from being mistaken for a base
 Psion power with the same index.
+
+Affordability filtering is applied only after GemRB has constructed the full
+temporary spellinfo list and assigned each entry its original synthetic index.
+An unavailable earlier choice can therefore disappear from the UI without
+changing the `SpellIndex` of any later legal choice; the resource charged by the
+PP runtime remains the same resource GemRB casts.
 
 Current selectors:
 
@@ -213,6 +221,9 @@ GitHub Actions runs:
 - fake-GemRB PP, selector and transaction tests;
 - single-stat PP initialization, zero-pool and rest-refill state tests;
 - temporary type-255 selector-index collision tests;
+- selector filtering tests that hide an earlier choice and verify later entries
+  retain their original non-compacted `SpellIndex` values;
+- positive THAC0-bonus regression checks for Precognition and Second Chance;
 - GUI patch install, idempotence, backup and uninstall fixtures;
 - nested-rest indentation and rendered-Python compilation checks;
 - read-only preflight failure tests that verify no partial files or backups are
