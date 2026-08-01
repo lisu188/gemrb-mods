@@ -31,6 +31,13 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(len(fist_rows), 1)
         self.assertTrue(fist_rows[0].startswith("%sm_class_id% MFIST1 MFIST1 MFIST2"))
 
+    def test_class_id_allocator_reuses_free_slots(self):
+        self.assertNotIn("sm_max_class_id + 1", TP2)
+        self.assertEqual(TP2.count("SET sm_candidate_id = 21"), 2)
+        self.assertEqual(TP2.count("WHILE (sm_candidate_id <= 255) AND (sm_class_id < 0)"), 2)
+        self.assertEqual(TP2.count("sm_existing_id = sm_candidate_id"), 2)
+        self.assertIn("ACTION_IF (sm_class_id < 0) OR (sm_class_id > 255)", TP2)
+
     def test_sorcerer_and_monk_features_are_combined(self):
         clskills_rows = payloads("APPEND", "clskills.2da")
         self.assertEqual(len(clskills_rows), 2)
