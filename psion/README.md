@@ -50,6 +50,8 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Maximum PP expenditure per manifestation equal to Psion level.
 - Discipline, Intelligence, manifester-level and current-pool validation.
 - Cancellation-safe two-phase PP transactions.
+- Quickslot/action-bar configuration is excluded from PP transactions, so
+  assigning a Psion power cannot reserve or spend points.
 - Runtime-filtered augmentation and choice lists.
 - Collision-safe temporary selector resolution: GemRB's synthetic spellinfo
   type 255 is resolved exclusively from the temporary spell list before any
@@ -59,6 +61,24 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Separate fixed level 1–9 progression for every discipline.
 - Nineteen known powers at level 9, including one exclusive discipline power
   whenever a new power tier becomes available.
+- Complete custom-class progression support: the installed game's Mage XP row
+  is inherited dynamically, THAC0 follows `20 - floor(level / 2)`, Lore gains 5
+  per level, and the class receives two starting proficiency points plus one
+  every four levels.
+- Character creation enforces Intelligence 15 while allowing every race and
+  alignment supported by the game.
+- One-pip weapon proficiency maximum for dagger, club, spear, quarterstaff,
+  crossbow, dart and sling; all other weapon/style rows are disabled.
+- Exact item usability through item-local opcode 319 restrictions: legal Psion
+  weapons and their ammunition remain usable, while armor, shields, illegal
+  weapons and inherited Mage-blocked nonweapons are rejected for all six
+  Psion discipline classes.
+- BG2-family starting-gold rows inherit the active game's Mage values rather
+  than embedding campaign-specific constants.
+- Throne of Bhaal starts receive Mage-equivalent `25STWEAP` starter equipment,
+  with the standard twenty-slot table shape validated before mutation.
+- ToB `LUNUMAB` rows keep HLA arithmetic valid while postponing HLA eligibility;
+  version 1.0 intentionally does not implement epic Psion powers.
 - Purpose-built resources for all sixty powers at levels 1–5.
 - Fifty-seven registered augmentation or choice child resources.
 - Backup-safe GemRB GUI-script installation and removal.
@@ -77,6 +97,9 @@ chosen. Manifestation therefore uses a transaction:
 
 The runtime revalidates selected child resources at confirmation time, so a
 power cannot overspend merely because PP changed after opening a selector.
+Temporary opcode-214 children are re-resolved from GemRB's raw spellinfo array at
+confirmation, so a child that becomes unaffordable before commit is rejected
+rather than being cast without its PP cost.
 
 ## Filtered selectors
 
@@ -167,6 +190,8 @@ comments and in-game descriptions:
 - Mind Probe does not display full statistics or scripted memories.
 - Astral Construct uses a temporary wolf-derived creature body.
 - Power learning is fixed by discipline rather than player-selected.
+- Epic/high-level abilities are not implemented in 1.0; ToB safety rows defer
+  HLA selection rather than borrowing another class's HLA table.
 
 These are gameplay-scope limitations, not silent installer fallbacks.
 
@@ -217,12 +242,16 @@ Sorcerer/Monk-era class data.
 GitHub Actions runs:
 
 - table, progression, augmentation and installer-source checks;
+- class XP, THAC0, Lore, proficiency, ability-requirement and item-usability
+  regression checks;
 - parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
 - single-stat PP initialization, zero-pool and rest-refill state tests;
 - temporary type-255 selector-index collision tests;
 - selector filtering tests that hide an earlier choice and verify later entries
   retain their original non-compacted `SpellIndex` values;
+- confirmation-time raw-spellinfo revalidation when PP changes after selection;
+- quickslot/action-bar configuration tests proving PP is not reserved or spent;
 - positive THAC0-bonus regression checks for Precognition and Second Chance;
 - GUI patch install, idempotence, backup and uninstall fixtures;
 - nested-rest indentation and rendered-Python compilation checks;
@@ -234,8 +263,12 @@ GitHub Actions runs:
 - official WeiDU 251 parsing of the TP2 and every TPA module;
 - real WeiDU install, verification, uninstall and reinstall for normalized,
   native EE and legacy combined class-table layouts;
+- semantic ITM fixtures proving legal Psion weapons remain usable while armor,
+  shields and illegal items receive six class-targeted opcode-319 restrictions;
+- a dedicated BG2/ToB startup lifecycle proving Mage-equivalent starting gold,
+  twenty-slot starter equipment and nonzero no-HLA safety rows;
 - binary validation of every generated Psion SPL header and effect range;
-- byte-for-byte restoration checks for every patched table;
+- byte-for-byte restoration checks for patched tables and semantic ITM fixtures;
 - semantic preservation checks for all original TLK entries.
 
 ## Post-1.0 development
@@ -243,4 +276,5 @@ GitHub Actions runs:
 Future work can improve fidelity without changing the 1.0 installer contract:
 choice-based power learning, dedicated Astral Construct assets and AI, exact
 construct targeting, PP transfer, reroll and concentration callbacks, a travel
-interface, psionic focus/feats/skills, psicrystals, items and enemy Psions.
+interface, psionic focus/feats/skills, psicrystals, dedicated psionic items,
+enemy Psions and a true epic/HLA progression.
