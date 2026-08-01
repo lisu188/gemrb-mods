@@ -35,11 +35,12 @@ UNLESS ~SORCERER_MONK_CLERIC ~
 
 // modify lu* for HLAs
 // lazy: no special table (lusmc.2da), since currently gemrb automatically uses the hlas from all classes
-// WTF @ lunumab? is the original so retarded too?
+// The triple-class component rows must be guarded by their own MULTI3 names.
+// Standard MULTI2 rows are expected to coexist and must not suppress these.
 APPEND ~luabbr.2da~ ~SORCERER_MONK_CLERIC SMC~ UNLESS ~SORCERER_MONK_CLERIC~
-APPEND ~lunumab.2da~ ~MULTI3SORCERER 13          1          99           1~ UNLESS ~MULTI2SORCERER~
-APPEND ~lunumab.2da~ ~MULTI3MONK 15          1          99           1~ UNLESS ~MULTI2MONK~
-APPEND ~lunumab.2da~ ~MULTI3CLERIC 13          1          99           1~ UNLESS ~MULTI2CLERIC~
+APPEND ~lunumab.2da~ ~MULTI3SORCERER 13          1          99           1~ UNLESS ~^[ %TAB%]*MULTI3SORCERER\([ %TAB%]\|$\)~
+APPEND ~lunumab.2da~ ~MULTI3MONK 15          1          99           1~ UNLESS ~^[ %TAB%]*MULTI3MONK\([ %TAB%]\|$\)~
+APPEND ~lunumab.2da~ ~MULTI3CLERIC 13          1          99           1~ UNLESS ~^[ %TAB%]*MULTI3CLERIC\([ %TAB%]\|$\)~
 APPEND ~lunumab.2da~ ~SORCERER_MONK_CLERIC 14          1          99           1~ UNLESS ~SORCERER_MONK_CLERIC~
 
 // ******************************************
