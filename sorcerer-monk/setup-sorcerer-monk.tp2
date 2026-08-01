@@ -25,16 +25,16 @@ OUTER_SET sm_lower = RESOLVE_STR_REF (@1)
 OUTER_SET sm_desc = RESOLVE_STR_REF (@2)
 OUTER_SET sm_mixed = RESOLVE_STR_REF (@3)
 OUTER_SET sm_brief = RESOLVE_STR_REF (@8)
-OUTER_SET sm_class_id = -1
-OUTER_SET sm_expected_class_id = -1
-OUTER_SET sm_clskills_id = -1
+OUTER_SET sm_class_id = (0 - 1)
+OUTER_SET sm_expected_class_id = (0 - 1)
+OUTER_SET sm_clskills_id = (0 - 1)
 OUTER_SET sm_class_id_conflict = 0
 OUTER_SET sm_valid_class_ids = 0
 OUTER_SET sm_split_class_tables = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
-OUTER_SET sm_xpcap = -2
+OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
@@ -148,9 +148,9 @@ COPY_EXISTING ~xpcap.2da~ ~override~
     PATCH_IF (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_xpcaps~ sm_i 1 sm_xpcap_value
       PATCH_IF IS_AN_INT ~%sm_xpcap_value%~ BEGIN
-        PATCH_IF sm_xpcap_value = -1 BEGIN
-          PATCH_IF sm_xpcap = -2 BEGIN
-            SET sm_xpcap = -1
+        PATCH_IF sm_xpcap_value = (0 - 1) BEGIN
+          PATCH_IF sm_xpcap = (0 - 2) BEGIN
+            SET sm_xpcap = (0 - 1)
           END
         END ELSE PATCH_IF sm_xpcap_value >= 0 BEGIN
           PATCH_IF (sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap) BEGIN
@@ -162,7 +162,7 @@ COPY_EXISTING ~xpcap.2da~ ~override~
   END
 BUT_ONLY
 
-ACTION_IF sm_xpcap < -1 THEN BEGIN
+ACTION_IF sm_xpcap < (0 - 1) THEN BEGIN
   FAIL @14
 END
 
