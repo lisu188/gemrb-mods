@@ -1,0 +1,23 @@
+name: Sorcerer Monk
+
+on:
+  push:
+    branches:
+      - improve-sorcerer-monk-v2
+    paths:
+      - sorcerer-monk/**
+      - .github/workflows/sorcerer-monk.yml
+  pull_request:
+    paths:
+      - sorcerer-monk/**
+      - .github/workflows/sorcerer-monk.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m unittest discover -s sorcerer-monk/tests -p "test_*.py"
