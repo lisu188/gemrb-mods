@@ -108,7 +108,7 @@ def mage_xp_values(level_count: int) -> tuple[str, ...]:
 
 
 def configure_progression_tables(override: Path, layout: str) -> None:
-    """Create width-varying XPLEVEL/THAC0 fixtures for dynamic row generation."""
+    """Create width-varying XP/THAC0 and standard Lore progression fixtures."""
     level_count = PROGRESSION_LEVELS[layout]
     columns = tuple(str(level) for level in range(1, level_count + 1))
     mage_xp = mage_xp_values(level_count)
@@ -133,6 +133,20 @@ def configure_progression_tables(override: Path, layout: str) -> None:
             ("FIGHTER", *(str(max(0, 20 - (level - 1))) for level in range(1, level_count + 1))),
         ),
         default="20",
+    )
+
+    # GemRB's level-up code reads LORE.2DA by exact class row name. The fixture
+    # deliberately omits Psion rows so the installer must add the designed
+    # +5 Lore/level progression instead of inheriting a built-in fallback.
+    write_2da(
+        override / "lore.2da",
+        ("RATE",),
+        (
+            ("MAGE", "3"),
+            ("THIEF", "3"),
+            ("FIGHTER", "1"),
+        ),
+        default="0",
     )
 
 
@@ -297,7 +311,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
 
     required = [
         "classes.2da", "class.ids", "alignmnt.2da", "weapprof.2da",
-        "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da",
+        "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da",
         "avprefc.2da", "qslots.2da", "clskills.2da", "wolf.cre",
         "missile.ids", "dmgtype.ids", "oh1000.are",
     ]
@@ -314,7 +328,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         print(f"  {line}")
     print(
         f"Fixture progression columns={PROGRESSION_LEVELS[layout]} "
-        f"for XPLEVEL.2DA and THAC0.2DA"
+        f"for XPLEVEL.2DA and THAC0.2DA; LORE.2DA uses one RATE column"
     )
 
     key_script = gemrb_root / "tools" / "demo_key_file.py"
