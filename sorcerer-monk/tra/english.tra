@@ -16,3 +16,4 @@ Dual-classing is not supported.~
 @10 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
 @12 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
 @13 = ~The GemRB class tables and CLSKILLS.2DA disagree about the numeric class identifier required for Sorcerer/Monk. Remove or reorder conflicting custom-class mods before installing.~
+@14 = ~Could not determine a valid Sorcerer/Monk experience cap from XPCAP.2DA.~
