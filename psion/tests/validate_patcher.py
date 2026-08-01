@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Backup, idempotence, runtime ownership, indentation, and preflight checks."""
+"""Backup, idempotence, runtime ownership, selector, indentation, and preflight checks."""
 
 from pathlib import Path
 import importlib.util
 import subprocess
 import sys
 import tempfile
+import types
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,7 +18,7 @@ def main() -> None:
     spec.loader.exec_module(module)
 
     actions_text = '''import GemRB\nimport Spellbook\n\ndef ActionCastPressed ():\n\t"""Opens the spell choice scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_CAST)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\t"""Opens the innate spell scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_INNATE)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\n\tSpell = GemRB.GetVar ("Spell")\n'''
-    spellbook_text = '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\ti = 0\n\treturn memorizedSpells\n'''
+    spellbook_text = '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\ti = 0\n\tfor resRef in spellResRefs:\n\t\tmemorizedSpells.append({\n\t\t\t"SpellIndex": i + 1000 * 255,\n\t\t\t"SpellResRef": resRef,\n\t\t})\n\t\ti += 1\n\treturn memorizedSpells\n'''
     rest_text = '''import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n'''
     nested_rest_text = '''import GemRB\n\ndef Rest():\n\tif True:\n\t\tGemRB.RestParty(0, 0)\n\t\treturn True\n'''
     runtime_source = ROOT / "guiscripts" / "Psionics.py"
@@ -77,11 +78,43 @@ def main() -> None:
         assert module.patch(menu, "rest")
         assert module.patch(store, "rest")
         patched_actions = actions.read_text(encoding="utf-8")
+        patched_spellbook = spellbook.read_text(encoding="utf-8")
         assert "Psionics.resolve_power_entry(Spellbook, pc, raw_spell)" in patched_actions
         assert "Psionics.begin_manifest" in patched_actions
         assert "Psionics.refresh_innate_charges" in patched_actions
         assert patched_actions.count("Psionics.refresh_innate_charges") == 1
-        assert "Psionics.filter_spellinfo" in spellbook.read_text(encoding="utf-8")
+        assert "Psionics.filter_spellinfo(actor, [entry[\"SpellResRef\"] for entry in memorizedSpells])" in patched_spellbook
+        assert "spellResRefs = Psionics.filter_spellinfo" not in patched_spellbook
+
+        # Affordability filtering happens only after GemRB has assigned the
+        # original synthetic type-255 indexes. Hiding entry 0 must therefore
+        # leave entry 1 at 255001 rather than compacting it to 255000.
+        fake_gemrb = types.ModuleType("GemRB")
+        fake_gemrb.GetSpelldata = lambda actor: ["PSRF04", "PSRF01", "SPWI112"]
+        fake_psionics = types.ModuleType("Psionics")
+        fake_psionics.filter_spellinfo = (
+            lambda actor, refs: [ref for ref in refs if ref != "PSRF04"]
+        )
+        old_gemrb = sys.modules.get("GemRB")
+        old_psionics = sys.modules.get("Psionics")
+        sys.modules["GemRB"] = fake_gemrb
+        sys.modules["Psionics"] = fake_psionics
+        try:
+            namespace = {}
+            exec(compile(patched_spellbook, "Spellbook.py", "exec"), namespace)
+            entries = namespace["GetSpellinfoSpells"](1, 255)
+            assert [entry["SpellResRef"] for entry in entries] == ["PSRF01", "SPWI112"]
+            assert [entry["SpellIndex"] for entry in entries] == [255001, 255002]
+        finally:
+            if old_gemrb is None:
+                sys.modules.pop("GemRB", None)
+            else:
+                sys.modules["GemRB"] = old_gemrb
+            if old_psionics is None:
+                sys.modules.pop("Psionics", None)
+            else:
+                sys.modules["Psionics"] = old_psionics
+
         assert not module.patch(actions, "actions")
 
         assert module.remove(actions)
@@ -135,7 +168,7 @@ def main() -> None:
             assert target.read_text(encoding="utf-8") == text
             assert not target.with_suffix(target.suffix + ".psion.bak").exists()
 
-    print("Psion GUI patcher, runtime lifecycle, indentation, import, and preflight validation passed.")
+    print("Psion GUI patcher, selector index, runtime lifecycle, indentation, import, and preflight validation passed.")
 
 
 if __name__ == "__main__":
