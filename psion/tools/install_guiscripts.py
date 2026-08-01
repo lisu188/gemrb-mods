@@ -96,7 +96,8 @@ def _patch_spellinfo_filter(text: str) -> str:
     hook = (
         '\t' + MARK_BEGIN + '\n'
         '\t# Keep original synthetic SpellIndex values; hide only completed entries.\n'
-        '\tmemorizedSpells = Psionics.filter_spellinfo_entries(actor, memorizedSpells)\n'
+        '\tpsionAllowedResRefs = Psionics.filter_spellinfo(actor, [entry["SpellResRef"] for entry in memorizedSpells])\n'
+        '\tmemorizedSpells = [entry for entry in memorizedSpells if entry["SpellResRef"] in psionAllowedResRefs]\n'
         '\t' + MARK_END + '\n'
     )
     return text[:return_pos] + hook + text[return_pos:]
