@@ -202,7 +202,9 @@ OUTER_SET sm_ids_class_id = IDS_OF_SYMBOL (~class~ ~SORCERER_MONK~)
 ACTION_IF (sm_ids_class_id >= 0) AND (sm_ids_class_id != sm_class_id) THEN BEGIN
   FAIL @17
 END
-LOOKUP_IDS_SYMBOL_OF_INT sm_ids_class_symbol ~class~ sm_class_id
+OUTER_PATCH ~~ BEGIN
+  LOOKUP_IDS_SYMBOL_OF_INT sm_ids_class_symbol ~class~ sm_class_id
+END
 ACTION_IF IS_AN_INT ~%sm_ids_class_symbol%~ THEN BEGIN
   OUTER_SET sm_ids_numeric_conflict = 0
 END ELSE BEGIN
