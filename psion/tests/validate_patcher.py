@@ -82,9 +82,55 @@ def main() -> None:
         assert "Psionics.resolve_power_entry(Spellbook, pc, raw_spell)" in patched_actions
         assert "Psionics.begin_manifest" in patched_actions
         assert "Psionics.refresh_innate_charges" in patched_actions
+        assert "if GemRB.GetVar(\"SettingButtons\")" in patched_actions
         assert patched_actions.count("Psionics.refresh_innate_charges") == 1
         assert "Psionics.filter_spellinfo(actor, [entry[\"SpellResRef\"] for entry in memorizedSpells])" in patched_spellbook
         assert "spellResRefs = Psionics.filter_spellinfo" not in patched_spellbook
+
+        # SpellPressed is also called while the player is assigning an action
+        # bar/quickspell button. Configuration mode must clear a stale pending
+        # reservation but never resolve, reserve, commit, or spend a Psion power.
+        config_gemrb = types.ModuleType("GemRB")
+        config_gemrb.GameGetFirstSelectedActor = lambda: 1
+        config_gemrb.GetVar = lambda name: 1 if name == "SettingButtons" else 4000
+        config_gemrb.Log = lambda *_: None
+        config_spellbook = types.ModuleType("Spellbook")
+        config_psionics = types.ModuleType("Psionics")
+        config_calls = {"cancel": 0, "resolve": 0, "begin": 0}
+
+        def config_cancel(actor):
+            config_calls["cancel"] += 1
+
+        def config_resolve(*_):
+            config_calls["resolve"] += 1
+            return {"SpellResRef": "PS1VIGR"}
+
+        def config_begin(*_):
+            config_calls["begin"] += 1
+            return True
+
+        config_psionics.cancel_pending = config_cancel
+        config_psionics.resolve_power_entry = config_resolve
+        config_psionics.begin_manifest = config_begin
+        config_psionics.refresh_innate_charges = lambda *_: 0
+        old_modules = {
+            name: sys.modules.get(name)
+            for name in ("GemRB", "Spellbook", "Psionics")
+        }
+        sys.modules["GemRB"] = config_gemrb
+        sys.modules["Spellbook"] = config_spellbook
+        sys.modules["Psionics"] = config_psionics
+        try:
+            namespace = {}
+            exec(compile(patched_actions, "ActionsWindow.py", "exec"), namespace)
+            namespace["SpellPressed"]()
+            assert config_calls == {"cancel": 1, "resolve": 0, "begin": 0}
+        finally:
+            for name, previous in old_modules.items():
+                if previous is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = previous
 
         # Affordability filtering happens only after GemRB has assigned the
         # original synthetic type-255 indexes. Hiding entry 0 must therefore
@@ -168,7 +214,7 @@ def main() -> None:
             assert target.read_text(encoding="utf-8") == text
             assert not target.with_suffix(target.suffix + ".psion.bak").exists()
 
-    print("Psion GUI patcher, selector index, runtime lifecycle, indentation, import, and preflight validation passed.")
+    print("Psion GUI patcher, selector index, configuration, runtime lifecycle, indentation, import, and preflight validation passed.")
 
 
 if __name__ == "__main__":
