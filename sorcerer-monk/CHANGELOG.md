@@ -7,7 +7,7 @@
 - Added explicit checks for conflicting class IDs and GemRB's below-32 class-mask limit.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
 - Added support for development GemRB versions that split class data across `CLASSTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
-- Added explicit handling for the normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` formats.
+- Added explicit handling for normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` formats.
 - Added Tutu, Tutu_TotSC, BGEE and Classic Adventures to the supported game list.
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
@@ -33,5 +33,6 @@
 - Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still permits high-tier fists where the campaign cap allows them.
 - Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
+- Added real WeiDU smoke coverage for released combined, current split, and native EE nine-/ten-column class-text layouts.
 - Added WeiDU syntax validation to CI.
 - Removed the stale version number and redundant engine warning from translated component text.
