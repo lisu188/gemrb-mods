@@ -53,6 +53,58 @@ def _patch_spell_pressed(text: str) -> str:
     return text.replace(needle, hook, 1)
 
 
+def _patch_quickspell_pressed(text: str) -> str:
+    """Route Psion quickslots through SpellPressed instead of bypassing PP."""
+    needle = (
+        'def ActionQSpellPressed (which):\n'
+        '\tpc = GemRB.GameGetFirstSelectedActor ()\n\n'
+        '\tGemRB.SpellCast (pc, -2, which)\n'
+        '\tUpdateActionsWindow ()\n'
+        '\treturn\n'
+    )
+    replacement = (
+        'def ActionQSpellPressed (which):\n'
+        '\tpc = GemRB.GameGetFirstSelectedActor ()\n\n'
+        '\t' + MARK_BEGIN + '\n'
+        '\t# Classic GemRB quickspells normally call SpellCast(-2, which) directly,\n'
+        '\t# bypassing SpellPressed. Registered Psion quickspells must re-enter the\n'
+        '\t# normal spell-button path so reserve/commit PP accounting still applies.\n'
+        '\ttry:\n'
+        '\t\tpcStats = GemRB.GetPCStats(pc)\n'
+        '\t\tquickResRef = ""\n'
+        '\t\tif pcStats and 0 <= which < len(pcStats["QuickSpells"]):\n'
+        '\t\t\tquickResRef = pcStats["QuickSpells"][which]\n'
+        '\t\tquickInfo = Psionics.power_info(quickResRef)\n'
+        '\t\tif quickInfo:\n'
+        '\t\t\t# A canceled target leaves the old first-phase reservation behind.\n'
+        '\t\t\t# Every new quickslot attempt starts a fresh transaction.\n'
+        '\t\t\tPsionics.cancel_pending(pc)\n'
+        '\t\t\tPsionics.refresh_innate_charges(pc)\n'
+        '\t\t\tparent = quickInfo["parent"]\n'
+        '\t\t\tentry = None\n'
+        '\t\t\tfor candidate in Spellbook.GetUsableMemorizedSpells(pc, Psionics.INNATE_TYPE):\n'
+        '\t\t\t\tif candidate.get("SpellResRef", "").upper() == parent.upper():\n'
+        '\t\t\t\t\tentry = candidate\n'
+        '\t\t\t\t\tbreak\n'
+        '\t\t\tif not entry:\n'
+        '\t\t\t\treturn\n'
+        '\t\t\tGemRB.SetVar("QSpell", None)\n'
+        '\t\t\tGemRB.SetVar("Spell", entry["SpellIndex"])\n'
+        '\t\t\tGemRB.SetVar("Type", 1 << Psionics.INNATE_TYPE)\n'
+        '\t\t\tSpellPressed()\n'
+        '\t\t\treturn\n'
+        '\texcept Exception as error:\n'
+        '\t\tGemRB.Log(2, "Psionics", "quickspell routing failed: %s" % error)\n'
+        '\t' + MARK_END + '\n\n'
+        '\tGemRB.SpellCast (pc, -2, which)\n'
+        '\tUpdateActionsWindow ()\n'
+        '\treturn\n'
+    )
+    if needle not in text:
+        raise RuntimeError("ActionsWindow.py ActionQSpellPressed layout not recognized")
+    return text.replace(needle, replacement, 1)
+
+
 def _patch_cancel_on_open(text: str, function_name: str, action_constant: str) -> str:
     doc = (
         '\t"""Opens the spell choice scrollbar."""\n\n'
@@ -131,6 +183,7 @@ def render_patch(text: str, kind: str, path: Path) -> str | None:
     text = _insert_import(text, path)
     if kind == "actions":
         text = _patch_spell_pressed(text)
+        text = _patch_quickspell_pressed(text)
         text = _patch_cancel_on_open(text, "ActionCastPressed", "ACT_CAST")
         text = _patch_cancel_on_open(text, "ActionInnatePressed", "ACT_INNATE")
     elif kind == "spellbook":
