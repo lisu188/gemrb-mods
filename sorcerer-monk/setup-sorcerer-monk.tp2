@@ -181,15 +181,20 @@ ACTION_IF sm_xpcap < (0 - 1) THEN BEGIN
 END
 
 ACTION_IF sm_split_class_tables = 1 THEN BEGIN
-  // CLASSTEXT has two supported layouts: GemRB's normalized six-column form,
-  // and the native EE ten-column form with biography and fallen-state fields.
+  // CLASSTEXT has three supported layouts: GemRB's normalized six-column form,
+  // the older native EE nine-column form, and the newer native EE ten-column
+  // form with FALLEN_NOTICE.
   ACTION_IF sm_clastext_cols = 6 THEN BEGIN
     OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed%~
   END ELSE BEGIN
-    ACTION_IF sm_clastext_cols = 10 THEN BEGIN
-      OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% * %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief% -1~
+    ACTION_IF sm_clastext_cols = 9 THEN BEGIN
+      OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% 16384 %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief%~
     END ELSE BEGIN
-      FAIL @12
+      ACTION_IF sm_clastext_cols = 10 THEN BEGIN
+        OUTER_SPRINT sm_clastext_row ~SORCERER_MONK %sm_class_id% 16384 %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief% -1~
+      END ELSE BEGIN
+        FAIL @12
+      END
     END
   END
 
