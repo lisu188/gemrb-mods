@@ -34,7 +34,7 @@ OUTER_SET sm_split_class_tables = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
-OUTER_SET sm_xpcap = -1
+OUTER_SET sm_xpcap = -2
 OUTER_SET sm_xpcap_cols = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
@@ -138,7 +138,8 @@ ACTION_IF sm_class_id < 0 THEN BEGIN
 END
 
 // XPCAP is campaign-specific. Use the more restrictive cap from the two
-// component rows rather than applying the BG2/ToB 8M cap to every game.
+// component rows rather than applying the BG2/ToB 8M cap to every game. -1 is
+// the conventional uncapped value and is treated as infinity for this merge.
 COPY_EXISTING ~xpcap.2da~ ~override~
   COUNT_2DA_COLS sm_xpcap_cols
   READ_2DA_ENTRIES_NOW ~sm_xpcaps~ sm_xpcap_cols
@@ -147,15 +148,21 @@ COPY_EXISTING ~xpcap.2da~ ~override~
     PATCH_IF (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_xpcaps~ sm_i 1 sm_xpcap_value
       PATCH_IF IS_AN_INT ~%sm_xpcap_value%~ BEGIN
-        PATCH_IF (sm_xpcap_value >= 0) AND ((sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap)) BEGIN
-          SET sm_xpcap = sm_xpcap_value
+        PATCH_IF sm_xpcap_value = -1 BEGIN
+          PATCH_IF sm_xpcap = -2 BEGIN
+            SET sm_xpcap = -1
+          END
+        END ELSE PATCH_IF sm_xpcap_value >= 0 BEGIN
+          PATCH_IF (sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap) BEGIN
+            SET sm_xpcap = sm_xpcap_value
+          END
         END
       END
     END
   END
 BUT_ONLY
 
-ACTION_IF sm_xpcap < 0 THEN BEGIN
+ACTION_IF sm_xpcap < -1 THEN BEGIN
   FAIL @14
 END
 
