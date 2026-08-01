@@ -14,10 +14,28 @@
   across patch/action scope, and ignore long trailing GemRB comment lines.
 - Added format-aware handling for normalized six-field, native EE ten-field and
   legacy nineteen-field class tables.
+- Added explicit Psion class progression: dynamic inheritance of the installed
+  Mage XP row, half-rate THAC0 progression, Lore 5/level, Intelligence 15
+  chargen minimum, two starting proficiency points and one every four levels.
+- Added exact one-pip weapon proficiency columns for dagger, club, spear,
+  quarterstaff, crossbow, dart and sling, while disabling other weapon/style
+  rows.
+- Added item-local opcode-319 class restrictions so legal Psion weapons and
+  ammunition remain usable while armor, shields, illegal weapons and inherited
+  Mage-blocked nonweapons are rejected for all six discipline classes.
+- Added BG2-family starting-gold rows cloned from the active game's Mage data.
+- Added guarded Throne of Bhaal `25STWEAP` columns using the Mage starter package
+  after validating GemRB's twenty-slot table shape.
+- Added ToB `LUNUMAB` safety rows with nonzero rates and deferred HLA eligibility;
+  version 1.0 intentionally does not borrow another class's HLA progression.
 - Added generated, non-proprietary BG-family fixtures based on pinned GemRB demo
   data and GemRB's official CHITIN.KEY generator.
 - Added full install, verification, uninstall and reinstall lifecycles for all
   three class-table layouts.
+- Added a dedicated real-WeiDU BG2/ToB startup lifecycle covering starting gold,
+  starter equipment, HLA safety rows and byte-for-byte uninstall restoration.
+- Added semantic ITM fixtures proving exact item-usability restrictions and
+  case-insensitive resource verification after WeiDU canonicalizes filenames.
 - Added binary validation of every generated Psion SPL header, ability range and
   effect range.
 - Added byte-for-byte uninstall restoration checks for patched tables and
@@ -37,6 +55,11 @@
   spellinfo list, avoiding collisions with ordinary memorized spell indices.
 - Preserved original synthetic type-255 `SpellIndex` values when hiding illegal
   selector children, so the resource charged for PP is the resource GemRB casts.
+- Re-resolved temporary selector children from raw spellinfo at confirmation,
+  preventing a child that becomes unaffordable from slipping through without
+  its PP cost.
+- Excluded quickslot/action-bar configuration from PP transactions and clear
+  stale reservations during configuration instead of reserving or spending PP.
 - Corrected review-discovered gameplay mappings: Mind Thrust save penalties,
   Animal Affinity ability opcodes, Burst/Hustle movement modes, Metamorphosis
   Strength, and positive THAC0 bonuses for Precognition and Second Chance.
