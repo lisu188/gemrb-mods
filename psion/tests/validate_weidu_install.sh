@@ -58,7 +58,8 @@ out = Path(sys.argv[2])
 candidates = (
     "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
     "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
-    "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
+    "xpcap.2da", "xplevel.2da", "thac0.2da", "avprefc.2da",
+    "qslots.2da", "clskills.2da",
 )
 paths = [root / "override" / name for name in candidates if (root / "override" / name).is_file()]
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
@@ -110,6 +111,21 @@ disciplines = (
     "PSION_EGOIST", "PSION_NOMAD", "PSION_TELEPATH",
 )
 
+
+def read_2da(path: Path) -> tuple[list[str], dict[str, list[str]]]:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    assert len(lines) >= 3 and lines[0].strip().upper() == "2DA V1.0", path
+    columns = lines[2].split()
+    rows: dict[str, list[str]] = {}
+    for line in lines[3:]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "//")):
+            continue
+        fields = stripped.split()
+        rows[fields[0]] = fields[1:]
+    return columns, rows
+
+
 class_tables = ["classes.2da"]
 if layout != "legacy":
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -121,6 +137,31 @@ for filename in (
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
+
+# New single classes require explicit XP and attack progression. Every Psion
+# must clone the complete installed-game MAGE XP row, regardless of table width.
+xp_columns, xp_rows = read_2da(override / "xplevel.2da")
+assert "MAGE" in xp_rows, (layout, "missing MAGE XPLEVEL row")
+assert len(xp_columns) in (20, 40, 41), (layout, len(xp_columns))
+assert len(xp_rows["MAGE"]) == len(xp_columns), (layout, "MAGE XPLEVEL width")
+for discipline in disciplines:
+    assert xp_rows.get(discipline) == xp_rows["MAGE"], (
+        layout, discipline, xp_rows.get(discipline), xp_rows["MAGE"]
+    )
+# Preserve the BG1 design checkpoint even in the wider fixture variants.
+assert xp_rows["MAGE"][8] == "135000", (layout, xp_rows["MAGE"][8])
+
+# THAC0 is deliberately not cloned from another class. It follows the Psion
+# half-rate formula for every level column exposed by the current game.
+thac0_columns, thac0_rows = read_2da(override / "thac0.2da")
+assert len(thac0_columns) == len(xp_columns), (
+    layout, len(thac0_columns), len(xp_columns)
+)
+expected_thac0 = [str(max(0, 20 - (level // 2))) for level in range(1, len(thac0_columns) + 1)]
+for discipline in disciplines:
+    assert thac0_rows.get(discipline) == expected_thac0, (
+        layout, discipline, thac0_rows.get(discipline), expected_thac0
+    )
 
 for filename in (
     "psionpool.2da", "psionknown.2da", "psiondisc.2da",
