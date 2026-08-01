@@ -283,7 +283,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     )
     write_2da(
         override / "profs.2da",
-        ("FIRST_LEVEL", "OTHER_LEVELS"),
+        ("FIRST_LEVEL", "RATE"),
         (("SORCERER", "2", "4"),),
     )
     write_2da(
