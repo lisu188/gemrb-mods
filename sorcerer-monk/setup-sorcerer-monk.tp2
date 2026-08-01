@@ -1,4 +1,4 @@
-BACKUP ~sorcerer-monk/backup~
+BACKUP ~sorcerer-monk-cleric/backup~
 AUTHOR ~lynxlynxlynx~
 VERSION ~2.0~
 AUTO_EVAL_STRINGS
@@ -7,6 +7,10 @@ LANGUAGE ~English~ ~english~ ~sorcerer-monk/tra/english.tra~
 
 BEGIN @0
 DESIGNATED 0
+
+// Keep the historical backup location so WeiDU can still reinstall or
+// uninstall existing 1.9 installations. Changing BACKUP would orphan those
+// restoration files before component actions get a chance to migrate them.
 
 // GemRB writes this path file after it has been run against the game once.
 // WeiDU uses it to locate GemRB-provided tables that are absent from the
@@ -30,6 +34,8 @@ OUTER_SET sm_split_class_tables = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
+OUTER_SET sm_xpcap = -1
+OUTER_SET sm_xpcap_cols = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
@@ -131,6 +137,28 @@ ACTION_IF sm_class_id < 0 THEN BEGIN
   OUTER_SET sm_class_id = sm_expected_class_id
 END
 
+// XPCAP is campaign-specific. Use the more restrictive cap from the two
+// component rows rather than applying the BG2/ToB 8M cap to every game.
+COPY_EXISTING ~xpcap.2da~ ~override~
+  COUNT_2DA_COLS sm_xpcap_cols
+  READ_2DA_ENTRIES_NOW ~sm_xpcaps~ sm_xpcap_cols
+  FOR (sm_i = 0; sm_i < sm_xpcaps; ++sm_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_xpcaps~ sm_i 0 sm_xpcap_class
+    PATCH_IF (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%sm_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_xpcaps~ sm_i 1 sm_xpcap_value
+      PATCH_IF IS_AN_INT ~%sm_xpcap_value%~ BEGIN
+        PATCH_IF (sm_xpcap_value >= 0) AND ((sm_xpcap < 0) OR (sm_xpcap_value < sm_xpcap)) BEGIN
+          SET sm_xpcap = sm_xpcap_value
+        END
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF sm_xpcap < 0 THEN BEGIN
+  FAIL @14
+END
+
 ACTION_IF sm_split_class_tables = 1 THEN BEGIN
   // CLASSTEXT has two supported layouts: GemRB's normalized six-column form,
   // and the native EE ten-column form with biography and fallen-state fields.
@@ -180,7 +208,7 @@ APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1
 APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
+APPEND ~xpcap.2da~ ~SORCERER_MONK %sm_xpcap%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Both component classes use the same starting-gold formula.
@@ -248,7 +276,7 @@ END
 // GemRB selects FISTWEAP by the rounded average multiclass level rather than
 // the Monk component level. This conservative mapping follows the Monk table
 // without granting a fist tier before the Monk side reaches it, while moving
-// the final tier early enough to remain reachable under the 8M total XP cap.
+// the final tier early enough to remain reachable under the campaign cap.
 APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
   UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]+MFIST1~
 
