@@ -84,6 +84,19 @@ class InstallerTests(unittest.TestCase):
     def test_monk_combat_progression_is_preserved(self):
         self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
 
+    def test_multiclass_fist_progression_uses_average_level_mapping(self):
+        fist_rows = payloads("APPEND", "fistweap.2da")
+        fists = fist_rows[0].split()[1:]
+        self.assertEqual(len(fists), 41)
+        self.assertEqual(fists[1], "MFIST1")
+        self.assertEqual(fists[2], "MFIST2")
+        self.assertEqual(fists[5], "MFIST3")
+        self.assertEqual(fists[9], "MFIST4")
+        self.assertEqual(fists[12], "MFIST5")
+        self.assertEqual(fists[14], "MFIST6")
+        self.assertEqual(fists[17], "MFIST7")
+        self.assertEqual(fists[22], "MFIST8")
+
     def test_merged_action_bar(self):
         self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
 
