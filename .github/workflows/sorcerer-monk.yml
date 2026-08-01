@@ -19,3 +19,15 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m unittest discover -s sorcerer-monk/tests -p "test_*.py"
+      - name: Install WeiDU 251
+        run: |
+          asset_url="$(curl -fsSL https://api.github.com/repos/WeiDUorg/weidu/releases/tags/v251.00 | python -c 'import json, sys; assets = json.load(sys.stdin)["assets"]; print(next(asset["browser_download_url"] for asset in assets if "linux" in asset["name"].lower()))')"
+          curl -fsSL "$asset_url" -o /tmp/weidu.zip
+          mkdir -p /tmp/weidu
+          unzip -q /tmp/weidu.zip -d /tmp/weidu
+          weidu_bin="$(find /tmp/weidu -type f -iname weidu | head -n 1)"
+          test -n "$weidu_bin"
+          chmod +x "$weidu_bin"
+          sudo install "$weidu_bin" /usr/local/bin/weidu
+      - name: Parse TP2 with WeiDU
+        run: weidu sorcerer-monk/setup-sorcerer-monk.tp2 --nogame --language 0 --force-install-list 0
