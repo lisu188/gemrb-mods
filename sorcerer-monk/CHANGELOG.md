@@ -12,6 +12,9 @@
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
 - Derived the class XP cap from the active game's Sorcerer and Monk `XPCAP.2DA` rows instead of forcing the BG2/ToB 8,000,000 cap.
+- Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.
+- Added standard combined class prerequisites: DEX 9, CON 9, INT 9, WIS 9 and CHA 9, with no STR minimum.
+- Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned.
 - Corrected the legacy non-proficiency penalty to follow Monk instead of Sorcerer.
 - Changed saving throws and hit points to multiclass-derived values.
 - Changed race restrictions to human-only.
@@ -27,7 +30,7 @@
 - Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still permits high-tier fists where the campaign cap allows them.
-- Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric can coexist in the same tables.
-- Added regression tests for class registration, multiclass metadata, combined class features, progression, upgrade behavior and character-generation defaults.
+- Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
+- Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
 - Added WeiDU syntax validation to CI.
 - Removed the stale version number and redundant engine warning from translated component text.
