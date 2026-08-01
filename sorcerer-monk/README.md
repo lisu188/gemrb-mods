@@ -31,12 +31,13 @@ Use WeiDU 247 or newer.
 
 ## Version 2.0 corrections
 
-- Corrects the backup directory.
+- Retains the historical `sorcerer-monk-cleric/backup` location so existing 1.9 installations can still be reinstalled or uninstalled safely by WeiDU.
 - Derives the Sorcerer/Monk class ID from its `CLSKILLS.2DA` row instead of hardcoding class ID 21.
 - Rejects conflicting class-table layouts and class IDs above 31, matching GemRB's runtime row-index and class-mask constraints.
 - Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
 - Handles both normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
 - Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
+- Uses the more restrictive Sorcerer/Monk experience cap from the active game's `XPCAP.2DA` instead of forcing the BG2/ToB 8,000,000 cap on every supported campaign.
 - Uses multiclass save and hit-point handling instead of priest saves and full Monk hit points.
 - Restricts the class to humans, matching the intersection of Sorcerer and Monk race rules.
 - Combines Mage/Sorcerer and Monk item-usability restrictions.
@@ -50,7 +51,8 @@ Use WeiDU 247 or newer.
 - Restricts quick-weapon slots to two, matching the more restrictive Sorcerer component.
 - Preserves Monk fist APR progression and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Keeps BGEE character generation unarmed rather than falling back to the default quarterstaff.
-- Adjusts the custom `FISTWEAP.2DA` row for GemRB's rounded multiclass-level lookup so fist tiers are not granted before the Monk component earns them and the final tier remains reachable under the normal XP cap.
+- Adjusts the custom `FISTWEAP.2DA` row for GemRB's rounded multiclass-level lookup so fist tiers are not granted before the Monk component earns them and high-tier fists remain reachable when the campaign cap permits them.
+- Uses exact class-token guards so `SORCERER_MONK_CLERIC` rows and columns do not suppress Sorcerer/Monk installation.
 
 ## Gameplay model
 
@@ -68,6 +70,8 @@ The installer has two documented class-table branches: the combined format used 
 
 GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The installer fails instead of creating a character whose class metadata would be interpreted incorrectly at runtime.
 
-GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier and the top fist remains attainable before the 8,000,000 XP cap.
+GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier. Lower-cap campaigns naturally stop at lower fist tiers; BG2/ToB progression can still reach the final tier.
+
+The apparently misplaced backup directory is intentional in version 2.0. Version 1.9 stored its uninstall data under `sorcerer-monk-cleric/backup`; changing the `BACKUP` directive after users have already installed 1.9 would prevent WeiDU from finding those restoration files during an upgrade. A future backup-path migration requires an explicit transition strategy rather than a direct path rename.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
