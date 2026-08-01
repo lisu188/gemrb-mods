@@ -11,7 +11,9 @@ are free; their chosen child resources carry the authoritative augmented PP cost
 Opcode 214 places selector children in GemRB's temporary spellinfo list. The
 ``filter_spellinfo`` hook removes Psion variants that the selected actor cannot
 currently afford or legally augment to, while leaving unrelated temporary
-spell selectors untouched.
+spell selectors untouched. Cast-time type-255 resolution uses the raw GemRB
+spellinfo array, so confirmation can still identify and reject a child even if
+its affordability changed after the selector UI was built.
 """
 import GemRB
 
@@ -197,26 +199,31 @@ def resolve_power_entry(spellbook, actor, raw_spell):
     """Resolve a GemRB spell token to a registered Psion resource.
 
     Opcode-214 selector children use GemRB's synthetic spellinfo type 255. Their
-    small list indices overlap ordinary spellbook indices, so type 255 must be
-    resolved exclusively from the temporary spellinfo list before any ordinary
-    memorized spell lookup is attempted.
+    small list indices overlap ordinary spellbook indices, so type 255 is
+    resolved directly against GemRB's raw spellinfo array. This deliberately
+    bypasses the affordability-filtered UI list: confirmation must still find a
+    selected child so ``begin_manifest`` can reject it if PP changed meanwhile.
     """
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
 
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
-        sources = [spellbook.GetSpellinfoSpells(actor, encoded_type)]
-    else:
-        book_types = [i for i in range(16) if encoded_type & (1 << i)]
-        if not book_types:
-            book_types = range(16)
-        sources = [
-            spellbook.GetUsableMemorizedSpells(actor, book_type)
-            for book_type in book_types
-        ]
+        try:
+            spell_resrefs = GemRB.GetSpelldata(actor)
+            if spell_index < 0 or spell_index >= len(spell_resrefs):
+                return None
+            resref = spell_resrefs[spell_index]
+        except Exception:
+            return None
+        if power_info(resref):
+            return {"SpellIndex": raw_spell, "SpellResRef": resref}
+        return None
 
-    for candidates in sources:
-        for candidate in candidates:
+    book_types = [i for i in range(16) if encoded_type & (1 << i)]
+    if not book_types:
+        book_types = range(16)
+    for book_type in book_types:
+        for candidate in spellbook.GetUsableMemorizedSpells(actor, book_type):
             if candidate.get("SpellIndex", -1) % 1000 != spell_index:
                 continue
             resref = candidate.get("SpellResRef", "")
