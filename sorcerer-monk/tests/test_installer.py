@@ -58,7 +58,11 @@ class InstallerTests(unittest.TestCase):
 
     def test_gameplay_restrictions(self):
         self.assertIn("SORCERER_MONK 1 1 1 0 0 0 0 0 0", payloads("APPEND", "alignmnt.2da"))
-        self.assertIn("SORCERER_MONK 2 5", payloads("APPEND", "profs.2da"))
+
+    def test_proficiency_progression_uses_fastest_component(self):
+        prof_rows = payloads("APPEND", "profs.2da")
+        self.assertIn("SORCERER_MONK 2 4", prof_rows)
+        self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
 
     def test_merged_action_bar(self):
         self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
