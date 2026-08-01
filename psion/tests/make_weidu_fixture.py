@@ -22,6 +22,11 @@ import tempfile
 from pathlib import Path
 
 LAYOUTS = ("normalized", "native", "legacy")
+PROGRESSION_LEVELS = {
+    "normalized": 20,
+    "native": 41,
+    "legacy": 40,
+}
 
 
 def lowercase_relative(path: Path) -> Path:
@@ -89,6 +94,46 @@ def read_2da_rows(path: Path) -> list[list[str]]:
             continue
         rows.append(stripped.split())
     return rows
+
+
+def mage_xp_values(level_count: int) -> tuple[str, ...]:
+    """Return a deterministic Mage progression with BG1's level-9 threshold."""
+    values = [
+        0, 2500, 5000, 10000, 20000, 40000, 60000, 90000, 135000,
+        250000, 375000,
+    ]
+    while len(values) < level_count:
+        values.append(values[-1] + 375000)
+    return tuple(str(value) for value in values[:level_count])
+
+
+def configure_progression_tables(override: Path, layout: str) -> None:
+    """Create width-varying XPLEVEL/THAC0 fixtures for dynamic row generation."""
+    level_count = PROGRESSION_LEVELS[layout]
+    columns = tuple(str(level) for level in range(1, level_count + 1))
+    mage_xp = mage_xp_values(level_count)
+
+    write_2da(
+        override / "xplevel.2da",
+        columns,
+        (
+            ("MAGE", *mage_xp),
+            ("FIGHTER", *(str((level - 1) * 2000) for level in range(1, level_count + 1))),
+        ),
+        default="0",
+    )
+
+    # Seed rows need only be structurally valid. The Psion installer must not
+    # clone either one: it generates the explicit half-rate Psion progression.
+    write_2da(
+        override / "thac0.2da",
+        columns,
+        (
+            ("MAGE", *("20" for _ in range(level_count))),
+            ("FIGHTER", *(str(max(0, 20 - (level - 1))) for level in range(1, level_count + 1))),
+        ),
+        default="20",
+    )
 
 
 def configure_class_layout(override: Path, layout: str) -> None:
@@ -232,6 +277,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         ("VALUE",),
         (("SORCERER", "8000000"),),
     )
+    configure_progression_tables(override, layout)
 
     # class-common.tpa appends exactly fifty proficiency values per discipline.
     write_2da(
@@ -251,8 +297,9 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
 
     required = [
         "classes.2da", "class.ids", "alignmnt.2da", "weapprof.2da",
-        "profs.2da", "xpcap.2da", "avprefc.2da", "qslots.2da",
-        "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids", "oh1000.are",
+        "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da",
+        "avprefc.2da", "qslots.2da", "clskills.2da", "wolf.cre",
+        "missile.ids", "dmgtype.ids", "oh1000.are",
     ]
     if layout != "legacy":
         required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -265,6 +312,10 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     print(f"Fixture layout={layout} {preview_name.upper()} preview:")
     for line in preview_lines[:10]:
         print(f"  {line}")
+    print(
+        f"Fixture progression columns={PROGRESSION_LEVELS[layout]} "
+        f"for XPLEVEL.2DA and THAC0.2DA"
+    )
 
     key_script = gemrb_root / "tools" / "demo_key_file.py"
     subprocess.run(["python3", str(key_script), str(output)], check=True)
