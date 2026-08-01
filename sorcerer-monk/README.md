@@ -32,7 +32,7 @@ Use WeiDU 247 or newer.
 ## Version 2.0 corrections
 
 - Corrects the backup directory.
-- Allocates a free class identifier instead of hardcoding class ID 21.
+- Allocates the first available custom class identifier instead of hardcoding class ID 21 or assuming IDs are contiguous.
 - Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
 - Handles both normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
 - Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
@@ -43,6 +43,7 @@ Use WeiDU 247 or newer.
 - Avoids modifying ToB starting-equipment and HLA tables in games where those tables are absent.
 - Supports both the older `SKILLS.2DA` layout and the newer `THIEFSCL.2DA`/`THIEFSKL.2DA` pair.
 - Matches Monk skill-point progression in both skill-table layouts: legacy `10/10` and current split `0/10`.
+- Uses the fastest component proficiency rate, giving the multiclass one proficiency point every four Monk levels.
 
 ## Gameplay model
 
