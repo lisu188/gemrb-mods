@@ -157,8 +157,11 @@ def write_item_fixture(path: Path, item_type: int, usability: int, proficiency: 
 
 
 def configure_item_usability_fixtures(override: Path) -> None:
+    # WeiDU normalizes same-resref override destinations to uppercase on Linux.
+    # Match that convention so uninstall backups capture the actual source bytes
+    # instead of treating the uppercase destination as previously absent.
     for filename, (item_type, usability, proficiency) in ITEM_USABILITY_FIXTURES.items():
-        write_item_fixture(override / filename, item_type, usability, proficiency)
+        write_item_fixture(override / filename.upper(), item_type, usability, proficiency)
 
 
 def read_2da_rows(path: Path) -> list[list[str]]:
@@ -427,8 +430,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         raise RuntimeError("generated chitin.key is invalid")
 
     configure_item_usability_fixtures(override)
-    require_files(override, tuple(ITEM_USABILITY_FIXTURES))
-    print("Added override-only semantic ITM fixtures after CHITIN.KEY generation")
+    require_files(override, tuple(filename.upper() for filename in ITEM_USABILITY_FIXTURES))
+    print("Added uppercase override-only semantic ITM fixtures after CHITIN.KEY generation")
 
 
 def main() -> None:
