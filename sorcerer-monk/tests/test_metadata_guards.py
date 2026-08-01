@@ -28,6 +28,15 @@ class MetadataGuardTests(unittest.TestCase):
         self.assertIn("sm_monk_class_id != 20", TP2)
         self.assertIn("FAIL @18", TP2)
 
+    def test_duplicate_identity_rows_are_rejected(self):
+        self.assertIn("OUTER_SET sm_clskills_matches = 0", TP2)
+        self.assertIn("OUTER_SET sm_class_table_matches = 0", TP2)
+        self.assertIn("SET sm_clskills_matches += 1", TP2)
+        self.assertEqual(TP2.count("SET sm_class_table_matches += 1"), 2)
+        self.assertIn("ACTION_IF sm_clskills_matches > 1", TP2)
+        self.assertIn("ACTION_IF sm_class_table_matches > 1", TP2)
+        self.assertGreaterEqual(TP2.count("FAIL @20"), 2)
+
     def test_xpcap_requires_both_component_rows(self):
         self.assertIn("OUTER_SET sm_found_sorcerer_xpcap = 0", TP2)
         self.assertIn("OUTER_SET sm_found_monk_xpcap = 0", TP2)
