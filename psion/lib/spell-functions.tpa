@@ -1,22 +1,24 @@
-// Self-contained SPL V1 construction helpers.
+// Self-contained SPL V1 / ITM V1 construction helpers.
 //
-// WeiDU's commonly used ADD_SPELL_EFFECT helper is distributed as an optional
-// library include, not as an automatically available language primitive, and
-// ADD_SPELL_HEADER is a community helper. The Psion installer previously called
-// both names without defining them, so a stock WeiDU installation failed at the
-// first generated power. These compact implementations keep the mod standalone.
+// WeiDU's commonly used ADD_SPELL_EFFECT and ADD_ITEM_EQEFFECT helpers are
+// distributed as optional library includes rather than automatically available
+// language primitives, and ADD_SPELL_HEADER is a community helper. The Psion
+// installer keeps compact local implementations so a stock WeiDU installation
+// has no undeclared helper-library dependency.
 //
-// SPL V1 layout used below:
+// SPL/ITM V1 layout used below:
 //   0x64  extended-header offset
 //   0x68  extended-header count
 //   0x6a  feature-block offset
-//   0x70  global/casting feature count
-//   0x28  bytes per extended header
+//   0x6e  ITM equipping-feature index
+//   0x70  SPL global / ITM equipping feature count
+//   0x28  bytes per SPL extended header
+//   0x38  bytes per ITM extended header
 //   0x30  bytes per feature block
 //
 // The functions intentionally support the argument subset used by this mod,
-// while retaining the conventional ADD_SPELL_HEADER and ADD_SPELL_EFFECT names
-// so every existing power definition remains readable.
+// while retaining conventional helper names so the resource definitions remain
+// readable.
 
 DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~
   INT_VAR
@@ -151,6 +153,82 @@ BEGIN
           END
         END
       END
+    END
+  END
+END
+
+// Add one ITM V1 equipping effect. This mirrors WeiDU's established helper
+// layout while remaining local to the mod. Equipping effects are the right home
+// for opcode 319 class restrictions because GemRB evaluates them in its core
+// Actor::Unusable path before allowing an item to be equipped or activated.
+DEFINE_PATCH_FUNCTION ~ADD_ITEM_EQEFFECT~
+  INT_VAR
+    opcode = 0
+    target = 0
+    timing = 0
+    parameter1 = 0
+    parameter2 = 0
+    power = 0
+    resist_dispel = 0
+    duration = 0
+    probability1 = 100
+    probability2 = 0
+    dicenumber = 0
+    dicesize = 0
+    savingthrow = 0
+    savebonus = 0
+    special = 0
+    ps_special = special
+  STR_VAR
+    resource = ~~
+BEGIN
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    PATCH_FAIL ~ADD_ITEM_EQEFFECT requires a complete ITM V1 header.~
+  END
+
+  READ_ASCII 0 ps_item_signature (8)
+  PATCH_IF ~%ps_item_signature%~ STRING_COMPARE_CASE ~ITM V1  ~ BEGIN
+    PATCH_FAIL ~ADD_ITEM_EQEFFECT supports ITM V1 resources only.~
+  END
+
+  READ_LONG 0x64 ps_item_header_offset
+  READ_SHORT 0x68 ps_item_header_count
+  READ_LONG 0x6a ps_item_effect_offset
+  READ_SHORT 0x6e ps_item_equipping_index
+  READ_SHORT 0x70 ps_item_equipping_count
+
+  // Append to the existing equipping block. WeiDU's ITM helper treats the
+  // equipping index at 0x6e as the byte displacement within the common effect
+  // table; ability feature indexes remain 0x30-sized logical indexes.
+  SET ps_new_item_effect = ps_item_effect_offset + ps_item_equipping_index + (ps_item_equipping_count * 0x30)
+  INSERT_BYTES ps_new_item_effect 0x30
+
+  WRITE_SHORT ps_new_item_effect opcode
+  WRITE_BYTE (ps_new_item_effect + 0x02) target
+  WRITE_BYTE (ps_new_item_effect + 0x03) power
+  WRITE_LONG (ps_new_item_effect + 0x04) parameter1
+  WRITE_LONG (ps_new_item_effect + 0x08) parameter2
+  WRITE_BYTE (ps_new_item_effect + 0x0c) timing
+  WRITE_BYTE (ps_new_item_effect + 0x0d) resist_dispel
+  WRITE_LONG (ps_new_item_effect + 0x0e) duration
+  WRITE_BYTE (ps_new_item_effect + 0x12) probability1
+  WRITE_BYTE (ps_new_item_effect + 0x13) probability2
+  WRITE_EVALUATED_ASCII (ps_new_item_effect + 0x14) ~%resource%~ #8
+  WRITE_LONG (ps_new_item_effect + 0x1c) dicenumber
+  WRITE_LONG (ps_new_item_effect + 0x20) dicesize
+  WRITE_LONG (ps_new_item_effect + 0x24) savingthrow
+  WRITE_LONG (ps_new_item_effect + 0x28) savebonus
+  WRITE_LONG (ps_new_item_effect + 0x2c) ps_special
+  WRITE_SHORT 0x70 (ps_item_equipping_count + 1)
+
+  // Every ability whose first effect lies after the equipping block shifts by
+  // one logical feature when a new equipping effect is inserted.
+  FOR (ps_item_header_index = 0; ps_item_header_index < ps_item_header_count; ++ps_item_header_index) BEGIN
+    SET ps_current_item_header = ps_item_header_offset + (ps_item_header_index * 0x38)
+    READ_SHORT (ps_current_item_header + 0x20) ps_item_first_effect
+    PATCH_IF (ps_item_first_effect > ps_item_equipping_index)
+      OR ((ps_item_first_effect = ps_item_equipping_index) AND (ps_item_equipping_count = 0)) BEGIN
+      WRITE_SHORT (ps_current_item_header + 0x20) (ps_item_first_effect + 1)
     END
   END
 END
