@@ -65,6 +65,9 @@ for a manual full-campaign playthrough on every supported game configuration.
   is inherited dynamically, THAC0 follows `20 - floor(level / 2)`, Lore gains 5
   per level, and the class receives two starting proficiency points plus one
   every four levels.
+- Dedicated `SAVEPSI` saving-throw progression cloned from the active game's
+  Mage table, with a +2 class bonus to saves against wands and spells while
+  death, polymorph and breath saves remain unchanged.
 - Character creation enforces Intelligence 15 while allowing every race and
   alignment supported by the game.
 - One-pip weapon proficiency maximum for dagger, club, spear, quarterstaff,
@@ -242,8 +245,8 @@ Sorcerer/Monk-era class data.
 GitHub Actions runs:
 
 - table, progression, augmentation and installer-source checks;
-- class XP, THAC0, Lore, proficiency, ability-requirement and item-usability
-  regression checks;
+- class XP, THAC0, saving throws, Lore, proficiency, ability-requirement and
+  item-usability regression checks;
 - parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
 - single-stat PP initialization, zero-pool and rest-refill state tests;
@@ -263,6 +266,9 @@ GitHub Actions runs:
 - official WeiDU 251 parsing of the TP2 and every TPA module;
 - real WeiDU install, verification, uninstall and reinstall for normalized,
   native EE and legacy combined class-table layouts;
+- a dedicated 20/41/40-column saving-throw lifecycle proving `SAVEPSI` preserves
+  Mage death/polymorph/breath saves, improves wand/spell saves by 2, is removed
+  on uninstall, leaves `SAVEWIZ` unchanged and reinstalls cleanly;
 - semantic ITM fixtures proving legal Psion weapons remain usable while armor,
   shields and illegal items receive six class-targeted opcode-319 restrictions;
 - a dedicated BG2/ToB startup lifecycle proving Mage-equivalent starting gold,
