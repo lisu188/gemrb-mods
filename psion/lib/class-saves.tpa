@@ -1,0 +1,21 @@
+// Psions use Mage saving throws except for a +2 class bonus to saves vs wands
+// and spells. GemRB reads the five rows in order as death, wands, polymorph,
+// breath, and spell, with level progression across the remaining columns.
+// Clone the active game's SAVEWIZ table so the class follows each campaign's
+// native progression width and only adjust the two designed save categories.
+
+COPY_EXISTING ~savewiz.2da~ ~override/savepsi.2da~
+  COUNT_2DA_COLS ps_save_cols
+  COUNT_2DA_ROWS ps_save_cols ps_save_rows
+  PATCH_IF (ps_save_rows != 5) OR (ps_save_cols < 2) BEGIN
+    PATCH_FAIL ~The Psion mod requires a five-row SAVEWIZ.2DA saving-throw table.~
+  END
+
+  PATCH_FOR_EACH ps_save_row IN 1 4 BEGIN
+    FOR (ps_save_col = 1; ps_save_col < ps_save_cols; ++ps_save_col) BEGIN
+      READ_2DA_ENTRY ps_save_row ps_save_col ps_save_cols ps_save_value
+      SET ps_save_value = ps_save_value - 2
+      SET_2DA_ENTRY ps_save_row ps_save_col ps_save_cols ~%ps_save_value%~
+    END
+  END
+BUT_ONLY
