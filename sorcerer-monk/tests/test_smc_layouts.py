@@ -13,6 +13,16 @@ class SorcererMonkClericLayoutTests(unittest.TestCase):
         self.assertIn("ACTION_IF smc_classes_cols = 19", TP2)
         self.assertNotIn("ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~", TP2)
 
+    def test_combined_class_row_has_full_released_width(self):
+        self.assertIn(
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0 0 9",
+            TP2,
+        )
+        self.assertNotIn(
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0~",
+            TP2,
+        )
+
     def test_split_clastext_supports_normalized_and_native_ee_shapes(self):
         self.assertIn("ACTION_IF smc_clastext_cols = 6", TP2)
         self.assertIn("ACTION_IF smc_clastext_cols = 9", TP2)
