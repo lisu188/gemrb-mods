@@ -67,8 +67,14 @@ class InstallerTests(unittest.TestCase):
     def test_starting_gold_matches_components(self):
         self.assertIn("SORCERER_MONK 4 1 1 10", payloads("APPEND", "strtgold.2da"))
 
+    def test_bgee_starts_unarmed(self):
+        self.assertIn("SORCERER_MONK", payloads("APPEND", "stweapon.2da"))
+
     def test_quick_weapon_slots_use_restrictive_component(self):
         self.assertIn("SORCERER_MONK 2", payloads("APPEND", "numwslot.2da"))
+
+    def test_monk_combat_progression_is_preserved(self):
+        self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
 
     def test_merged_action_bar(self):
         self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
