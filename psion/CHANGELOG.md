@@ -24,6 +24,24 @@
   semantic preservation checks for every original TLK entry.
 - Added case-insensitive fixture resource handling matching Infinity Engine
   lookup behavior on Linux.
+- Installed the standalone `Psionics.py` runtime module ownership-safely: an
+  existing module is backed up and restored, while a mod-created module is
+  removed on uninstall.
+- Added reusable PP-backed innate manifestations without touching unrelated
+  innate abilities.
+- Added read-only GUI-script preflight, missing-import detection and exact
+  nested `RestParty` indentation preservation before any installation mutation.
+- Moved PP initialization state out of engine stat 188 (`SUMMON_DISABLE_ACTION`)
+  and encoded both the Psion signature and current PP solely in user stat 239.
+- Made temporary opcode-214 type-255 token resolution exclusive to GemRB's
+  spellinfo list, avoiding collisions with ordinary memorized spell indices.
+- Preserved original synthetic type-255 `SpellIndex` values when hiding illegal
+  selector children, so the resource charged for PP is the resource GemRB casts.
+- Corrected review-discovered gameplay mappings: Mind Thrust save penalties,
+  Animal Affinity ability opcodes, Burst/Hustle movement modes, Metamorphosis
+  Strength, and positive THAC0 bonuses for Precognition and Second Chance.
+- Added behavioral and static regressions for every review fix, including
+  selector index gaps, single-stat zero-PP state and GUI installation rollback.
 - Locked the release infrastructure, helper ordering and compatibility layouts
   into the version-neutral core validator.
 - Updated installation, compatibility, validation and known-limitation
