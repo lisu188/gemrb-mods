@@ -33,7 +33,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("%sm_class_id% SORCERER_MONK", payloads("APPEND", "class.ids"))
         fist_rows = payloads("APPEND", "fistweap.2da")
         self.assertEqual(len(fist_rows), 1)
-        self.assertTrue(fist_rows[0].startswith("%sm_class_id% MFIST1 MFIST1 MFIST2"))
+        self.assertTrue(fist_rows[0].startswith("%sm_class_id% MFIST1 MFIST1 MFIST1"))
 
     def test_class_id_matches_clskills_row_index(self):
         self.assertNotIn("sm_candidate_id", TP2)
@@ -117,18 +117,22 @@ class InstallerTests(unittest.TestCase):
     def test_monk_combat_progression_is_preserved(self):
         self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
 
-    def test_multiclass_fist_progression_uses_average_level_mapping(self):
+    def test_multiclass_fist_progression_uses_conservative_average_level_mapping(self):
         fist_rows = payloads("APPEND", "fistweap.2da")
         fists = fist_rows[0].split()[1:]
         self.assertEqual(len(fists), 41)
-        self.assertEqual(fists[1], "MFIST1")
-        self.assertEqual(fists[2], "MFIST2")
-        self.assertEqual(fists[5], "MFIST3")
-        self.assertEqual(fists[9], "MFIST4")
-        self.assertEqual(fists[12], "MFIST5")
-        self.assertEqual(fists[14], "MFIST6")
-        self.assertEqual(fists[17], "MFIST7")
-        self.assertEqual(fists[22], "MFIST8")
+        expected_ranges = [
+            (0, 2, "MFIST1"),
+            (3, 5, "MFIST2"),
+            (6, 9, "MFIST3"),
+            (10, 12, "MFIST4"),
+            (13, 14, "MFIST5"),
+            (15, 17, "MFIST6"),
+            (18, 22, "MFIST7"),
+            (23, 40, "MFIST8"),
+        ]
+        for start, end, fist in expected_ranges:
+            self.assertEqual(fists[start : end + 1], [fist] * (end - start + 1))
 
     def test_merged_action_bar(self):
         self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
