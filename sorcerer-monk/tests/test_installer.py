@@ -31,12 +31,20 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(len(fist_rows), 1)
         self.assertTrue(fist_rows[0].startswith("%sm_class_id% MFIST1 MFIST1 MFIST2"))
 
-    def test_class_id_allocator_reuses_free_slots(self):
-        self.assertNotIn("sm_max_class_id + 1", TP2)
-        self.assertEqual(TP2.count("SET sm_candidate_id = 21"), 2)
-        self.assertEqual(TP2.count("WHILE (sm_candidate_id <= 255) AND (sm_class_id < 0)"), 2)
-        self.assertEqual(TP2.count("sm_existing_id = sm_candidate_id"), 2)
-        self.assertIn("ACTION_IF (sm_class_id < 0) OR (sm_class_id > 255)", TP2)
+    def test_class_id_matches_clskills_row_index(self):
+        self.assertNotIn("sm_candidate_id", TP2)
+        self.assertIn("OUTER_SET sm_expected_class_id = sm_clskills_id", TP2)
+        self.assertIn("OUTER_SET sm_expected_class_id = sm_clskills_rows", TP2)
+        self.assertIn("sm_expected_class_id > 31", TP2)
+        self.assertEqual(TP2.count("sm_existing_id = sm_expected_class_id"), 2)
+        self.assertIn("sm_class_id != sm_expected_class_id", TP2)
+        self.assertIn("OUTER_SET sm_class_id = sm_expected_class_id", TP2)
+
+    def test_legacy_nonproficiency_penalty_follows_monk(self):
+        self.assertIn("OUTER_SPRINT sm_no_prof ~-3~", TP2)
+        self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
+        self.assertIn("READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_no_prof", TP2)
+        self.assertNotIn("OUTER_SPRINT sm_no_prof ~-4~", TP2)
 
     def test_sorcerer_and_monk_features_are_combined(self):
         clskills_rows = payloads("APPEND", "clskills.2da")
