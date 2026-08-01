@@ -35,7 +35,7 @@ Use WeiDU 247 or newer.
 - Derives the Sorcerer/Monk class ID from its `CLSKILLS.2DA` row instead of hardcoding class ID 21.
 - Rejects conflicting class-table layouts and class IDs above 31, matching GemRB's runtime row-index and class-mask constraints.
 - Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
-- Handles both normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
+- Handles normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
 - Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
 - Uses the more restrictive Sorcerer/Monk experience cap from the active game's `XPCAP.2DA` instead of forcing the BG2/ToB 8,000,000 cap on every supported campaign.
 - Preserves the conventional `XPCAP=-1` uncapped configuration used by XP-cap remover mods: two uncapped components stay uncapped, while a finite component cap remains the restrictive result.
@@ -70,7 +70,7 @@ Use WeiDU 247 or newer.
 
 ## Compatibility notes
 
-The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in either its normalized six-column form or the native EE ten-column form.
+The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in GemRB's normalized six-column form and in native EE nine- or ten-column forms.
 
 GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The installer fails instead of creating a character whose class metadata would be interpreted incorrectly at runtime.
 
