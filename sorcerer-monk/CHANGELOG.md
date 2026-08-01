@@ -24,6 +24,7 @@
 - Restored explanatory comments and the legacy `SKILLS.2DA` fallback.
 - Corrected newer split `THIEFSKL.2DA` Monk skill progression to 0 starting points and 10 points per Monk level.
 - Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
+- Corrected the legacy `SKILLS.2DA` availability mask so Find Traps is enabled alongside Move Silently and Hide in Shadows, matching the Monk column.
 - Corrected proficiency progression to the Monk/fastest-component rate of one point every four levels.
 - Added the component-compatible starting-gold row.
 - Added a two-slot `NUMWSLOT.2DA` row instead of falling through to the table default.
