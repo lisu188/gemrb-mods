@@ -28,6 +28,44 @@ PROGRESSION_LEVELS = {
     "legacy": 40,
 }
 
+# BG2-family WEAPPROF ordering, including the eight retained BG1 group rows.
+# IDs for the modern rows match the engine proficiency stats where applicable.
+WEAPPROF_ROWS = (
+    ("LARGE_SWORD", 0),
+    ("SMALL_SWORD", 1),
+    ("BOW", 2),
+    ("SPEAR", 3),
+    ("BLUNT", 4),
+    ("SPIKED", 5),
+    ("AXE", 6),
+    ("MISSILE", 7),
+    ("BASTARDSWORD", 89),
+    ("LONGSWORD", 90),
+    ("SHORTSWORD", 91),
+    ("AXE", 92),
+    ("TWOHANDEDSWORD", 93),
+    ("KATANA", 94),
+    ("SCIMITARWAKISASHININJATO", 95),
+    ("DAGGER", 96),
+    ("WARHAMMER", 97),
+    ("CLUB", 115),
+    ("SPEAR", 98),
+    ("HALBERD", 99),
+    ("FLAILMORNINGSTAR", 100),
+    ("MACE", 101),
+    ("QUARTERSTAFF", 102),
+    ("CROSSBOW", 103),
+    ("LONGBOW", 104),
+    ("SHORTBOW", 105),
+    ("DART", 106),
+    ("SLING", 107),
+    ("2HANDED", 111),
+    ("SWORDANDSHIELD", 112),
+    ("SINGLEWEAPON", 113),
+    ("2WEAPON", 114),
+    *((f"EXTRA{number}", 114 + number) for number in range(2, 20)),
+)
+
 
 def lowercase_relative(path: Path) -> Path:
     """Return a case-normalized relative path for IE resource lookup."""
@@ -136,8 +174,7 @@ def configure_progression_tables(override: Path, layout: str) -> None:
     )
 
     # GemRB's level-up code reads LORE.2DA by exact class row name. The fixture
-    # deliberately omits Psion rows so the installer must add the designed
-    # +5 Lore/level progression instead of inheriting a built-in fallback.
+    # deliberately omits Psion rows so the installer must add +5 Lore/level.
     write_2da(
         override / "lore.2da",
         ("RATE",),
@@ -146,6 +183,43 @@ def configure_progression_tables(override: Path, layout: str) -> None:
             ("THIEF", "3"),
             ("FIGHTER", "1"),
         ),
+        default="0",
+    )
+
+
+def configure_class_rule_tables(override: Path) -> None:
+    """Create semantic ability-requirement and proficiency fixtures."""
+    write_2da(
+        override / "abclasrq.2da",
+        ("MIN_STR", "MIN_DEX", "MIN_CON", "MIN_INT", "MIN_WIS", "MIN_CHR"),
+        (
+            ("MAGE", "0", "0", "0", "9", "0", "0"),
+            ("SORCERER", "0", "0", "0", "9", "0", "0"),
+        ),
+        default="0",
+    )
+
+    mage_allowed = {
+        "SMALL_SWORD", "BLUNT", "MISSILE", "DAGGER",
+        "QUARTERSTAFF", "DART", "SLING",
+    }
+    rows = []
+    for index, (name, stat_id) in enumerate(WEAPPROF_ROWS):
+        value = "1" if name in mage_allowed else "0"
+        rows.append(
+            (
+                name,
+                str(stat_id),
+                str(1000 + index),
+                str(2000 + index),
+                value,
+                value,
+            )
+        )
+    write_2da(
+        override / "weapprof.2da",
+        ("ID", "NAME_REF", "DESC_REF", "MAGE", "SORCERER"),
+        tuple(rows),
         default="0",
     )
 
@@ -289,17 +363,10 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     write_2da(
         override / "xpcap.2da",
         ("VALUE",),
-        (("SORCERER", "8000000"),),
+        (("MAGE", "8000000"), ("SORCERER", "8000000")),
     )
     configure_progression_tables(override, layout)
-
-    # class-common.tpa appends exactly fifty proficiency values per discipline.
-    write_2da(
-        override / "weapprof.2da",
-        ("SORCERER",),
-        tuple((f"PROF{index:02d}", "0") for index in range(50)),
-    )
-
+    configure_class_rule_tables(override)
     configure_class_layout(override, layout)
 
     # A real GemRB run writes this file. Point at the fixture override so WeiDU
@@ -310,10 +377,11 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     )
 
     required = [
-        "classes.2da", "class.ids", "alignmnt.2da", "weapprof.2da",
-        "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da",
-        "avprefc.2da", "qslots.2da", "clskills.2da", "wolf.cre",
-        "missile.ids", "dmgtype.ids", "oh1000.are",
+        "classes.2da", "class.ids", "alignmnt.2da", "abclasrq.2da",
+        "weapprof.2da", "profs.2da", "xpcap.2da", "xplevel.2da",
+        "thac0.2da", "lore.2da", "avprefc.2da", "qslots.2da",
+        "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids",
+        "oh1000.are",
     ]
     if layout != "legacy":
         required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -328,7 +396,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         print(f"  {line}")
     print(
         f"Fixture progression columns={PROGRESSION_LEVELS[layout]} "
-        f"for XPLEVEL.2DA and THAC0.2DA; LORE.2DA uses one RATE column"
+        f"for XPLEVEL.2DA and THAC0.2DA; semantic WEAPPROF/ABCLASRQ enabled"
     )
 
     key_script = gemrb_root / "tools" / "demo_key_file.py"
