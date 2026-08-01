@@ -43,7 +43,7 @@ def fake_table(name: str):
 def main() -> None:
     gemrb = types.ModuleType("GemRB")
     gui = types.ModuleType("GUICommon")
-    stats = {(1, 38): 18, (1, 34): 3, (1, 188): 0, (1, 239): 0}
+    stats = {(1, 38): 18, (1, 34): 3, (1, 239): 0}
     tables = {
         name: fake_table(name + ".2da")
         for name in ("psionpool", "psionpowers", "psionaugment")
@@ -98,7 +98,22 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        # Initialization and current PP share GemRB's documented user stat 239.
+        # No ordinary engine stat is consumed merely as an initialized marker.
+        assert not hasattr(module, "POOL_READY_STAT")
         assert module.ensure_pool(1) == 17
+        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | 17
+        initialized, current = module._decode_pool_state(1)
+        assert initialized and current == 17
+
+        # An unowned/legacy raw value lacks the signature and initializes once.
+        stats[(1, 239)] = 7
+        assert module.ensure_pool(1) == 17
+        # A signed zero-current state remains zero instead of auto-refilling.
+        stats[(1, 239)] = module.POOL_STATE_SIGNATURE
+        assert module.ensure_pool(1) == 0
+        assert module.ensure_pool(1, True) == 17
+
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]
             assert module.can_manifest(1, parent)
@@ -145,6 +160,8 @@ def main() -> None:
         assert module.ensure_pool(1) == before
         assert module.begin_manifest(1, "PSAADEX")
         assert module.ensure_pool(1) == before - 3
+        initialized, current = module._decode_pool_state(1)
+        assert initialized and current == before - 3
 
         # One depleted Psion power is replaced with a charged copy. The already
         # usable Psion power and the unrelated depleted innate remain untouched.
@@ -155,7 +172,7 @@ def main() -> None:
         assert states == {"PS1ERAY": 1, "PS1VIGR": 1, "SPCL900": 0}, states
         assert module.refresh_innate_charges(2) == 0
 
-        stats[(1, 188)], stats[(1, 239)] = 1, 0
+        stats[(1, 239)] = module.POOL_STATE_SIGNATURE
         assert not module.can_manifest(1, "PS2AAFF")
         assert module.filter_spellinfo(1, ["SPWI112", "PSAASTR"]) == ["SPWI112"]
     finally:
