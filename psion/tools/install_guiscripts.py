@@ -112,14 +112,15 @@ def _patch_spellinfo_filter(text: str) -> str:
 
 
 def _patch_rest(text: str, path: Path) -> str:
-    match = re.search(r"(GemRB\.RestParty\([^\n]*\)\n)", text)
+    match = re.search(r"(?m)^([ \t]*)(GemRB\.RestParty\([^\n]*\)\n)", text)
     if not match:
         raise RuntimeError(f"{path.name} rest call not found")
+    indent = match.group(1)
     hook = (
-        match.group(1)
-        + "\t" + MARK_BEGIN + "\n"
-        + "\tPsionics.restore_party()\n"
-        + "\t" + MARK_END + "\n"
+        indent + match.group(2)
+        + indent + MARK_BEGIN + "\n"
+        + indent + "Psionics.restore_party()\n"
+        + indent + MARK_END + "\n"
     )
     return text[: match.start()] + hook + text[match.end() :]
 
