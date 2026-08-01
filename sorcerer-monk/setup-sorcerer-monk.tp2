@@ -145,71 +145,71 @@ ACTION_IF sm_split_class_tables = 1 THEN BEGIN
   END
 
   APPEND ~clastext.2da~ ~%sm_clastext_row%~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
   // Multiclass saves and hit points are derived from the component classes.
   APPEND ~classes.2da~ ~SORCERER_MONK * 786432 0x20040000 -1 0 9~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
   APPEND ~clsrcreq.2da~ ~SORCERER_MONK 1 0 0 0 0 0 0~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
   APPEND ~hpclass.2da~ ~SORCERER_MONK *~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
   // The released combined table contains text references, class ID, hit-point
   // handling and race restrictions in the same row.
   APPEND ~classes.2da~ ~SORCERER_MONK %sm_lower% %sm_desc% %sm_mixed% * 786432 %sm_class_id% * 0x20040000 -1 1 0 0 0 0 0 0 0 9~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // Register the numeric ID for scripts and other mods.
 APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // ******************************************
 // Game table changes
 
 APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // All supported games expose the extended BG2-style proficiency table.
 APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Match the fastest component proficiency progression (Monk: one point every
 // four levels) while retaining the Monk starting allotment of two points.
 APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Both component classes use the same starting-gold formula.
 APPEND ~strtgold.2da~ ~SORCERER_MONK 4 1 1 10~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // BGEE defaults to a quarterstaff for classes missing from STWEAPON. Keep the
 // Monk component's intended unarmed start instead.
 ACTION_IF FILE_EXISTS_IN_GAME ~stweapon.2da~ THEN BEGIN
   APPEND ~stweapon.2da~ ~SORCERER_MONK~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // GemRB exposes NUMWSLOT to all supported games. Standard multiclasses use the
 // more restrictive component slot count, so Sorcerer/Monk follows Sorcerer's 2.
 APPEND ~numwslot.2da~ ~SORCERER_MONK 2~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Preserve Monk fist APR and the better component non-proficiency penalty on
 // engines that externalize these combat bonuses.
 ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
   APPEND ~clswpbon.2da~ ~SORCERER_MONK 1 3 2~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // ToB starting equipment and HLA tables are absent from some supported games.
 ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // Dual-classing would additionally require ABDC*, DUALCLASS.2DA and a
@@ -218,7 +218,7 @@ END
 // Use the combined HLAs from both component classes where HLA tables exist.
 ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
   APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
@@ -227,22 +227,22 @@ ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
   APPEND ~lunumab.2da~ ~MULTI2MONK 14 1 99 1~
     UNLESS ~MULTI2MONK~
   APPEND ~lunumab.2da~ ~SORCERER_MONK 14 1 99 1~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // Avatar class value (partial animation ID).
 APPEND ~avprefc.2da~ ~SORCERER_MONK 0x500~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Released and development GemRB tables differ only by the legacy NO_PROF
 // column. STARTXP values follow Sorcerer while the legacy non-proficiency
 // penalty follows the better Monk component value.
 ACTION_IF sm_clskills_cols = 17 THEN BEGIN
   APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
   APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
 // GemRB selects FISTWEAP by the rounded average multiclass level rather than
@@ -254,15 +254,15 @@ APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 M
 
 // Custom merged action bar: spellcasting, thieving/monk abilities and items.
 APPEND ~qslots.2da~ ~SORCERER_MONK 0 3 4 2 8 9 11 12 13~
-  UNLESS ~SORCERER_MONK~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Newer GemRB builds split the old SKILLS.2DA data into THIEFSCL/THIEFSKL.
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
   APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
   APPEND ~thiefskl.2da~ ~SORCERER_MONK 0 10~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
   APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 10 -1 -1 -1 1 1 -1 -1~
-    UNLESS ~SORCERER_MONK~
+    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
