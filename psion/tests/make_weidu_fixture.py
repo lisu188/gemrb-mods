@@ -9,7 +9,7 @@ and then selects one of the class-table layouts supported by the installer:
 - ``legacy``: older GemRB's nineteen-field combined CLASSES layout.
 
 The result is an installer fixture, not a playable campaign. It exercises real
-WeiDU resource loading, table patching, SPL/CRE creation, TLK writes, backup,
+WeiDU resource loading, table patching, SPL/CRE/ITM creation, TLK writes, backup,
 uninstall and reinstall without distributing proprietary game data.
 """
 
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import struct
 import subprocess
 import tempfile
 from pathlib import Path
@@ -26,6 +27,23 @@ PROGRESSION_LEVELS = {
     "normalized": 20,
     "native": 41,
     "legacy": 40,
+}
+
+# Deterministic zero-effect ITMs used to validate the Psion-specific opcode-319
+# usability conversion. Values are item type, legacy usability mask and weapon
+# proficiency byte. All resrefs stay within the engine's eight-character limit.
+ITEM_USABILITY_FIXTURES = {
+    "psspear.itm": (29, 0x40000, 0x62),  # legal Psion weapon, Mage-blocked
+    "psxbow.itm": (27, 0x40000, 0x67),   # legal Psion weapon, Mage-blocked
+    "psclub.itm": (17, 0x40000, 0x73),   # legal club, shared mace/club type
+    "psmace.itm": (17, 0, 0x65),         # illegal mace, same item type as club
+    "pssword.itm": (19, 0, 0x5B),        # illegal weapon without Mage bit
+    "psarmor.itm": (2, 0, 0),            # armor must always be blocked
+    "psshield.itm": (12, 0, 0),          # shield must always be blocked
+    "psringx.itm": (10, 0x40000, 0),     # nonweapon inherits Mage restriction
+    "psringok.itm": (10, 0, 0),          # ordinary nonweapon remains usable
+    "psbullet.itm": (14, 0x40000, 0),    # sling ammunition exception
+    "psbolt.itm": (31, 0x40000, 0),      # crossbow ammunition exception
 }
 
 # BG2-family WEAPPROF ordering, including the eight retained BG1 group rows.
@@ -121,6 +139,26 @@ def write_2da(
     lines = ["2DA V1.0", default, "        " + " ".join(columns)]
     lines.extend(" ".join(row) for row in rows)
     path.write_text("\n".join(lines) + "\n", encoding="ascii")
+
+
+def write_item_fixture(path: Path, item_type: int, usability: int, proficiency: int) -> None:
+    """Write a minimal structurally valid ITM V1 resource with no abilities/effects."""
+    data = bytearray(0x72)
+    data[:8] = b"ITM V1  "
+    struct.pack_into("<H", data, 0x1C, item_type)
+    struct.pack_into("<I", data, 0x1E, usability)
+    data[0x31] = proficiency
+    struct.pack_into("<I", data, 0x64, 0x72)  # extended-header offset
+    struct.pack_into("<H", data, 0x68, 0)     # extended-header count
+    struct.pack_into("<I", data, 0x6A, 0x72)  # effect-table offset
+    struct.pack_into("<H", data, 0x6E, 0)     # equipping-effect byte index
+    struct.pack_into("<H", data, 0x70, 0)     # equipping-effect count
+    path.write_bytes(data)
+
+
+def configure_item_usability_fixtures(override: Path) -> None:
+    for filename, (item_type, usability, proficiency) in ITEM_USABILITY_FIXTURES.items():
+        write_item_fixture(override / filename, item_type, usability, proficiency)
 
 
 def read_2da_rows(path: Path) -> list[list[str]]:
@@ -363,10 +401,11 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     write_2da(
         override / "xpcap.2da",
         ("VALUE",),
-        (("MAGE", "8000000"), ("SORCERER", "8000000")),
+        (("MAGE", "161000"), ("SORCERER", "8000000")),
     )
     configure_progression_tables(override, layout)
     configure_class_rule_tables(override)
+    configure_item_usability_fixtures(override)
     configure_class_layout(override, layout)
 
     # A real GemRB run writes this file. Point at the fixture override so WeiDU
@@ -381,7 +420,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         "weapprof.2da", "profs.2da", "xpcap.2da", "xplevel.2da",
         "thac0.2da", "lore.2da", "avprefc.2da", "qslots.2da",
         "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids",
-        "oh1000.are",
+        "oh1000.are", *ITEM_USABILITY_FIXTURES,
     ]
     if layout != "legacy":
         required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -396,7 +435,7 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         print(f"  {line}")
     print(
         f"Fixture progression columns={PROGRESSION_LEVELS[layout]} "
-        f"for XPLEVEL.2DA and THAC0.2DA; semantic WEAPPROF/ABCLASRQ enabled"
+        f"for XPLEVEL.2DA and THAC0.2DA; semantic WEAPPROF/ABCLASRQ/ITM fixtures enabled"
     )
 
     key_script = gemrb_root / "tools" / "demo_key_file.py"
