@@ -22,3 +22,4 @@ Dual-classing is not supported.~
 @17 = ~CLASS.IDS conflicts with the numeric class identifier required for Sorcerer/Monk. Remove stale symbol or numeric mappings before installing.~
 @18 = ~Sorcerer and Monk must retain GemRB class IDs 19 and 20 in CLSKILLS.2DA and the active class table. The current tables are incompatible with the Sorcerer/Monk multiclass mask.~
 @19 = ~FISTWEAP.2DA already contains a row for the numeric class identifier allocated to Sorcerer/Monk. Remove the conflicting custom-class row before installing.~
+@20 = ~Multiple SORCERER_MONK identity rows already exist in CLSKILLS.2DA or the active class table. Remove the duplicate rows before installing.~
