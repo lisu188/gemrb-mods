@@ -37,7 +37,8 @@ Sorcerer/Monk and the legacy Sorcerer/Monk/Cleric mod are intentionally mutually
 - Prevents simultaneous installation with Sorcerer/Monk/Cleric because both legacy packages share the same WeiDU backup namespace and the older triple-class installer hardcodes a class ID that can collide on EE layouts.
 - Derives the Sorcerer/Monk class ID from its `CLSKILLS.2DA` row instead of hardcoding class ID 21.
 - Rejects conflicting class-table layouts and class IDs above 31, matching GemRB's runtime row-index and class-mask constraints.
-- Rejects a stale `CLASS.IDS` `SORCERER_MONK` symbol when it points at a different numeric class ID than the active GemRB class tables require.
+- Requires Sorcerer and Monk to retain their canonical GemRB IDs and `CLSKILLS.2DA` row indices 19 and 20 because the multiclass component mask depends on those IDs.
+- Rejects `CLASS.IDS` conflicts in either direction: `SORCERER_MONK` cannot point at another numeric ID, and the allocated numeric ID cannot already belong to another symbol.
 - Supports the combined class table used by released GemRB versions and the split class tables used by development builds.
 - Handles normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` layouts when the split tables are present.
 - Handles the released and development `CLSKILLS.2DA` layouts and inherits campaign-specific starting experience from the Sorcerer row.
@@ -60,7 +61,7 @@ Sorcerer/Monk and the legacy Sorcerer/Monk/Cleric mod are intentionally mutually
 - Preserves Monk fist APR progression and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Keeps BGEE character generation unarmed rather than falling back to the default quarterstaff.
 - Adjusts the custom `FISTWEAP.2DA` row for GemRB's rounded multiclass-level lookup so fist tiers are not granted before the Monk component earns them and high-tier fists remain reachable when the campaign cap permits them.
-- Preserves an existing `FISTWEAP.2DA` row for the allocated numeric class ID regardless of its first fist resource, preventing a duplicate numeric row when another customization already owns that slot.
+- Rejects a pre-existing `FISTWEAP.2DA` row for the allocated numeric class ID because that table has no class-name ownership marker and silently preserving another row would bind unknown fist data to Sorcerer/Monk.
 - Uses exact class-token guards so `SORCERER_MONK_CLERIC` rows and columns do not suppress Sorcerer/Monk installation.
 - Uses exact row-name guards for the `MULTI2SORCERER` and `MULTI2MONK` HLA metadata.
 
@@ -79,9 +80,9 @@ Sorcerer/Monk and the legacy Sorcerer/Monk/Cleric mod are intentionally mutually
 
 The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in GemRB's normalized six-column form and in native EE nine- or ten-column forms.
 
-GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The installer fails instead of creating a character whose class metadata would be interpreted incorrectly at runtime. An existing `CLASS.IDS` registration for `SORCERER_MONK` must resolve to that same ID.
+GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The Sorcerer/Monk component mask is built for Sorcerer ID 19 and Monk ID 20, so the installer also verifies those base-class IDs and their `CLSKILLS.2DA` row positions before making changes. `CLASS.IDS` must agree in both directions: `SORCERER_MONK` must resolve to the allocated ID, and the allocated ID must not already resolve to another class symbol.
 
-GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier. Lower-cap campaigns naturally stop at lower fist tiers; BG2/ToB progression can still reach the final tier. If the allocated numeric class ID already has a `FISTWEAP.2DA` row, the installer preserves it instead of adding a second row with the same ID.
+GemRB currently selects `FISTWEAP.2DA` by the rounded average multiclass level, not by the Monk component level. An exact Monk fist transition at every XP boundary therefore cannot be represented by a single custom table row. Version 2.0 uses a conservative mapping: some fist transitions can occur slightly later than on a single-class Monk, but none occur before the Monk component reaches the corresponding tier. Lower-cap campaigns naturally stop at lower fist tiers; BG2/ToB progression can still reach the final tier. Because `FISTWEAP.2DA` identifies rows only by numeric class ID, an existing row for the ID allocated to Sorcerer/Monk is treated as a collision and installation stops before modifying game tables.
 
 The apparently misplaced backup directory is intentional in version 2.0. Version 1.9 stored its uninstall data under `sorcerer-monk-cleric/backup`; changing the `BACKUP` directive after users have already installed 1.9 would prevent WeiDU from finding those restoration files during an upgrade. A future backup-path migration requires an explicit transition strategy rather than a direct path rename.
 
