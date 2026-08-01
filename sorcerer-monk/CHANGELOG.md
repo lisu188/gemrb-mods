@@ -3,6 +3,7 @@
 ## 2.0
 
 - Preserved the historical `sorcerer-monk-cleric/backup` path so existing 1.9 installations remain reinstallable and uninstallable by WeiDU.
+- Prevented simultaneous installation with Sorcerer/Monk/Cleric because the two legacy packages share the same WeiDU backup namespace and the older triple-class installer can also collide on class ID 22.
 - Replaced hardcoded class ID 21 with an ID derived from the Sorcerer/Monk `CLSKILLS.2DA` row index.
 - Added explicit checks for conflicting class IDs and GemRB's below-32 class-mask limit.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
@@ -32,7 +33,9 @@
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still permits high-tier fists where the campaign cap allows them.
 - Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
+- Tightened the `MULTI2SORCERER` and `MULTI2MONK` HLA guards to exact row-name matching.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
 - Added real WeiDU smoke coverage for released combined, current split, and native EE nine-/ten-column class-text layouts.
-- Added WeiDU syntax validation to CI.
+- Added real WeiDU tests proving both sibling installation orders are rejected before table changes and that uninstall restores the first component's original fixture state byte-for-byte.
+- Added WeiDU syntax validation to CI for both sibling TP2 installers.
 - Removed the stale version number and redundant engine warning from translated component text.
