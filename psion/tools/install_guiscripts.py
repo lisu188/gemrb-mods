@@ -16,10 +16,13 @@ MARK_BEGIN = "# PSION MOD BEGIN"
 MARK_END = "# PSION MOD END"
 
 
-def _insert_import(text: str) -> str:
-    if "import Psionics\n" not in text:
-        text = text.replace("import GemRB\n", "import GemRB\nimport Psionics\n", 1)
-    return text
+def _insert_import(text: str, path: Path) -> str:
+    if "import Psionics\n" in text:
+        return text
+    needle = "import GemRB\n"
+    if needle not in text:
+        raise RuntimeError(f"{path.name} GemRB import not found")
+    return text.replace(needle, needle + "import Psionics\n", 1)
 
 
 def _patch_spell_pressed(text: str) -> str:
@@ -130,7 +133,7 @@ def render_patch(text: str, kind: str, path: Path) -> str | None:
     if MARK_BEGIN in text:
         return None
 
-    text = _insert_import(text)
+    text = _insert_import(text, path)
     if kind == "actions":
         text = _patch_spell_pressed(text)
         text = _patch_cancel_on_open(text, "ActionCastPressed", "ACT_CAST")
