@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fast static checks for Psion XP and THAC0 class progression wiring."""
+"""Fast static checks for Psion XP, THAC0, and Lore progression wiring."""
 
 from pathlib import Path
 
@@ -42,9 +42,20 @@ def main() -> None:
     ):
         assert fragment in progression, fragment
 
+    # GemRB's level-up code looks up LORE.2DA by exact class row name, so every
+    # discipline must define the designed +5 Lore/level rate explicitly.
+    for fragment in (
+        "COPY_EXISTING ~lore.2da~ ~override~",
+        "COUNT_2DA_COLS ps_lore_cols",
+        "PATCH_IF ps_lore_cols = 2",
+        "standard single-RATE LORE.2DA layout",
+    ):
+        assert fragment in progression, fragment
+
     for discipline in DISCIPLINES:
         assert f"APPEND ~xplevel.2da~ ~{discipline}%ps_xp_values%~" in progression
         assert f"APPEND ~thac0.2da~ ~{discipline}%ps_thac0_values%~" in progression
+        assert f"APPEND ~lore.2da~ ~{discipline} 5~" in progression
 
     layout_pos = setup.index("INCLUDE ~psion/lib/class-layout.tpa~")
     progression_pos = setup.index("INCLUDE ~psion/lib/class-progression.tpa~")
@@ -59,17 +70,20 @@ def main() -> None:
         '"legacy": 40',
         'override / "xplevel.2da"',
         'override / "thac0.2da"',
+        'override / "lore.2da"',
         '135000',
+        '("RATE",)',
     ):
         assert fragment in fixture, fragment
 
     # Lifecycle validation must verify install values and exact rollback for
-    # both progression resources.
+    # all three class-progression resources.
     for fragment in (
-        '"xplevel.2da", "thac0.2da"',
+        '"xplevel.2da", "thac0.2da", "lore.2da"',
         'xp_rows.get(discipline) == xp_rows["MAGE"]',
         '20 - (level // 2)',
         'assert xp_rows["MAGE"][8] == "135000"',
+        'lore_rows.get(discipline) == ["5"]',
     ):
         assert fragment in lifecycle, fragment
 
@@ -78,7 +92,7 @@ def main() -> None:
     assert expected[19] == 10
     assert expected[-1] == 0
 
-    print("Psion XP and THAC0 progression validation passed.")
+    print("Psion XP, THAC0, and Lore progression validation passed.")
 
 
 if __name__ == "__main__":
