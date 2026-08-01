@@ -64,6 +64,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SORCERER_MONK 2 4", prof_rows)
         self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
 
+    def test_starting_gold_matches_components(self):
+        self.assertIn("SORCERER_MONK 4 1 1 10", payloads("APPEND", "strtgold.2da"))
+
     def test_quick_weapon_slots_use_restrictive_component(self):
         self.assertIn("SORCERER_MONK 2", payloads("APPEND", "numwslot.2da"))
 
