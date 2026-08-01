@@ -25,6 +25,7 @@
 - Added a two-slot `NUMWSLOT.2DA` row instead of falling through to the table default.
 - Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
+- Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still reaches the top fist under the normal XP cap.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression and character-generation defaults.
 - Added WeiDU syntax validation to CI.
 - Removed the stale version number and redundant engine warning from translated component text.
