@@ -26,6 +26,12 @@ def prepare_both(game):
     shutil.copytree(SMC, game / "sorcerer-monk-cleric")
     override = game / "override"
     write_2da(
+        override / "weapprof.2da",
+        ["MAGE"],
+        [(f"PROF{i:02d}", [1]) for i in range(51)],
+        default="0",
+    )
+    write_2da(
         override / "25stweap.2da",
         ["MAGE"],
         [(f"SLOT{i}", ["*"]) for i in range(20)],
