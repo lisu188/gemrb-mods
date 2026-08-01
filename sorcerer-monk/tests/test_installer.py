@@ -79,8 +79,11 @@ class InstallerTests(unittest.TestCase):
 
     def test_legacy_monk_skill_progression(self):
         legacy_rows = payloads("APPEND_COL", "skills.2da")
-        self.assertIn("$ $ SORCERER_MONK 10 10 -1 -1 -1 1 1 -1 -1", legacy_rows)
-        self.assertNotIn("$ $ SORCERER_MONK 10 5 -1 -1 -1 1 1 -1 -1", legacy_rows)
+        expected = "$ $ SORCERER_MONK 10 10 -1 -1 1 1 1 -1 -1"
+        self.assertIn(expected, legacy_rows)
+        self.assertNotIn("$ $ SORCERER_MONK 10 10 -1 -1 -1 1 1 -1 -1", legacy_rows)
+        values = expected.split()[3:]
+        self.assertEqual(values, ["10", "10", "-1", "-1", "1", "1", "1", "-1", "-1"])
 
     def test_gameplay_restrictions(self):
         self.assertIn("SORCERER_MONK 1 1 1 0 0 0 0 0 0", payloads("APPEND", "alignmnt.2da"))
