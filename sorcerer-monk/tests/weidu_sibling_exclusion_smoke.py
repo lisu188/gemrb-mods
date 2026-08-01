@@ -26,12 +26,6 @@ def prepare_both(game):
     shutil.copytree(SMC, game / "sorcerer-monk-cleric")
     override = game / "override"
     write_2da(
-        override / "weapprof.2da",
-        ["MAGE"],
-        [(f"PROF{i:02d}", [1]) for i in range(51)],
-        default="0",
-    )
-    write_2da(
         override / "25stweap.2da",
         ["MAGE"],
         [(f"SLOT{i}", ["*"]) for i in range(20)],
@@ -41,6 +35,15 @@ def prepare_both(game):
         override / "lunumab.2da",
         ["FIRST_LEVEL", "RATE", "MAX_LEVEL", "NUM_ALLOWED"],
         [("SORCERER", [14, 1, 99, 1]), ("MONK", [14, 1, 99, 1]), ("CLERIC", [14, 1, 99, 1])],
+    )
+
+
+def use_legacy_smc_weapprof(override):
+    write_2da(
+        override / "weapprof.2da",
+        ["MAGE"],
+        [(f"PROF{i:02d}", [1]) for i in range(51)],
+        default="0",
     )
 
 
@@ -106,6 +109,7 @@ def exercise_smc_then_sm(weidu):
         game = Path(tmp)
         prepare_both(game)
         override = game / "override"
+        use_legacy_smc_weapprof(override)
         originals = snapshot(override)
 
         run_component(
