@@ -15,11 +15,11 @@ class SorcererMonkClericLayoutTests(unittest.TestCase):
 
     def test_combined_class_row_has_full_released_width(self):
         self.assertIn(
-            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0 0 9",
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0 0 9",
             TP2,
         )
         self.assertNotIn(
-            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0~",
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0~",
             TP2,
         )
 
@@ -27,15 +27,15 @@ class SorcererMonkClericLayoutTests(unittest.TestCase):
         self.assertIn("ACTION_IF smc_clastext_cols = 6", TP2)
         self.assertIn("ACTION_IF smc_clastext_cols = 9", TP2)
         self.assertIn(
-            "SORCERER_MONK_CLERIC 22 * %smc_lower% %smc_desc% %smc_mixed%",
+            "SORCERER_MONK_CLERIC %smc_class_id% * %smc_lower% %smc_desc% %smc_mixed%",
             TP2,
         )
         self.assertIn(
-            "SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief%",
+            "SORCERER_MONK_CLERIC %smc_class_id% 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief%",
             TP2,
         )
         self.assertIn(
-            "SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief% -1",
+            "SORCERER_MONK_CLERIC %smc_class_id% 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief% -1",
             TP2,
         )
         self.assertNotIn("22 * SORCERER_MONK_CLERIC PLACEHOLDER_1", TP2)
