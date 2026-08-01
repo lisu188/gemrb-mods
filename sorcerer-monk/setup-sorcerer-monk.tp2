@@ -168,6 +168,11 @@ APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
 APPEND ~xpcap.2da~ ~SORCERER_MONK 8000000~
   UNLESS ~SORCERER_MONK~
 
+// GemRB exposes NUMWSLOT to all supported games. Standard multiclasses use the
+// more restrictive component slot count, so Sorcerer/Monk follows Sorcerer's 2.
+APPEND ~numwslot.2da~ ~SORCERER_MONK 2~
+  UNLESS ~SORCERER_MONK~
+
 // ToB starting equipment and HLA tables are absent from some supported games.
 ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
