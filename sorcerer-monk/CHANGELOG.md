@@ -4,6 +4,7 @@
 
 - Fixed `BACKUP` pointing at the Sorcerer/Monk/Cleric mod directory.
 - Replaced hardcoded class ID 21 with free-ID discovery through the active GemRB class table.
+- Reused holes in the custom-class ID range instead of assuming the next ID is always above the current maximum.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
 - Added support for development GemRB versions that split class data across `CLASSTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
 - Added explicit handling for the normalized GemRB and native Enhanced Edition `CLASSTEXT.2DA` formats.
@@ -18,5 +19,7 @@
 - Restored explanatory comments and the legacy `SKILLS.2DA` fallback.
 - Corrected newer split `THIEFSKL.2DA` Monk skill progression to 0 starting points and 10 points per Monk level.
 - Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
+- Corrected proficiency progression to the Monk/fastest-component rate of one point every four levels.
 - Added regression tests for class registration, multiclass metadata, combined class features and gameplay restrictions.
+- Added WeiDU syntax validation to CI.
 - Removed the stale version number and redundant engine warning from translated component text.
