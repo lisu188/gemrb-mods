@@ -17,7 +17,7 @@ def main() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    actions_text = '''import GemRB\nimport Spellbook\n\ndef ActionCastPressed ():\n\t"""Opens the spell choice scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_CAST)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\t"""Opens the innate spell scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_INNATE)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\n\tSpell = GemRB.GetVar ("Spell")\n'''
+    actions_text = '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\t"""Opens the spell choice scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_CAST)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\t"""Opens the innate spell scrollbar."""\n\n\tif GemRB.GetVar ("SettingButtons"):\n\t\tSaveActionButton (ACT_INNATE)\n\t\treturn\n\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\n\tSpell = GemRB.GetVar ("Spell")\n'''
     spellbook_text = '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\ti = 0\n\tfor resRef in spellResRefs:\n\t\tmemorizedSpells.append({\n\t\t\t"SpellIndex": i + 1000 * 255,\n\t\t\t"SpellResRef": resRef,\n\t\t})\n\t\ti += 1\n\treturn memorizedSpells\n'''
     rest_text = '''import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n'''
     nested_rest_text = '''import GemRB\n\ndef Rest():\n\tif True:\n\t\tGemRB.RestParty(0, 0)\n\t\treturn True\n'''
@@ -83,7 +83,10 @@ def main() -> None:
         assert "Psionics.begin_manifest" in patched_actions
         assert "Psionics.refresh_innate_charges" in patched_actions
         assert "if GemRB.GetVar(\"SettingButtons\")" in patched_actions
-        assert patched_actions.count("Psionics.refresh_innate_charges") == 1
+        assert "quickInfo = Psionics.power_info(quickResRef)" in patched_actions
+        assert "SpellPressed()" in patched_actions
+        assert "Psionics.cancel_pending(pc)" in patched_actions
+        assert patched_actions.count("Psionics.refresh_innate_charges") == 2
         assert "Psionics.filter_spellinfo(actor, [entry[\"SpellResRef\"] for entry in memorizedSpells])" in patched_spellbook
         assert "spellResRefs = Psionics.filter_spellinfo" not in patched_spellbook
 
@@ -125,6 +128,94 @@ def main() -> None:
             exec(compile(patched_actions, "ActionsWindow.py", "exec"), namespace)
             namespace["SpellPressed"]()
             assert config_calls == {"cancel": 1, "resolve": 0, "begin": 0}
+        finally:
+            for name, previous in old_modules.items():
+                if previous is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = previous
+
+        # Classic quickspell buttons normally bypass SpellPressed entirely.
+        # A registered Psion quickspell must instead clear any stale reservation,
+        # refresh its reusable innate charge, and re-enter SpellPressed using the
+        # original encoded innate SpellIndex. Repeating after a canceled target
+        # starts fresh, while unrelated quickspells retain GemRB's direct path.
+        quick_vars = {"SettingButtons": 0, "Spell": 0, "Type": 0, "QSpell": None}
+        quick_direct_casts = []
+        quick_gemrb = types.ModuleType("GemRB")
+        quick_gemrb.GameGetFirstSelectedActor = lambda: 1
+        quick_gemrb.GetPCStats = lambda actor: {
+            "QuickSpells": ["PS1VIGR", "SPWI112"]
+        }
+        quick_gemrb.GetVar = lambda name: quick_vars.get(name)
+        quick_gemrb.SetVar = lambda name, value: quick_vars.__setitem__(name, value)
+        quick_gemrb.SpellCast = lambda *args: quick_direct_casts.append(args)
+        quick_gemrb.Log = lambda *_: None
+
+        quick_spellbook = types.ModuleType("Spellbook")
+        quick_spellbook.GetUsableMemorizedSpells = lambda actor, book_type: [
+            {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}
+        ]
+
+        quick_psionics = types.ModuleType("Psionics")
+        quick_psionics.INNATE_TYPE = 2
+        quick_calls = {"cancel": 0, "refresh": 0, "resolve": 0, "begin": 0}
+
+        def quick_power_info(resref):
+            if str(resref).upper() == "PS1VIGR":
+                return {"parent": "PS1VIGR"}
+            return None
+
+        def quick_cancel(actor):
+            quick_calls["cancel"] += 1
+
+        def quick_refresh(actor):
+            quick_calls["refresh"] += 1
+            return 1
+
+        def quick_resolve(spellbook_module, actor, raw_spell):
+            quick_calls["resolve"] += 1
+            assert raw_spell == 4000
+            return {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}
+
+        def quick_begin(actor, resref):
+            quick_calls["begin"] += 1
+            assert resref == "PS1VIGR"
+            return True
+
+        quick_psionics.power_info = quick_power_info
+        quick_psionics.cancel_pending = quick_cancel
+        quick_psionics.refresh_innate_charges = quick_refresh
+        quick_psionics.resolve_power_entry = quick_resolve
+        quick_psionics.begin_manifest = quick_begin
+
+        old_modules = {
+            name: sys.modules.get(name)
+            for name in ("GemRB", "Spellbook", "Psionics")
+        }
+        sys.modules["GemRB"] = quick_gemrb
+        sys.modules["Spellbook"] = quick_spellbook
+        sys.modules["Psionics"] = quick_psionics
+        try:
+            namespace = {}
+            exec(compile(patched_actions, "ActionsWindow.py", "exec"), namespace)
+            namespace["ActionQSpellPressed"](0)
+            assert quick_vars["Spell"] == 4000
+            assert quick_vars["Type"] == 4
+            assert quick_vars["QSpell"] is None
+            assert quick_calls == {"cancel": 1, "refresh": 1, "resolve": 1, "begin": 1}
+            assert quick_direct_casts == []
+
+            # Simulate canceling target selection: there is no confirmation
+            # callback. A new quickslot press must still cancel the stale first
+            # phase before creating a fresh reservation.
+            namespace["ActionQSpellPressed"](0)
+            assert quick_calls == {"cancel": 2, "refresh": 2, "resolve": 2, "begin": 2}
+            assert quick_direct_casts == []
+
+            # Non-Psion quickspells are untouched.
+            namespace["ActionQSpellPressed"](1)
+            assert quick_direct_casts == [(1, -2, 1)]
         finally:
             for name, previous in old_modules.items():
                 if previous is None:
@@ -214,7 +305,7 @@ def main() -> None:
             assert target.read_text(encoding="utf-8") == text
             assert not target.with_suffix(target.suffix + ".psion.bak").exists()
 
-    print("Psion GUI patcher, selector index, configuration, runtime lifecycle, indentation, import, and preflight validation passed.")
+    print("Psion GUI patcher, selector index, quickspell cancellation/routing, configuration, runtime lifecycle, indentation, import, and preflight validation passed.")
 
 
 if __name__ == "__main__":
