@@ -77,6 +77,7 @@ def main() -> None:
         assert module.patch(menu, "rest")
         assert module.patch(store, "rest")
         patched_actions = actions.read_text(encoding="utf-8")
+        assert "Psionics.resolve_power_entry(Spellbook, pc, raw_spell)" in patched_actions
         assert "Psionics.begin_manifest" in patched_actions
         assert "Psionics.refresh_innate_charges" in patched_actions
         assert patched_actions.count("Psionics.refresh_innate_charges") == 1
