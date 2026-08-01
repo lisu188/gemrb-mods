@@ -23,10 +23,11 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --layout "$layout"
 cp -R "$repo_root/psion" "$game/psion"
 
-# Snapshot every pre-existing table that the installer edits. WeiDU restores
-# those resources byte-for-byte. DIALOG.TLK is different: uninstall preserves
-# the original entries but may leave newly allocated, now-unreferenced string
-# slots at the end. Record a semantic digest of the original entry prefix.
+# Snapshot every pre-existing table and synthetic ITM that the installer edits.
+# WeiDU restores those resources byte-for-byte. DIALOG.TLK is different:
+# uninstall preserves the original entries but may leave newly allocated,
+# now-unreferenced string slots at the end. Record a semantic digest of the
+# original entry prefix.
 python3 - "$game" "$baseline" <<'PY'
 from __future__ import annotations
 import hashlib
@@ -60,6 +61,9 @@ candidates = (
     "class.ids", "alignmnt.2da", "abclasrq.2da", "weapprof.2da",
     "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da",
     "avprefc.2da", "qslots.2da", "clskills.2da",
+    "psspear.itm", "psxbow.itm", "psclub.itm", "psmace.itm",
+    "pssword.itm", "psarmor.itm", "psshield.itm", "psringx.itm",
+    "psringok.itm", "psbullet.itm", "psbolt.itm",
 )
 paths = [root / "override" / name for name in candidates if (root / "override" / name).is_file()]
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
@@ -139,6 +143,38 @@ def read_2da_list(path: Path) -> tuple[list[str], list[list[str]]]:
     return columns, rows
 
 
+def read_class_ids(path: Path) -> dict[str, int]:
+    result = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        fields = line.split()
+        if len(fields) < 2 or fields[1] not in disciplines:
+            continue
+        result[fields[1]] = int(fields[0], 0)
+    return result
+
+
+def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
+    data = path.read_bytes()
+    assert data[:8] == b"ITM V1  ", (layout, path.name, data[:8])
+    assert len(data) >= 0x72, (layout, path.name, len(data))
+    effect_offset = struct.unpack_from("<I", data, 0x6A)[0]
+    equipping_index = struct.unpack_from("<H", data, 0x6E)[0]
+    equipping_count = struct.unpack_from("<H", data, 0x70)[0]
+    effects = []
+    for index in range(equipping_count):
+        offset = effect_offset + equipping_index + index * 0x30
+        assert offset + 0x30 <= len(data), (layout, path.name, offset, len(data))
+        effects.append((
+            struct.unpack_from("<H", data, offset)[0],
+            data[offset + 0x02],
+            data[offset + 0x03],
+            struct.unpack_from("<I", data, offset + 0x04)[0],
+            struct.unpack_from("<I", data, offset + 0x08)[0],
+            data[offset + 0x0C],
+        ))
+    return effects
+
+
 class_tables = ["classes.2da"]
 if layout != "legacy":
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
@@ -150,6 +186,17 @@ for filename in (
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
+
+# A custom class cannot safely reuse the Mage/Sorcerer legacy ITM usability bit:
+# doing so would incorrectly reject legal Psion spears, crossbows, and clubs.
+# The class rows are neutral and item-local opcode 319 effects carry the rules.
+class_columns, class_rows = read_2da(override / "classes.2da")
+assert "USABILITY" in class_columns, (layout, class_columns)
+usability_column = class_columns.index("USABILITY")
+for discipline in disciplines:
+    assert int(class_rows[discipline][usability_column], 0) == 0, (
+        layout, discipline, class_rows[discipline][usability_column]
+    )
 
 # Character creation requires Intelligence 15 and no other class-specific
 # ability minimum. This must be enforced in chargen, not merely at manifest time.
@@ -189,6 +236,43 @@ for discipline in disciplines:
         if row_name in seen:
             seen[row_name] += 1
 assert all(seen[name] >= 1 for name in allowed), (layout, seen)
+
+# Preserve the campaign's real XP ceiling. The fixture deliberately gives Mage
+# 161000 and Sorcerer 8000000 so cloning the wrong seed is detectable.
+xpcap_columns, xpcap_rows = read_2da(override / "xpcap.2da")
+assert xpcap_columns == ["VALUE"], (layout, xpcap_columns)
+assert xpcap_rows["MAGE"] == ["161000"], (layout, xpcap_rows["MAGE"])
+for discipline in disciplines:
+    assert xpcap_rows.get(discipline) == xpcap_rows["MAGE"], (
+        layout, discipline, xpcap_rows.get(discipline), xpcap_rows["MAGE"]
+    )
+
+# Item-local restrictions: legal Psion weapons and their ammunition remain
+# unrestricted even when the fixture marks them unusable by Mages. Illegal
+# weapons, armor, shields, and Mage-blocked nonweapons receive exactly six
+# CLASS.IDS-targeted opcode-319 restrictions, one per discipline.
+class_ids = read_class_ids(override / "class.ids")
+assert set(class_ids) == set(disciplines), (layout, class_ids)
+psion_ids = set(class_ids.values())
+restricted_items = {
+    "psmace.itm", "pssword.itm", "psarmor.itm", "psshield.itm", "psringx.itm"
+}
+legal_items = {
+    "psspear.itm", "psxbow.itm", "psclub.itm", "psringok.itm",
+    "psbullet.itm", "psbolt.itm",
+}
+for filename in restricted_items:
+    effects = equipping_effects(override / filename)
+    assert len(effects) == 6, (layout, filename, effects)
+    assert {effect[3] for effect in effects} == psion_ids, (layout, filename, effects, psion_ids)
+    for opcode, target, power, parameter1, parameter2, timing in effects:
+        assert (opcode, target, power, parameter2, timing) == (319, 2, 0, 5, 2), (
+            layout, filename, opcode, target, power, parameter1, parameter2, timing
+        )
+for filename in legal_items:
+    assert equipping_effects(override / filename) == [], (
+        layout, filename, equipping_effects(override / filename)
+    )
 
 # New single classes require explicit XP and attack progression. Every Psion
 # must clone the complete installed-game MAGE XP row, regardless of table width.
@@ -329,7 +413,7 @@ for filename in (
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",
 ):
     assert not (override / filename).exists(), (layout, filename)
-print(f"WeiDU {layout} fixture uninstall restored tables and original TLK entries.")
+print(f"WeiDU {layout} fixture uninstall restored tables, ITMs, and original TLK entries.")
 PY
 }
 
