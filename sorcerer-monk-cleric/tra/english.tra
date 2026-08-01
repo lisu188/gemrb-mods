@@ -4,4 +4,7 @@
 This is a multiclass-only combination, no dualclassing possible. Mage race and item restrictions, monk avatar, combined starting gear in tob, no detecting traps or turn undead (custom actionbar) ...~
 @3 = ~SORCERER/MONK/CLERIC~
 @4 = ~Sorcerer/Monk/Cleric cannot be installed while Sorcerer/Monk is installed. The two legacy mods share a WeiDU backup namespace and can corrupt each other's uninstall state. Uninstall Sorcerer/Monk first.~
-
+@5 = ~A spontaneous arcane and divine caster trained in monastic disciplines.~
+@6 = ~Unsupported CLASSES.2DA layout. Expected the released combined or current split GemRB format.~
+@7 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
+@8 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
