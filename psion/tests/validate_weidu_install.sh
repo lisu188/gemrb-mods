@@ -138,6 +138,15 @@ for filename in (
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
 
+# Character creation grants two proficiency points and level-up grants one new
+# point every four levels, matching the design and GemRB's PROFS.RATE lookup.
+profs_columns, profs_rows = read_2da(override / "profs.2da")
+assert profs_columns == ["FIRST_LEVEL", "RATE"], (layout, profs_columns)
+for discipline in disciplines:
+    assert profs_rows.get(discipline) == ["2", "4"], (
+        layout, discipline, profs_rows.get(discipline)
+    )
+
 # New single classes require explicit XP and attack progression. Every Psion
 # must clone the complete installed-game MAGE XP row, regardless of table width.
 xp_columns, xp_rows = read_2da(override / "xplevel.2da")
@@ -148,7 +157,6 @@ for discipline in disciplines:
     assert xp_rows.get(discipline) == xp_rows["MAGE"], (
         layout, discipline, xp_rows.get(discipline), xp_rows["MAGE"]
     )
-# Preserve the BG1 design checkpoint even in the wider fixture variants.
 assert xp_rows["MAGE"][8] == "135000", (layout, xp_rows["MAGE"][8])
 
 # THAC0 is deliberately not cloned from another class. It follows the Psion
@@ -182,7 +190,6 @@ for filename in (
 ):
     assert (override / filename).is_file(), (layout, filename)
 
-# WeiDU preserves source filename case, which differs between platforms.
 generated = [path for path in override.iterdir() if path.is_file()]
 spells = {
     path.name.lower()
@@ -192,8 +199,6 @@ spells = {
 assert len(spells) >= 117, (layout, len(spells))
 assert any(path.name.lower() == "psacon01.cre" for path in generated), layout
 
-# Inspect every generated SPL structurally. A valid power has the SPL V1
-# signature, at least one extended header, and all effect blocks within bounds.
 for name in spells:
     path = next(item for item in generated if item.name.lower() == name)
     data = path.read_bytes()
@@ -259,8 +264,6 @@ for relative, expected in baseline["files"].items():
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     assert actual == expected, (layout, relative, expected, actual)
 
-# WeiDU generally does not compact DIALOG.TLK on uninstall. Verify that every
-# original entry is unchanged and in the same position.
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
 original_count = baseline["tlk"]["count"]
 assert len(entries) >= original_count, (layout, len(entries), original_count)
@@ -287,8 +290,6 @@ print(f"WeiDU {layout} fixture uninstall restored tables and original TLK entrie
 PY
 }
 
-# Exercise backup creation, rollback and a clean second installation. Reinstall
-# catches stale backup state and scripts that only work in a pristine directory.
 install
 verify_installed
 uninstall
