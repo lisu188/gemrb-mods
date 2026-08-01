@@ -40,6 +40,16 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("sm_class_id != sm_expected_class_id", TP2)
         self.assertIn("OUTER_SET sm_class_id = sm_expected_class_id", TP2)
 
+    def test_exact_class_token_guards_do_not_match_triple_class(self):
+        self.assertNotIn("UNLESS ~SORCERER_MONK~", TP2)
+        guard = r"UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~"
+        self.assertGreaterEqual(TP2.count(guard), 20)
+        token = re.compile(r"(^|[ \t])SORCERER_MONK([ \t]|$)", re.MULTILINE)
+        self.assertIsNotNone(token.search("SORCERER_MONK 1 2 3"))
+        self.assertIsNotNone(token.search("21 SORCERER_MONK"))
+        self.assertIsNotNone(token.search("  SORCERER_MONK\t"))
+        self.assertIsNone(token.search("SORCERER_MONK_CLERIC 1 2 3"))
+
     def test_legacy_nonproficiency_penalty_follows_monk(self):
         self.assertIn("OUTER_SPRINT sm_no_prof ~-3~", TP2)
         self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
