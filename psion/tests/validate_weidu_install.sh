@@ -57,9 +57,9 @@ root = Path(sys.argv[1])
 out = Path(sys.argv[2])
 candidates = (
     "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
-    "class.ids", "alignmnt.2da", "weapprof.2da", "profs.2da",
-    "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da", "avprefc.2da",
-    "qslots.2da", "clskills.2da",
+    "class.ids", "alignmnt.2da", "abclasrq.2da", "weapprof.2da",
+    "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da",
+    "avprefc.2da", "qslots.2da", "clskills.2da",
 )
 paths = [root / "override" / name for name in candidates if (root / "override" / name).is_file()]
 entries = tlk_entries(root / "lang/en_US/dialog.tlk")
@@ -126,17 +126,41 @@ def read_2da(path: Path) -> tuple[list[str], dict[str, list[str]]]:
     return columns, rows
 
 
+def read_2da_list(path: Path) -> tuple[list[str], list[list[str]]]:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    assert len(lines) >= 3 and lines[0].strip().upper() == "2DA V1.0", path
+    columns = lines[2].split()
+    rows = []
+    for line in lines[3:]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "//")):
+            continue
+        rows.append(stripped.split())
+    return columns, rows
+
+
 class_tables = ["classes.2da"]
 if layout != "legacy":
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
 for filename in (
     *class_tables,
-    "class.ids", "alignmnt.2da", "profs.2da", "xpcap.2da",
-    "avprefc.2da", "qslots.2da", "clskills.2da",
+    "class.ids", "alignmnt.2da", "abclasrq.2da", "weapprof.2da",
+    "profs.2da", "xpcap.2da", "avprefc.2da", "qslots.2da", "clskills.2da",
 ):
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
+
+# Character creation requires Intelligence 15 and no other class-specific
+# ability minimum. This must be enforced in chargen, not merely at manifest time.
+ability_columns, ability_rows = read_2da(override / "abclasrq.2da")
+assert ability_columns == [
+    "MIN_STR", "MIN_DEX", "MIN_CON", "MIN_INT", "MIN_WIS", "MIN_CHR"
+], (layout, ability_columns)
+for discipline in disciplines:
+    assert ability_rows.get(discipline) == ["0", "0", "0", "15", "0", "0"], (
+        layout, discipline, ability_rows.get(discipline)
+    )
 
 # Character creation grants two proficiency points and level-up grants one new
 # point every four levels, matching the design and GemRB's PROFS.RATE lookup.
@@ -146,6 +170,25 @@ for discipline in disciplines:
     assert profs_rows.get(discipline) == ["2", "4"], (
         layout, discipline, profs_rows.get(discipline)
     )
+
+# WEAPPROF is positional at runtime but semantic by row name. Each Psion may
+# place at most one pip in dagger, club, spear, quarterstaff, crossbow, dart and
+# sling; every other proficiency/style row is disabled. Duplicate SPEAR rows
+# intentionally receive the same value without relying on their offsets.
+weapprof_columns, weapprof_rows = read_2da_list(override / "weapprof.2da")
+allowed = {"DAGGER", "CLUB", "SPEAR", "QUARTERSTAFF", "CROSSBOW", "DART", "SLING"}
+seen = {name: 0 for name in allowed}
+for discipline in disciplines:
+    assert discipline in weapprof_columns, (layout, discipline, weapprof_columns)
+    column = weapprof_columns.index(discipline)
+    for fields in weapprof_rows:
+        row_name = fields[0]
+        value = fields[1 + column]
+        expected = "1" if row_name in allowed else "0"
+        assert value == expected, (layout, discipline, row_name, value, expected)
+        if row_name in seen:
+            seen[row_name] += 1
+assert all(seen[name] >= 1 for name in allowed), (layout, seen)
 
 # New single classes require explicit XP and attack progression. Every Psion
 # must clone the complete installed-game MAGE XP row, regardless of table width.
