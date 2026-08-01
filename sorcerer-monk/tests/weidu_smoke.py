@@ -156,7 +156,7 @@ def verify_installed(game):
 
     backup = game / "sorcerer-monk-cleric" / "backup" / "0"
     assert backup.is_dir()
-    assert (game / "weidu.log").is_file()
+    assert (game / "WeiDU.log").is_file()
 
 
 def run_weidu(weidu, game, *args):
