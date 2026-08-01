@@ -29,6 +29,8 @@ jobs:
 
       - name: Validate tables, installer source and Python
         run: python psion/tests/validate.py
+      - name: Validate class XP and THAC0 progression
+        run: python psion/tests/validate_class_progression.py
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
       - name: Validate GUI patch lifecycle
