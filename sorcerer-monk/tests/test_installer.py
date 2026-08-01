@@ -12,6 +12,10 @@ def payloads(directive, table):
 
 
 class InstallerTests(unittest.TestCase):
+    def test_backup_path_preserves_v19_upgrades(self):
+        self.assertTrue(TP2.startswith("BACKUP ~sorcerer-monk-cleric/backup~"))
+        self.assertNotIn("BACKUP ~sorcerer-monk/backup~", TP2)
+
     def test_split_class_metadata(self):
         class_rows = payloads("APPEND", "classes.2da")
         self.assertIn("SORCERER_MONK * 786432 0x20040000 -1 0 9", class_rows)
@@ -81,6 +85,15 @@ class InstallerTests(unittest.TestCase):
         prof_rows = payloads("APPEND", "profs.2da")
         self.assertIn("SORCERER_MONK 2 4", prof_rows)
         self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
+
+    def test_xp_cap_is_inherited_from_components(self):
+        self.assertNotIn("SORCERER_MONK 8000000", TP2)
+        self.assertIn("OUTER_SET sm_xpcap = -1", TP2)
+        self.assertIn("STRING_EQUAL_CASE ~SORCERER~", TP2)
+        self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
+        self.assertIn("sm_xpcap_value < sm_xpcap", TP2)
+        self.assertIn("SORCERER_MONK %sm_xpcap%", payloads("APPEND", "xpcap.2da"))
+        self.assertIn("FAIL @14", TP2)
 
     def test_starting_gold_matches_components(self):
         self.assertIn("SORCERER_MONK 4 1 1 10", payloads("APPEND", "strtgold.2da"))
