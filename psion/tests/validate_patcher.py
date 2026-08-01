@@ -34,6 +34,20 @@ def main() -> None:
     assert "\t\t# PSION MOD END\n\t\treturn True\n" in nested_rendered
     compile(nested_rendered, "NestedRest.py", "exec")
 
+    # A script that cannot receive an import must fail during read-only
+    # preflight; otherwise the inserted hooks would reference an undefined
+    # Psionics module at runtime.
+    try:
+        module.render_patch(
+            rest_text.replace("import GemRB\n", "import SomethingElse\n"),
+            "rest",
+            Path("NoGemRB.py"),
+        )
+    except RuntimeError as error:
+        assert str(error) == "NoGemRB.py GemRB import not found"
+    else:
+        raise AssertionError("missing GemRB import should fail preflight")
+
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
         actions = folder / "ActionsWindow.py"
@@ -120,7 +134,7 @@ def main() -> None:
             assert target.read_text(encoding="utf-8") == text
             assert not target.with_suffix(target.suffix + ".psion.bak").exists()
 
-    print("Psion GUI patcher, runtime lifecycle, indentation, and preflight validation passed.")
+    print("Psion GUI patcher, runtime lifecycle, indentation, import, and preflight validation passed.")
 
 
 if __name__ == "__main__":
