@@ -6,7 +6,8 @@
 - Prevented simultaneous installation with Sorcerer/Monk/Cleric because the two legacy packages share the same WeiDU backup namespace and the older triple-class installer can also collide on class ID 22.
 - Replaced hardcoded class ID 21 with an ID derived from the Sorcerer/Monk `CLSKILLS.2DA` row index.
 - Added explicit checks for conflicting class IDs and GemRB's below-32 class-mask limit.
-- Added a `CLASS.IDS` consistency check that rejects stale `SORCERER_MONK` symbols pointing at a different numeric class ID.
+- Added canonical base-class checks requiring Sorcerer ID/row 19 and Monk ID/row 20 before using the fixed Sorcerer/Monk multiclass mask.
+- Added bidirectional `CLASS.IDS` consistency checks so neither the `SORCERER_MONK` symbol nor its allocated numeric ID can conflict with another registration.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
 - Added support for development GemRB versions that split class data across `CLASSTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
 - Added explicit handling for normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` formats.
@@ -34,12 +35,12 @@
 - Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still permits high-tier fists where the campaign cap allows them.
-- Changed the `FISTWEAP.2DA` guard to reserve the allocated numeric class row regardless of its first fist resource, preventing duplicate numeric rows when another customization already owns the slot.
+- Rejected pre-existing `FISTWEAP.2DA` rows for the allocated numeric class ID instead of silently preserving ambiguous numeric ownership or appending a duplicate row.
 - Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
 - Tightened the `MULTI2SORCERER` and `MULTI2MONK` HLA guards to exact row-name matching.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
 - Added real WeiDU smoke coverage for released combined, current split, and native EE nine-/ten-column class-text layouts.
 - Added real WeiDU tests proving both sibling installation orders are rejected before table changes and that uninstall restores the first component's original fixture state byte-for-byte.
-- Added real WeiDU metadata-guard tests for stale `CLASS.IDS`, incomplete `XPCAP.2DA`, and pre-existing custom `FISTWEAP.2DA` rows.
+- Added real WeiDU metadata-guard tests for stale/reversed `CLASS.IDS`, noncanonical component class IDs, incomplete `XPCAP.2DA`, and pre-existing `FISTWEAP.2DA` numeric collisions.
 - Added WeiDU syntax validation to CI for both sibling TP2 installers.
 - Removed the stale version number and redundant engine warning from translated component text.
