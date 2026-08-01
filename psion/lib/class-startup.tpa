@@ -75,3 +75,17 @@ ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   APPEND_COL ~25stweap.2da~ ~$ $ PSION_NOMAD %ps_tob_mage_equipment%~ UNLESS ~PSION_NOMAD~
   APPEND_COL ~25stweap.2da~ ~$ $ PSION_TELEPATH %ps_tob_mage_equipment%~ UNLESS ~PSION_TELEPATH~
 END
+
+// GemRB's ToB level-up path indexes LUNUMAB.2DA by exact class name and then
+// divides the pending HLA count by RATE. A missing custom-class row can resolve
+// to the table default (0), causing invalid HLA arithmetic before the HLA UI is
+// even opened. Version 1.0 intentionally has no epic/HLA subsystem, so postpone
+// HLA eligibility beyond the supported level range while keeping RATE nonzero.
+ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
+  APPEND ~lunumab.2da~ ~PSION_SEER 99 1 99 1~ UNLESS ~PSION_SEER~
+  APPEND ~lunumab.2da~ ~PSION_SHAPER 99 1 99 1~ UNLESS ~PSION_SHAPER~
+  APPEND ~lunumab.2da~ ~PSION_KINETICIST 99 1 99 1~ UNLESS ~PSION_KINETICIST~
+  APPEND ~lunumab.2da~ ~PSION_EGOIST 99 1 99 1~ UNLESS ~PSION_EGOIST~
+  APPEND ~lunumab.2da~ ~PSION_NOMAD 99 1 99 1~ UNLESS ~PSION_NOMAD~
+  APPEND ~lunumab.2da~ ~PSION_TELEPATH 99 1 99 1~ UNLESS ~PSION_TELEPATH~
+END
