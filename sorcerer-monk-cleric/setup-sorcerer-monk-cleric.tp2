@@ -99,7 +99,7 @@ ACTION_IF smc_split_class_tables = 1 THEN BEGIN
   ACTION_IF smc_clastext_cols = 6 THEN BEGIN
     OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 * %smc_lower% %smc_desc% %smc_mixed%~
   END ELSE BEGIN
-    ACTION_IF smc_clastext_cols = 9 THEN BEGIN
+    ACTION_IF smc_classtext_cols = 9 THEN BEGIN
       OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief%~
     END ELSE BEGIN
       OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief% -1~
@@ -115,7 +115,7 @@ ACTION_IF smc_split_class_tables = 1 THEN BEGIN
   APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC  SAVEPRS 786436 0x40000 -1 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0~
+  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END
 
