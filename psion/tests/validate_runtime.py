@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fake-GemRB power-point, selector, transaction, and charge checks."""
+"""Fake-GemRB power-point, selector, transaction, charge, and token checks."""
 
 from pathlib import Path
 import importlib.util
@@ -106,6 +106,39 @@ def main() -> None:
         assert module.power_info("PSAADEX")["cost"] == 3
         mixed = ["SPWI112", "PSRF01", "PSRF04", "PSAADEX"]
         assert module.filter_spellinfo(1, mixed) == ["SPWI112", "PSRF01", "PSAADEX"]
+
+        # Temporary opcode-214 choices use synthetic type 255. Their index can
+        # equal an ordinary innate index, so type 255 must never inspect the
+        # memorized spellbook before resolving the selector child.
+        class CollisionSpellbook:
+            def __init__(self):
+                self.memorized_calls = 0
+                self.spellinfo_calls = 0
+
+            def GetSpellinfoSpells(self, actor, book_type):
+                self.spellinfo_calls += 1
+                return [
+                    {"SpellIndex": 255000, "SpellResRef": "PSMT03"},
+                    {"SpellIndex": 255001, "SpellResRef": "PSNOTMOD"},
+                ]
+
+            def GetUsableMemorizedSpells(self, actor, book_type):
+                self.memorized_calls += 1
+                return [{"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}]
+
+        collision = CollisionSpellbook()
+        entry = module.resolve_power_entry(collision, 1, 255000)
+        assert entry["SpellResRef"] == "PSMT03", entry
+        assert collision.spellinfo_calls == 1
+        assert collision.memorized_calls == 0
+        # A PS-prefixed resource from another mod is not intercepted merely by
+        # its name; only resources registered in the Psion power tables count.
+        assert module.resolve_power_entry(collision, 1, 255001) is None
+        assert collision.memorized_calls == 0
+
+        ordinary = module.resolve_power_entry(collision, 1, 4000)
+        assert ordinary["SpellResRef"] == "PS1VIGR", ordinary
+        assert collision.memorized_calls == 1
 
         before = module.ensure_pool(1)
         assert module.begin_manifest(1, "PSAADEX")
