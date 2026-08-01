@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Runtime support for the GemRB Psion mod.
 
-Power-point state is stored entirely in GemRB's user-defined actor stat 239.
-The high word carries a Psion signature and the low word carries current PP, so
-no ordinary Infinity Engine stat is repurposed as an initialization marker.
+Power-point state is persisted in a private, non-dispellable actor effect that
+GemRB serializes with normal CRE effect blocks. GemRB user stat 239 is only a
+fast runtime cache: its high word carries a Psion signature and its low word the
+current PP value. This avoids depending on arbitrary user-stat serialization
+across save/load while still keeping PP reads cheap during selector filtering.
+
 Manifestation uses a two-phase transaction: the first SpellPressed callback
 reserves a power, while the second callback commits its cost. Selector resources
 are free; their chosen child resources carry the authoritative augmented PP cost.
@@ -21,6 +24,15 @@ CURRENT_POOL_STAT = 239
 POOL_STATE_SIGNATURE = 0x50530000  # ASCII-ish "PS" in the high word.
 POOL_STATE_SIGNATURE_MASK = 0xFFFF0000
 POOL_VALUE_MASK = 0x0000FFFF
+
+# Save-safe PP storage. Protection:Spell ignores Param1/Param2; a private,
+# nonexistent resource therefore acts only as an inert serialized state carrier.
+# GemRB.ApplyEffect defaults to resistance 0 (not resistible and not dispellable).
+POOL_EFFECT_OPCODE = "Protection:Spell"
+POOL_EFFECT_MARKER = 0x50535050  # ASCII-ish "PSPP", positive signed 32-bit.
+POOL_EFFECT_RESOURCE = "PSPPSTAT"
+POOL_EFFECT_SOURCE = "PSPPMOD"
+
 INT_STAT = 38
 LEVEL_STAT = 34
 INNATE_TYPE = 2
@@ -74,6 +86,7 @@ def maximum_pool(actor):
 
 
 def _decode_pool_state(actor):
+    """Decode the fast stat-239 cache; it is not the save authority."""
     raw = int(GemRB.GetPlayerStat(actor, CURRENT_POOL_STAT))
     initialized = (
         raw & POOL_STATE_SIGNATURE_MASK
@@ -81,7 +94,7 @@ def _decode_pool_state(actor):
     return initialized, raw & POOL_VALUE_MASK
 
 
-def _write_pool_state(actor, current):
+def _write_pool_cache(actor, current):
     current = max(0, min(int(current), POOL_VALUE_MASK))
     GemRB.SetPlayerStat(
         actor,
@@ -91,15 +104,69 @@ def _write_pool_state(actor, current):
     return current
 
 
+def _read_persistent_pool_state(actor):
+    """Read PP from the private serialized actor effect after save/load."""
+    try:
+        for effect in GemRB.GetEffects(actor, POOL_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != POOL_EFFECT_MARKER:
+                continue
+            if str(effect.get("Resource1", "")).upper() != POOL_EFFECT_RESOURCE:
+                continue
+            current = max(0, min(int(effect.get("Param1", 0)), POOL_VALUE_MASK))
+            return True, current
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "persistent PP read failed: %s" % error)
+    return False, 0
+
+
+def _write_pool_state(actor, current):
+    """Persist PP in the actor effect queue and mirror it into stat 239."""
+    current = max(0, min(int(current), POOL_VALUE_MASK))
+    # Remove only our marker. The deliberately large Param2 value makes a
+    # collision with an unrelated Protection:Spell effect extremely unlikely.
+    GemRB.DispelEffect(actor, POOL_EFFECT_OPCODE, POOL_EFFECT_MARKER)
+    GemRB.ApplyEffect(
+        actor,
+        POOL_EFFECT_OPCODE,
+        current,
+        POOL_EFFECT_MARKER,
+        POOL_EFFECT_RESOURCE,
+        "",
+        "",
+        POOL_EFFECT_SOURCE,
+    )
+    return _write_pool_cache(actor, current)
+
+
 def ensure_pool(actor, refill=False):
     if not is_psion(actor):
         return 0
     cap = min(maximum_pool(actor), POOL_VALUE_MASK)
+
+    # Normal runtime path: stat 239 is a cheap cache, avoiding effect scans for
+    # every affordability check in a large augmentation selector.
     initialized, current = _decode_pool_state(actor)
-    if refill or not initialized:
-        current = cap
-    current = max(0, min(current, cap))
-    return _write_pool_state(actor, current)
+    if initialized and not refill:
+        clamped = max(0, min(current, cap))
+        if clamped != current:
+            return _write_pool_state(actor, clamped)
+        return clamped
+
+    if refill:
+        return _write_pool_state(actor, cap)
+
+    # A cache miss is the expected post-load path on BG-family CRE formats.
+    # Recover the authoritative serialized effect and rebuild the fast cache.
+    persisted, current = _read_persistent_pool_state(actor)
+    if persisted:
+        clamped = max(0, min(current, cap))
+        if clamped != current:
+            return _write_pool_state(actor, clamped)
+        return _write_pool_cache(actor, clamped)
+
+    # First use on a Psion: initialize a full pool and immediately create the
+    # save-safe effect, including for a genuine zero-cap edge case.
+    return _write_pool_state(actor, cap)
 
 
 def restore_party():
