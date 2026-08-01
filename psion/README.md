@@ -41,13 +41,19 @@ for a manual full-campaign playthrough on every supported game configuration.
 
   `floor(Intelligence modifier × Psion level / 2)`
 
-- Persistent current PP stored in GemRB actor stat 239.
+- Persistent PP state stored exclusively in GemRB's user-defined actor stat 239.
+  A Psion signature occupies the high word and current PP the low word, so no
+  ordinary Infinity Engine gameplay stat is repurposed as an initialization
+  marker.
 - Full PP restoration after ordinary and temple resting.
 - Base costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
 - Maximum PP expenditure per manifestation equal to Psion level.
 - Discipline, Intelligence, manifester-level and current-pool validation.
 - Cancellation-safe two-phase PP transactions.
 - Runtime-filtered augmentation and choice lists.
+- Collision-safe temporary selector resolution: GemRB's synthetic spellinfo
+  type 255 is resolved exclusively from the temporary spell list before any
+  ordinary memorized-spell lookup.
 - Separate fixed level 1–9 progression for every discipline.
 - Nineteen known powers at level 9, including one exclusive discipline power
   whenever a new power tier becomes available.
@@ -55,6 +61,7 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Fifty-seven registered augmentation or choice child resources.
 - Backup-safe GemRB GUI-script installation and removal.
 - Ownership-aware installation of the standalone `Psionics.py` runtime module.
+- Read-only GUI compatibility preflight before the installer writes any file.
 
 ## Power-point transaction
 
@@ -74,6 +81,12 @@ power cannot overspend merely because PP changed after opening a selector.
 Opcode-214 choice lists pass through the installed `Spellbook.py` hook. Only
 choices registered in `PSIONAUGMENT.2DA` are filtered; base-game and third-party
 selectors retain their order and behavior.
+
+GemRB encodes temporary opcode-214 entries with synthetic spell type 255. Those
+small selector indices can numerically overlap ordinary spellbook indices. The
+Psion runtime therefore resolves type 255 exclusively from GemRB's temporary
+spellinfo list, preventing an augmented child from being mistaken for a base
+Psion power with the same index.
 
 Current selectors:
 
@@ -161,6 +174,12 @@ These are gameplay-scope limitations, not silent installer fallbacks.
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
+Before modifying anything, the patcher renders all four shared-script changes in
+memory. If a supported hook location or the required `import GemRB` insertion
+point cannot be found, installation aborts without copying the runtime, creating
+backups or partially modifying the GemRB installation. Rest hooks preserve the
+exact indentation of the matched `GemRB.RestParty(...)` call.
+
 The patcher copies `psion/guiscripts/Psionics.py` into the selected GemRB
 `GUIScripts` directory and updates `ActionsWindow.py`, `Spellbook.py`,
 `MenuWindow.py` and `GUISTORE.py`.
@@ -192,7 +211,12 @@ GitHub Actions runs:
 - table, progression, augmentation and installer-source checks;
 - parser-safety checks for unsupported WeiDU integer forms;
 - fake-GemRB PP, selector and transaction tests;
+- single-stat PP initialization, zero-pool and rest-refill state tests;
+- temporary type-255 selector-index collision tests;
 - GUI patch install, idempotence, backup and uninstall fixtures;
+- nested-rest indentation and rendered-Python compilation checks;
+- read-only preflight failure tests that verify no partial files or backups are
+  created;
 - runtime-module replacement, restoration, creation and removal fixtures;
 - dedicated level-3, level-4 and level-5 resource regression suites;
 - Python compilation checks;
