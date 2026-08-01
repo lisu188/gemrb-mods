@@ -10,8 +10,9 @@ Dual-classing is not supported.~
 @3 = ~Sorcerer/Monk~
 @4 = ~Run this game with GemRB at least once before installing. WeiDU could not find gemrb_path.txt.~
 @5 = ~This mod supports Tutu, Tutu_TotSC, BGEE, Classic Adventures, BG2, ToB, BGT, BG2EE and EET installations running through GemRB.~
-@7 = ~No free 8-bit class identifier is available. Remove conflicting custom-class mods before installing.~
+@7 = ~No compatible GemRB class slot is available. Playable class IDs must match CLSKILLS.2DA row indices and remain below 32.~
 @8 = ~A lawful spontaneous arcane caster trained in unarmed combat and monastic disciplines.~
 @9 = ~Could not determine the existing numeric class identifiers from the GemRB class tables.~
 @10 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
 @12 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
+@13 = ~The GemRB class tables and CLSKILLS.2DA disagree about the numeric class identifier required for Sorcerer/Monk. Remove or reorder conflicting custom-class mods before installing.~
