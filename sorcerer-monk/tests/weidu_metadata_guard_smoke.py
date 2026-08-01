@@ -47,8 +47,8 @@ def assert_rejected(result, message):
     assert message.casefold() in result.stdout.casefold(), result.stdout
 
 
-def exercise_stale_class_ids(weidu):
-    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-stale-class-ids-") as tmp:
+def exercise_stale_class_ids_symbol(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-stale-class-ids-symbol-") as tmp:
         game = Path(tmp)
         build_fixture(game)
         override = game / "override"
@@ -59,9 +59,52 @@ def exercise_stale_class_ids(weidu):
         originals = snapshot(override)
 
         result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
-        assert_rejected(result, "CLASS.IDS already maps SORCERER_MONK to a different numeric class identifier")
-        assert_snapshot(override, originals, "stale CLASS.IDS rejection")
-        print("stale CLASS.IDS mapping: rejected safely", flush=True)
+        assert_rejected(result, "CLASS.IDS conflicts with the numeric class identifier required for Sorcerer/Monk")
+        assert_snapshot(override, originals, "stale CLASS.IDS symbol rejection")
+        print("stale CLASS.IDS symbol mapping: rejected safely", flush=True)
+
+
+def exercise_class_ids_numeric_collision(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-class-ids-id-collision-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        (override / "class.ids").write_text(
+            "19 SORCERER\n20 MONK\n21 OTHER_CLASS\n",
+            encoding="utf-8",
+        )
+        originals = snapshot(override)
+
+        result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
+        assert_rejected(result, "CLASS.IDS conflicts with the numeric class identifier required for Sorcerer/Monk")
+        assert_snapshot(override, originals, "CLASS.IDS numeric collision rejection")
+        print("allocated CLASS.IDS numeric ID owned by another symbol: rejected safely", flush=True)
+
+
+def exercise_noncanonical_component_class_id(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-component-id-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        classes_path = override / "classes.2da"
+        lines = classes_path.read_text(encoding="utf-8").splitlines()
+        found = False
+        for index, line in enumerate(lines):
+            fields = line.split()
+            if fields and fields[0] == "MONK":
+                assert fields[6] == "20", fields
+                fields[6] = "18"
+                lines[index] = " ".join(fields)
+                found = True
+                break
+        assert found
+        classes_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        originals = snapshot(override)
+
+        result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
+        assert_rejected(result, "Sorcerer and Monk must retain GemRB class IDs 19 and 20")
+        assert_snapshot(override, originals, "component class ID rejection")
+        print("noncanonical Monk class ID: rejected safely", flush=True)
 
 
 def exercise_missing_component_xpcap(weidu):
@@ -93,18 +136,10 @@ def exercise_existing_custom_fist_row(weidu):
             handle.write("21 " + " ".join(["CUSTOM_FIST"] * 41) + "\n")
         originals = snapshot(override)
 
-        run_weidu(weidu, game, "--force-install-list", "0")
-        rows = [
-            line.split()
-            for line in fist_path.read_text(encoding="utf-8").splitlines()
-            if line.split() and line.split()[0] == "21"
-        ]
-        assert len(rows) == 1, rows
-        assert rows[0][1:] == ["CUSTOM_FIST"] * 41, rows[0]
-
-        run_weidu(weidu, game, "--force-uninstall", "0")
-        assert_snapshot(override, originals, "custom FISTWEAP row uninstall")
-        print("existing custom FISTWEAP row: preserved without duplication", flush=True)
+        result = run_weidu(weidu, game, "--force-install-list", "0", check=False)
+        assert_rejected(result, "FISTWEAP.2DA already contains a row for the numeric class identifier allocated to Sorcerer/Monk")
+        assert_snapshot(override, originals, "custom FISTWEAP collision rejection")
+        print("existing custom FISTWEAP numeric row: rejected safely", flush=True)
 
 
 def main():
@@ -112,7 +147,9 @@ def main():
     if not weidu:
         raise SystemExit("WeiDU executable not found")
 
-    exercise_stale_class_ids(weidu)
+    exercise_stale_class_ids_symbol(weidu)
+    exercise_class_ids_numeric_collision(weidu)
+    exercise_noncanonical_component_class_id(weidu)
     exercise_missing_component_xpcap(weidu)
     exercise_existing_custom_fist_row(weidu)
 
