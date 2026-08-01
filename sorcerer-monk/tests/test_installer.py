@@ -13,9 +13,17 @@ def payloads(directive, table):
 
 class InstallerTests(unittest.TestCase):
     def test_split_class_metadata(self):
-        self.assertIn("SORCERER_MONK * 786432 0x20040000 -1 0 9", payloads("APPEND", "classes.2da"))
+        class_rows = payloads("APPEND", "classes.2da")
+        self.assertIn("SORCERER_MONK * 786432 0x20040000 -1 0 9", class_rows)
         self.assertIn("SORCERER_MONK 1 0 0 0 0 0 0", payloads("APPEND", "clsrcreq.2da"))
         self.assertIn("SORCERER_MONK *", payloads("APPEND", "hpclass.2da"))
+
+    def test_released_class_metadata(self):
+        class_rows = payloads("APPEND", "classes.2da")
+        self.assertIn(
+            "SORCERER_MONK %sm_lower% %sm_desc% %sm_mixed% * 786432 %sm_class_id% * 0x20040000 -1 1 0 0 0 0 0 0 0 9",
+            class_rows,
+        )
 
     def test_class_registration_uses_allocated_id(self):
         self.assertIn("%sm_class_id% SORCERER_MONK", payloads("APPEND", "class.ids"))
@@ -44,6 +52,9 @@ class InstallerTests(unittest.TestCase):
     def test_gameplay_restrictions(self):
         self.assertIn("SORCERER_MONK 1 1 1 0 0 0 0 0 0", payloads("APPEND", "alignmnt.2da"))
         self.assertIn("SORCERER_MONK 2 5", payloads("APPEND", "profs.2da"))
+
+    def test_merged_action_bar(self):
+        self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
 
 
 if __name__ == "__main__":
