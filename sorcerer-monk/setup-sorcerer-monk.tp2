@@ -21,6 +21,12 @@ REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @4
 // Original BG1 and TotSC are excluded because they lack both base classes.
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bg2 tob bgt bg2ee eet~ @5
 
+// The historical Sorcerer/Monk and Sorcerer/Monk/Cleric packages both use the
+// same WeiDU backup directory and component number. Installing both would make
+// uninstall restoration order-dependent, and the old triple-class also
+// hardcodes a class ID that can collide with this component on EE layouts.
+REQUIRE_PREDICATE !MOD_IS_INSTALLED ~sorcerer-monk-cleric/setup-sorcerer-monk-cleric.tp2~ 0 @16
+
 OUTER_SET sm_lower = RESOLVE_STR_REF (@1)
 OUTER_SET sm_desc = RESOLVE_STR_REF (@2)
 OUTER_SET sm_mixed = RESOLVE_STR_REF (@3)
@@ -291,9 +297,9 @@ END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
   APPEND ~lunumab.2da~ ~MULTI2SORCERER 14 1 99 1~
-    UNLESS ~MULTI2SORCERER~
+    UNLESS ~^[ %TAB%]*MULTI2SORCERER\([ %TAB%]\|$\)~
   APPEND ~lunumab.2da~ ~MULTI2MONK 14 1 99 1~
-    UNLESS ~MULTI2MONK~
+    UNLESS ~^[ %TAB%]*MULTI2MONK\([ %TAB%]\|$\)~
   APPEND ~lunumab.2da~ ~SORCERER_MONK 14 1 99 1~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
