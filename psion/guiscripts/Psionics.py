@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Runtime support for the GemRB Psion mod.
 
-Power points are stored in GemRB's user-defined actor stat 239. Manifestation
-uses a two-phase transaction: the first SpellPressed callback reserves a power,
-while the second callback commits its cost. Selector resources are free; their
-chosen child resources carry the authoritative augmented PP cost.
+Power-point state is stored entirely in GemRB's user-defined actor stat 239.
+The high word carries a Psion signature and the low word carries current PP, so
+no ordinary Infinity Engine stat is repurposed as an initialization marker.
+Manifestation uses a two-phase transaction: the first SpellPressed callback
+reserves a power, while the second callback commits its cost. Selector resources
+are free; their chosen child resources carry the authoritative augmented PP cost.
 
 Opcode 214 places selector children in GemRB's temporary spellinfo list. The
 ``filter_spellinfo`` hook removes Psion variants that the selected actor cannot
@@ -14,7 +16,9 @@ spell selectors untouched.
 import GemRB
 
 CURRENT_POOL_STAT = 239
-POOL_READY_STAT = 188
+POOL_STATE_SIGNATURE = 0x50530000  # ASCII-ish "PS" in the high word.
+POOL_STATE_SIGNATURE_MASK = 0xFFFF0000
+POOL_VALUE_MASK = 0x0000FFFF
 INT_STAT = 38
 LEVEL_STAT = 34
 INNATE_TYPE = 2
@@ -67,18 +71,33 @@ def maximum_pool(actor):
     return max(0, base + (modifier * level) // 2)
 
 
+def _decode_pool_state(actor):
+    raw = int(GemRB.GetPlayerStat(actor, CURRENT_POOL_STAT))
+    initialized = (
+        raw & POOL_STATE_SIGNATURE_MASK
+    ) == POOL_STATE_SIGNATURE
+    return initialized, raw & POOL_VALUE_MASK
+
+
+def _write_pool_state(actor, current):
+    current = max(0, min(int(current), POOL_VALUE_MASK))
+    GemRB.SetPlayerStat(
+        actor,
+        CURRENT_POOL_STAT,
+        POOL_STATE_SIGNATURE | current,
+    )
+    return current
+
+
 def ensure_pool(actor, refill=False):
     if not is_psion(actor):
         return 0
-    cap = maximum_pool(actor)
-    ready = GemRB.GetPlayerStat(actor, POOL_READY_STAT)
-    current = GemRB.GetPlayerStat(actor, CURRENT_POOL_STAT)
-    if refill or not ready:
+    cap = min(maximum_pool(actor), POOL_VALUE_MASK)
+    initialized, current = _decode_pool_state(actor)
+    if refill or not initialized:
         current = cap
-        GemRB.SetPlayerStat(actor, POOL_READY_STAT, 1)
     current = max(0, min(current, cap))
-    GemRB.SetPlayerStat(actor, CURRENT_POOL_STAT, current)
-    return current
+    return _write_pool_state(actor, current)
 
 
 def restore_party():
@@ -351,7 +370,7 @@ def begin_manifest(actor, resref):
             GemRB.DisplayString(10417, 0xFFFFFF, actor)
             return False
         current = ensure_pool(actor)
-        GemRB.SetPlayerStat(actor, CURRENT_POOL_STAT, current - info["cost"])
+        _write_pool_state(actor, current - info["cost"])
         _pending.pop(actor, None)
         return True
 
