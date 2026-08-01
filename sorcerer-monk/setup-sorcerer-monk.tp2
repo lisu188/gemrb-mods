@@ -31,6 +31,7 @@ OUTER_SET sm_clskills_id = (0 - 1)
 OUTER_SET sm_class_id_conflict = 0
 OUTER_SET sm_valid_class_ids = 0
 OUTER_SET sm_split_class_tables = 0
+OUTER_SET sm_classes_cols = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
@@ -81,12 +82,28 @@ ACTION_IF (sm_expected_class_id < 1) OR (sm_expected_class_id > 31) THEN BEGIN
   FAIL @7
 END
 
+// Determine the GemRB class-table generation from CLASSES.2DA itself. Enhanced
+// Edition games can provide a native HPCLASS.2DA even when the active GemRB
+// data still uses the released combined CLASSES.2DA schema, so HPCLASS presence
+// is not a safe layout discriminator.
+COPY_EXISTING ~classes.2da~ ~override~
+  COUNT_2DA_COLS sm_classes_cols
+BUT_ONLY
+
+ACTION_IF sm_classes_cols = 7 THEN BEGIN
+  OUTER_SET sm_split_class_tables = 1
+END ELSE BEGIN
+  ACTION_IF sm_classes_cols = 19 THEN BEGIN
+    OUTER_SET sm_split_class_tables = 0
+  END ELSE BEGIN
+    FAIL @15
+  END
+END
+
 // Released GemRB versions keep class text, IDs, hit points and race rules in
 // one combined CLASSES.2DA row. Development versions split these fields into
 // CLASSTEXT.2DA, HPCLASS.2DA and CLSRCREQ.2DA.
-ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
-  OUTER_SET sm_split_class_tables = 1
-
+ACTION_IF sm_split_class_tables = 1 THEN BEGIN
   COPY_EXISTING ~clastext.2da~ ~override~
     COUNT_2DA_COLS sm_clastext_cols
     READ_2DA_ENTRIES_NOW ~sm_clastext~ sm_clastext_cols
@@ -104,10 +121,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
     END
   BUT_ONLY
 END ELSE BEGIN
-  OUTER_SET sm_classes_cols = 0
-
   COPY_EXISTING ~classes.2da~ ~override~
-    COUNT_2DA_COLS sm_classes_cols
     READ_2DA_ENTRIES_NOW ~sm_classes~ sm_classes_cols
     FOR (sm_i = 0; sm_i < sm_classes; ++sm_i) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_classes~ sm_i 0 sm_class_name
