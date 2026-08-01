@@ -29,7 +29,7 @@ jobs:
 
       - name: Validate tables, installer source and Python
         run: python psion/tests/validate.py
-      - name: Validate class XP and THAC0 progression
+      - name: Validate class XP, THAC0, and saving throw progression
         run: python psion/tests/validate_class_progression.py
       - name: Validate character-generation startup tables
         run: python psion/tests/validate_startup.py
@@ -79,6 +79,9 @@ jobs:
           path: vendor/gemrb
           fetch-depth: 1
 
+      - name: Seed missing Mage saving throw fixture
+        run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
+
       - name: Install, uninstall and reinstall every class-table layout
         shell: bash
         run: |
@@ -87,6 +90,10 @@ jobs:
             echo "Validating $layout class-table layout"
             bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
           done
+
+      - name: Validate Psion saving throw install lifecycle
+        shell: bash
+        run: bash psion/tests/validate_save_weidu.sh vendor/gemrb
 
       - name: Install, uninstall and reinstall BG2 startup tables
         shell: bash
