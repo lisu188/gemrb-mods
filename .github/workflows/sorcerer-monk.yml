@@ -31,10 +31,15 @@ jobs:
           sudo install "$weidu_bin" /usr/local/bin/weidu
       - name: Parse TP2 with WeiDU
         run: |
-          output="$(weidu --nogame --parse-check TP2 sorcerer-monk/setup-sorcerer-monk.tp2 2>&1 || true)"
+          set +e
+          output="$(weidu --nogame --parse-check TP2 sorcerer-monk/setup-sorcerer-monk.tp2 2>&1)"
+          status=$?
+          set -e
           printf '%s\n' "$output"
-          if grep -E 'PARSE ERROR|FATAL ERROR' <<<"$output"; then
+          if [ "$status" -ne 0 ] || grep -Eiq 'PARSE ERROR|FATAL ERROR|ERROR: parsing' <<<"$output"; then
             exit 1
           fi
       - name: Real WeiDU install, reinstall and uninstall smoke test
         run: python sorcerer-monk/tests/weidu_smoke.py weidu
+      - name: Real WeiDU released and split layout smoke tests
+        run: python sorcerer-monk/tests/weidu_layout_smoke.py weidu
