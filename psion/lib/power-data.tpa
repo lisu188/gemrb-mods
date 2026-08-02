@@ -1,5 +1,30 @@
 // Prototype power resources are cloned from existing spell resources.
 // The table remains authoritative for level, discipline and pool cost.
+
+// Saving-throw difficulty shared by every generated power.
+//
+// D&D 3.5 sets a power's save DC at 10 + power level + key ability modifier.
+// The Infinity Engine has no DC: a target saves when its own d20 roll plus the
+// effect's savebonus meets the save target from its class and level. Only the
+// relative part of the tabletop formula survives that translation, so each
+// level module defines psion_levelN_save_penalty carrying a power-level term
+// of -(N - 1). Level 1 therefore sits at the baseline and each higher tier is
+// one point harder to resist, preserving the spread the tabletop formula
+// produces without inflating Psion powers against ordinary BG spells.
+//
+// The key-ability half cannot scale with the manifester. GemRB's Python API
+// exposes no way to vary an installed SPL's savebonus by the caster's runtime
+// stats: ModifyEffect only moves an effect's target coordinates, and the only
+// substitution hook, PrepareSpontaneousCast, would require a separate SPL per
+// Intelligence bracket for all sixty powers. Chargen enforces Intelligence 15
+// (see class-common.tpa), so every Psion has at least a +2 key-ability
+// modifier; that guaranteed share is baked in here, and Intelligence above 15
+// does not further improve save difficulty.
+//
+// This constant is the one place the translation trades fidelity for
+// tractability, and it is balance-affecting: setting it to 0 reverts every
+// power to the engine's default save difficulty.
+OUTER_SET psion_key_ability_save_penalty = (0 - 2)
 ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_power_name BEGIN
   ~PS1ERAY~ => ~Energy Ray~
   ~PS1MTHR~ => ~Mind Thrust~

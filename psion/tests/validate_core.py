@@ -245,6 +245,42 @@ def validate_augmentation() -> None:
     assert all_children == {row[0] for row in augment}
 
 
+def validate_save_dc_scheme() -> None:
+    """Every save-bearing effect carries its power level's save penalty.
+
+    D&D 3.5 sets a power's save DC at 10 + power level + key ability modifier.
+    The engine has no DC, so the translation splits into a power-level term of
+    -(N - 1) and the guaranteed key-ability term from the Intelligence 15
+    chargen minimum. This check pins both constants and the fact that no
+    save-bearing effect is left without one, which is the shape of regression
+    that silently reverts the scheme.
+    """
+    shared = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
+    assert "OUTER_SET psion_key_ability_save_penalty = (0 - 2)" in shared
+
+    for level in range(1, 6):
+        text = (ROOT / "lib" / f"level{level}-powers.tpa").read_text(encoding="utf-8")
+        constant = f"psion_level{level}_save_penalty"
+        expected = (
+            "psion_key_ability_save_penalty"
+            if level == 1
+            else f"(psion_key_ability_save_penalty - {level - 1})"
+        )
+        assert f"OUTER_SET {constant} = {expected}" in text, (level, expected)
+
+        for number, line in enumerate(text.splitlines(), start=1):
+            if "savingthrow = BIT" not in line:
+                continue
+            # The multi-line INT_VAR form puts savebonus on its own line.
+            following = text.splitlines()[number : number + 1]
+            if constant in line or (following and constant in following[0]):
+                continue
+            raise AssertionError(
+                f"level{level}-powers.tpa:{number} sets a saving throw without "
+                f"{constant}"
+            )
+
+
 def validate_installer() -> None:
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     assert "VERSION ~1.0.0~" in setup
@@ -266,6 +302,7 @@ def main() -> None:
     validate_release_infrastructure()
     validate_builders()
     validate_augmentation()
+    validate_save_dc_scheme()
     validate_installer()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)

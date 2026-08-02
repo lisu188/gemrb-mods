@@ -41,6 +41,9 @@ END
 
 OUTER_SET psion_level2_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
 
+// Power-level share of the tabletop save DC; see level1-powers.tpa.
+OUTER_SET psion_level2_save_penalty = (psion_key_ability_save_penalty - 1)
+
 // BG-family games use New_Cone_Of_Cold, while IWDEE retains the older symbol.
 // Use WeiDU's game predicate instead of relying on an undeclared helper variable.
 OUTER_SET psion_cone_projectile = IDS_OF_SYMBOL (~missile~ ~New_Cone_Of_Cold~)
@@ -145,7 +148,7 @@ LAF psion_create_level2_power
     ps_icon = ~spwi217~
 END
 COPY_EXISTING ~PS2SWCR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 3 dicesize = 4 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 3 dicesize = 4 savingthrow = BIT1 savebonus = psion_level2_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Clairvoyant Sense: remote cameras are area/script specific. The portable
@@ -196,7 +199,7 @@ LAF psion_create_level2_power
     ps_icon = ~spwi215~
 END
 COPY_EXISTING ~PS2EMIS.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT1 savebonus = psion_level2_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Animal Affinity becomes a free selector. Its three children are generated in
@@ -243,5 +246,5 @@ LAF psion_create_level2_power
     ps_icon = ~spwi211~
 END
 COPY_EXISTING ~PS2BRLK.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level2_save_penalty END
 BUT_ONLY

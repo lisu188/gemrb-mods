@@ -53,6 +53,12 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Full PP restoration after ordinary and temple resting.
 - Base costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
 - Maximum PP expenditure per manifestation equal to Psion level.
+- Power-level scaled saving-throw difficulty. The tabletop DC of
+  `10 + power level + Intelligence modifier` has no Infinity Engine equivalent,
+  so each generated effect carries a `savebonus` combining a power-level term
+  of `-(level - 1)` with the `+2` key-ability modifier guaranteed by the
+  Intelligence 15 chargen minimum. Intelligence above 15 does not further
+  improve save difficulty; see below.
 - Discipline, Intelligence, manifester-level and current-pool validation.
 - Cancellation-safe two-phase PP transactions.
 - Quickslot/action-bar configuration is excluded from PP transactions, so
@@ -179,6 +185,12 @@ following portable approximations are intentional and documented in source
 comments and in-game descriptions:
 
 - Will saves use save vs spell or broad BG saving-throw modifiers.
+- Saving-throw difficulty scales with power level but not with the manifester's
+  Intelligence. GemRB exposes no way to vary an installed SPL's `savebonus` by
+  the caster's runtime stats: `ModifyEffect` only moves an effect's target
+  coordinates, and `PrepareSpontaneousCast`, the one substitution hook, would
+  need a separate resource per Intelligence bracket for all sixty powers. The
+  guaranteed `+2` from the Intelligence 15 chargen minimum is baked in instead.
 - Vigor uses timed HP effects instead of native temporary HP.
 - Concealment uses Blur, AC and saving-throw bonuses.
 - Biofeedback uses percentage rather than flat damage reduction.

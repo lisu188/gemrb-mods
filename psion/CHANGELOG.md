@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Added saving-throw difficulty scaled by power level. Previously every
+  generated effect left `savebonus = 0`, so neither a power's level nor the
+  manifester's Intelligence had any bearing on whether it landed — Intelligence
+  bought power points and nothing else. Each save-bearing effect now carries a
+  `savebonus` combining a power-level term of `-(level - 1)` with the `+2`
+  key-ability modifier guaranteed by the Intelligence 15 chargen minimum.
+- Documented why Intelligence above 15 cannot improve save difficulty: GemRB
+  exposes no way to vary an installed SPL's `savebonus` by the caster's runtime
+  stats. `ModifyEffect` only moves an effect's target coordinates, and
+  `PrepareSpontaneousCast`, the one substitution hook, would require a separate
+  resource per Intelligence bracket across all sixty powers.
+- Added a `validate_core.py` invariant that pins the per-level constants and
+  fails if any save-bearing effect is left without its penalty.
+
 Rules-fidelity corrections from a review against the D&D 3.5 Expanded Psionics
 Handbook. The core economy (power-point table, powers known, `(2 x level) - 1`
 base costs, the manifester-level spending cap and the `Int >= 10 + power level`

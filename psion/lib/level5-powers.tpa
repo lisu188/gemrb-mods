@@ -42,6 +42,9 @@ END
 
 OUTER_SET psion_level5_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
 
+// Power-level share of the tabletop save DC; see level1-powers.tpa.
+OUTER_SET psion_level5_save_penalty = (psion_key_ability_save_penalty - 4)
+
 // Adapt Body: poison and disease immunity plus broad environmental resistance.
 // Fatigue immunity remains a runtime task because fatigue opcodes differ across
 // the supported game families.
@@ -77,7 +80,7 @@ LAF psion_create_level5_power
 END
 COPY_EXISTING ~PS5CATP.spl~ ~override~
   PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 30 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 30 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
   END
 BUT_ONLY
 
@@ -113,10 +116,10 @@ LAF psion_create_level5_power
     ps_icon = ~spwi505~
 END
 COPY_EXISTING ~PS5COGL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 6 dicesize = 6 savingthrow = BIT0 special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 6 dicesize = 6 savingthrow = BIT0 savebonus = psion_level5_save_penalty special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
   PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 50 parameter2 = ps_failure_type timing = 0 duration = 18 savingthrow = BIT0 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 50 parameter2 = ps_failure_type timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
   END
 BUT_ONLY
 
@@ -186,7 +189,7 @@ LAF psion_create_level5_power
     ps_icon = ~spwi512~
 END
 COPY_EXISTING ~PS5HOCR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 9 dicesize = 4 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 9 dicesize = 4 savingthrow = BIT1 savebonus = psion_level5_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Energy Current: a full concentration channel requires per-frame GemRB state.
@@ -204,9 +207,9 @@ LAF psion_create_level5_power
     ps_icon = ~spwi510~
 END
 COPY_EXISTING ~PS5ECUR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 savebonus = psion_level5_save_penalty special = BIT8 END
   PATCH_FOR_EACH ps_delay IN 6 12 18 24 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 timing = 4 duration = ps_delay savingthrow = BIT1 special = BIT8 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 timing = 4 duration = ps_delay savingthrow = BIT1 savebonus = psion_level5_save_penalty special = BIT8 END
   END
 BUT_ONLY
 
@@ -244,8 +247,8 @@ LAF psion_create_level5_power
     ps_icon = ~spwi505~
 END
 COPY_EXISTING ~PS5BALT.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 9 dicesize = 6 savingthrow = BIT2 special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT2 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 9 dicesize = 6 savingthrow = BIT2 savebonus = psion_level5_save_penalty special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT2 savebonus = psion_level5_save_penalty END
 BUT_ONLY
 
 // Mind Probe: viewing a target's full record and scripted memories requires GUI
@@ -264,6 +267,6 @@ LAF psion_create_level5_power
 END
 COPY_EXISTING ~PS5MPRB.spl~ ~override~
   FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 30 savingthrow = BIT0 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
   END
 BUT_ONLY
