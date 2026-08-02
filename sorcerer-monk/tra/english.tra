@@ -23,3 +23,5 @@ Dual-classing is not supported.~
 @18 = ~Sorcerer and Monk must retain GemRB class IDs 19 and 20 in CLSKILLS.2DA and the active class table. The current tables are incompatible with the Sorcerer/Monk multiclass mask.~
 @19 = ~FISTWEAP.2DA already contains a row for the numeric class identifier allocated to Sorcerer/Monk. Remove the conflicting custom-class row before installing.~
 @20 = ~Multiple SORCERER_MONK identity rows already exist in CLSKILLS.2DA or the active class table. Remove the duplicate rows before installing.~
+@21 = ~QSLOTS.2DA does not have one row per existing class. GemRB reads the action bar by row index, so the Sorcerer/Monk row would be applied to the wrong class. Remove or reorder conflicting custom-class mods before installing.~
+@22 = ~Another class already uses the SM0 high-level-ability abbreviation in LUABBR.2DA. Installing would replace its LUSM0.2DA list with the Sorcerer/Monk merge. Remove the conflicting custom-class mod before installing.~
