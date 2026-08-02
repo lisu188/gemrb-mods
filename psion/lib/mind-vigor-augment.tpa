@@ -11,7 +11,7 @@ STR_VAR
 BEGIN
   OUTER_SET ps_save_penalty = (0 - ((ps_cost - 1) / 2))
   OUTER_SPRINT ps_variant_name ~Mind Thrust (%ps_cost% PP)~
-  OUTER_SPRINT ps_variant_description ~A direct mental attack deals %ps_cost%d10 magical damage. A save vs spell negates the damage; the save penalty improves by 1 for every 2 PP beyond the first.~
+  OUTER_SPRINT ps_variant_description ~A direct mental attack deals 1d10 magical damage. A save vs spell negates the damage; the save penalty improves by 1 for every 2 PP beyond the first.~
 
   LAF psion_create_level1_power
     INT_VAR
@@ -33,7 +33,7 @@ BEGIN
         target = 2
         resist_dispel = BIT0
         parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
-        dicenumber = ps_cost
+        dicenumber = 1
         dicesize = 10
         savingthrow = BIT0
         savebonus = ps_save_penalty
@@ -83,7 +83,7 @@ LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1MTHR~
     ps_name = ~Mind Thrust~
-    ps_description = ~Spend 1 to 9 power points. Damage is 1d10 per PP and the save DC increases for every 2 additional PP.~
+    ps_description = ~Spend 1 to 9 power points. Damage is always 1d10; the save DC increases by 1 for every 2 additional PP.~
     ps_icon = ~spwi105~
 END
 COPY_EXISTING ~PS1MTHR.spl~ ~override~

@@ -195,6 +195,7 @@ def validate_builders() -> None:
         "PS1ERAY": (level1, "psion_create_level1_power", ("opcode = 12", "dicesize = 6")),
         "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
         "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
+        "PS1FSCR": (level1, "psion_create_level1_power", ("opcode = 0", "parameter1 = (0 - 4)", "opcode = 206")),
         "PS1PREC": (level1, "psion_create_level1_power", ("opcode = 54", "parameter1 = 1", "parameter1 = (0 - 1)")),
         "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
         "PS1BRST": (level1, "psion_create_level1_power", ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
@@ -218,6 +219,11 @@ def validate_builders() -> None:
 
     assert "savebonus = ps_save_penalty" in mind_vigor
     assert "save_bonus = ps_save_penalty" not in mind_vigor
+
+    # Mind Thrust deals a flat 1d10 at every augmentation tier; augmenting buys
+    # only the save-DC penalty, never extra damage dice.
+    assert "dicenumber = 1" in mind_vigor
+    assert "dicenumber = ps_cost" not in mind_vigor
 
 
 def validate_augmentation() -> None:

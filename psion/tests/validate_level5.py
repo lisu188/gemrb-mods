@@ -53,7 +53,7 @@ def main() -> None:
             "PATCH_FOR_EACH ps_failure_type IN 0 1 2", "opcode = 60",
             "parameter1 = 30", "duration = 30", "savingthrow = BIT0",
         ),
-        "PS5PRES": ("opcode = 166", "parameter1 = 29", "duration = 540"),
+        "PS5PRES": ("opcode = 166", "parameter1 = 21", "duration = 540"),
         "PS5COGL": (
             "opcode = 12", "dicenumber = 6", "dicesize = 6", "opcode = 40",
             "parameter1 = 50", "duration = 18",
@@ -64,13 +64,13 @@ def main() -> None:
         "PS5HOCR": ("opcode = 12", "SLASHING", "dicenumber = 9", "dicesize = 4", "special = BIT8"),
         "PS5ECUR": (
             "dicenumber = 5", "PATCH_FOR_EACH ps_delay IN 6 12 18 24",
-            "timing = 4", "dicenumber = 2", "ELECTRICITY",
+            "timing = 4", "dicenumber = 2", "ELECTRICITY", "savingthrow = BIT1",
         ),
         "PS5PFDB": (
             "opcode = 321", "opcode = 15", "opcode = 44", "opcode = 10",
             "parameter1 = 2", "duration = 30",
         ),
-        "PS5BALT": ("dicenumber = 9", "dicesize = 6", "opcode = 40", "duration = 18"),
+        "PS5BALT": ("dicenumber = 9", "dicesize = 6", "opcode = 40", "duration = 18", "savingthrow = BIT2"),
         "PS5MPRB": ("ps_save_opcode = 33", "parameter1 = 2", "duration = 30", "savingthrow = BIT0"),
     }
     for resref, fragments in required.items():

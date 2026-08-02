@@ -197,11 +197,11 @@ LAF psion_create_level4_power
   STR_VAR
     ps_resref = ~PS4EBAL~
     ps_name = ~Energy Ball~
-    ps_description = ~An electrical explosion deals 7d6 damage in a small area. A successful save vs spell halves the damage.~
+    ps_description = ~An electrical explosion deals 7d6 damage in a small area. A successful save vs breath halves the damage.~
     ps_icon = ~spwi414~
 END
 COPY_EXISTING ~PS4EBAL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 7 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 7 dicesize = 6 savingthrow = BIT1 special = BIT8 END
 BUT_ONLY
 
 // Metamorphosis: the first portable form is a powerful bear-like body. A later

@@ -1,7 +1,7 @@
 // Purpose-built level-2 Psion powers.
 //
 // These resources deliberately avoid copying wizard or priest effects. Where
-// the Infinity Engine has no direct D&D 3e equivalent, the approximation is
+// the Infinity Engine has no direct D&D 3.5e equivalent, the approximation is
 // documented next to the resource and in its in-game description.
 
 DEFINE_ACTION_FUNCTION psion_create_level2_power
@@ -192,11 +192,11 @@ LAF psion_create_level2_power
   STR_VAR
     ps_resref = ~PS2EMIS~
     ps_name = ~Energy Missile~
-    ps_description = ~An electrical burst deals 3d6 damage to creatures near the selected point. A successful save vs spell halves the damage. This area burst approximates the tabletop power's three discrete targets.~
+    ps_description = ~An electrical burst deals 3d6 damage to creatures near the selected point. A successful save vs breath halves the damage. This area burst approximates the tabletop power's three discrete targets.~
     ps_icon = ~spwi215~
 END
 COPY_EXISTING ~PS2EMIS.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT1 special = BIT8 END
 BUT_ONLY
 
 // Animal Affinity becomes a free selector. Its three children are generated in

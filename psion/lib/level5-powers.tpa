@@ -81,8 +81,8 @@ COPY_EXISTING ~PS5CATP.spl~ ~override~
   END
 BUT_ONLY
 
-// Power Resistance: at the first legal manifestation level the tabletop value
-// is 20 + manifester level = 29. Augmentation will later scale this value.
+// Power Resistance: the tabletop value is 12 + manifester level, so the first
+// legal manifestation level gives 21. Augmentation will later scale this value.
 LAF psion_create_level5_power
   INT_VAR
     ps_target = 2
@@ -91,12 +91,12 @@ LAF psion_create_level5_power
   STR_VAR
     ps_resref = ~PS5PRES~
     ps_name = ~Power Resistance~
-    ps_description = ~For nine turns the target gains 29 percent magic and power resistance. This base value corresponds to a ninth-level manifester; later augmentation will scale it with manifester level.~
+    ps_description = ~For nine turns the target gains 21 percent magic and power resistance. This base value corresponds to a ninth-level manifester; later augmentation will scale it with manifester level.~
     ps_icon = ~sppr508~
 END
 COPY_EXISTING ~PS5PRES.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS5PRES~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 166 target = 2 resist_dispel = BIT1 parameter1 = 29 timing = 0 duration = 540 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 166 target = 2 resist_dispel = BIT1 parameter1 = 21 timing = 0 duration = 540 END
 BUT_ONLY
 
 // Cognitive Overload: psychic damage plus disruption of deliberate action.
@@ -200,13 +200,13 @@ LAF psion_create_level5_power
   STR_VAR
     ps_resref = ~PS5ECUR~
     ps_name = ~Energy Current~
-    ps_description = ~Electrical energy deals 5d6 damage immediately and four additional 2d6 pulses over the next four rounds. A save vs spell halves each packet. The portable resource does not yet end when concentration is broken.~
+    ps_description = ~Electrical energy deals 5d6 damage immediately and four additional 2d6 pulses over the next four rounds. A save vs breath halves each packet. The portable resource does not yet end when concentration is broken.~
     ps_icon = ~spwi510~
 END
 COPY_EXISTING ~PS5ECUR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT0 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
   PATCH_FOR_EACH ps_delay IN 6 12 18 24 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 timing = 4 duration = ps_delay savingthrow = BIT0 special = BIT8 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 timing = 4 duration = ps_delay savingthrow = BIT1 special = BIT8 END
   END
 BUT_ONLY
 
@@ -240,12 +240,12 @@ LAF psion_create_level5_power
   STR_VAR
     ps_resref = ~PS5BALT~
     ps_name = ~Spatial Disruption~
-    ps_description = ~The target is partially displaced through hostile space, suffering 9d6 magical damage with a save vs spell for half. A failed save also slows it for three rounds.~
+    ps_description = ~The target is partially displaced through hostile space, suffering 9d6 magical damage with a save vs death for half. A failed save also slows it for three rounds.~
     ps_icon = ~spwi505~
 END
 COPY_EXISTING ~PS5BALT.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 9 dicesize = 6 savingthrow = BIT0 special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 9 dicesize = 6 savingthrow = BIT2 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT2 END
 BUT_ONLY
 
 // Mind Probe: viewing a target's full record and scripted memories requires GUI

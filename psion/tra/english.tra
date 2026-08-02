@@ -1,4 +1,4 @@
-@0 = ~Experimental D&D 3e Psion class for GemRB~
+@0 = ~Experimental D&D 3.5e Psion class for GemRB~
 @1 = ~Run GemRB against this game before installing; gemrb_path.txt is missing.~
 @2 = ~This component supports Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE and EET.~
 @3 = ~Could not determine the active GemRB class identifier range.~
