@@ -28,6 +28,14 @@
   catalogue, and no CLAB table granted Cognitive Overload, so no character
   could learn it.
 - The power catalogue grows from 60 to 61 entries.
+- Kept Energy Push learnable after its level change. It moved out of the
+  Kineticist's level-1 row, and levels 1-9 are count-pinned and full, so it
+  takes the Kineticist's level-4 slot from Detect Hostile Intent, which five
+  other disciplines still grant.
+- Added a `validate_core.py` invariant pinning the set of powers no CLAB table
+  grants. Sixteen powers are built but unreachable while CLAB rows 10-20 stay
+  empty; pinning the set means stranding a further power fails CI instead of
+  shipping unnoticed, and the README now lists them.
 
 - Extended every augmentation ladder to the manifester-level cap of 20 power
   points. The cap was already enforced correctly, but each ladder stopped at

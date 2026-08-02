@@ -100,6 +100,44 @@ def validate_progressions() -> None:
                     assert powers[exclusive[0]]["level"] == maximum
 
 
+# Powers with no GA_ entry in any CLAB table. They are built and installed to
+# override/ but no character can learn them, because CLAB rows 10-20 are still
+# all **** while psionknown.2da expects the catalogue to keep growing to level
+# 20. Workstream 4 fills those rows and drains this set.
+#
+# The set is pinned rather than merely counted so that stranding a further
+# power fails here instead of shipping unnoticed. Moving Energy Push to its
+# correct 2nd level stranded it in exactly this way and only review caught it.
+UNGRANTED_POWERS = {
+    "PS1EMND", "PS2CBLS", "PS2TSHD", "PS2BIOF", "PS2SWCR", "PS3MBAR",
+    "PS3TSGT", "PS3THOP", "PS4DDOR", "PS4TKMN", "PS4PLEE", "PS5ADBD",
+    "PS5CATP", "PS5PCRU", "PS5TRUE", "PS5TELE",
+}
+
+
+def validate_learnable_powers() -> None:
+    """Pin which powers no discipline can learn.
+
+    Powers reach a character only through GA_ entries in the six CLAB tables,
+    so a power absent from all six is unreachable however complete its builder
+    is.
+    """
+    granted = set()
+    for filename in DISCIPLINE_CLABS.values():
+        for row in rows(filename):
+            granted.update(token[3:] for token in row[1:] if token.startswith("GA_PS"))
+
+    catalogue = {row[0] for row in rows("psionpowers.2da")}
+    assert granted <= catalogue, ("CLAB grants an unknown power", sorted(granted - catalogue))
+
+    stranded = catalogue - granted
+    assert stranded == UNGRANTED_POWERS, (
+        "learnability changed",
+        {"newly stranded": sorted(stranded - UNGRANTED_POWERS),
+         "newly reachable": sorted(UNGRANTED_POWERS - stranded)},
+    )
+
+
 def validate_weidu_integer_syntax() -> None:
     """Reject forms that WeiDU 251 does not accept in INT_VAR expressions."""
     bare_negative = re.compile(
@@ -422,6 +460,7 @@ def validate_installer() -> None:
 def main() -> None:
     validate_tables()
     validate_progressions()
+    validate_learnable_powers()
     validate_weidu_integer_syntax()
     validate_release_infrastructure()
     validate_builders()

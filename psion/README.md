@@ -188,6 +188,22 @@ Adapt Body, Catapsi, Power Resistance, Psychic Crush, True Seeing, Teleport,
 Second Chance, Hail of Crystals, Energy Current, Psychofeedback, Baleful
 Teleport and Mind Probe.
 
+### Not yet learnable
+
+The lists above are the authored catalogue, not the reachable one. Powers reach
+a character only through `GA_` entries in the six discipline CLAB tables, and
+CLAB rows 10–20 are still entirely empty, so sixteen powers are built and
+installed but cannot yet be learned by anyone:
+
+Empty Mind, Concussion Blast, Thought Shield, Biofeedback, Swarm of Crystals,
+Mental Barrier, Touchsight, Time Hop, Dimension Door, Telekinetic Maneuver,
+Power Leech, Adapt Body, Catapsi, Psychic Crush, True Seeing and Teleport.
+
+Cumulative grants at levels 1–9 are pinned to `psionknown.2da` and every row is
+full, so there is no room for these until rows 10–20 are filled. That is the
+level 6–9 workstream's job. `validate_core.py` pins this exact list, so a change
+that strands a further power fails CI rather than shipping unnoticed.
+
 ## Deliberate engine approximations
 
 The Infinity Engine does not expose every D&D 3.5e psionic mechanism. The
