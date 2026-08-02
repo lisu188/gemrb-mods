@@ -274,7 +274,10 @@ UNLESS ~SORCERER_MONK_CLERIC ~
 APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK_CLERIC  0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
-APPEND ~profs.2da~ ~SORCERER_MONK_CLERIC  2 5~
+// GemRB's multiclass proficiency logic uses the combined class RATE while
+// selecting the fastest component's level. Match Monk, the fastest component,
+// at one proficiency point every four levels; keep Monk's two starting points.
+APPEND ~profs.2da~ ~SORCERER_MONK_CLERIC 2 4~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
 APPEND ~xpcap.2da~ ~SORCERER_MONK_CLERIC %smc_xpcap%~
@@ -353,11 +356,11 @@ APPEND ~fistweap.2da~ ~%smc_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 
 // action bar setup
 APPEND ~qslots.2da~ ~SORCERER_MONK_CLERIC       0          3          4          2          8          9          11         12        13~
 
-// monk "thieving" skills
+// Monk is the only component with THIEFSKILL, so use Monk's availability and
+// progression. Current GemRB uses the combined class's THIEFSCL/THIEFSKL data.
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
-  // gemrb since 0.9.5-git
   APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK_CLERIC 0 0 1 1 1 0 0~
-  APPEND ~thiefskl.2da~ ~SORCERER_MONK_CLERIC 10 5~
+  APPEND ~thiefskl.2da~ ~SORCERER_MONK_CLERIC 0 10~
 END ELSE BEGIN
-  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK_CLERIC 10 5 -1 -1 -1 1 1 -1 -1~
+  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK_CLERIC 10 10 -1 -1 1 1 1 -1 -1~
 END
