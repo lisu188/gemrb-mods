@@ -10,11 +10,6 @@ requirement) was already correct and is unchanged.
 - Relabelled the component, README, changelog and source comments as D&D 3.5e.
   The implemented tables were always the 3.5 Expanded Psionics Handbook ones;
   only the label said 3e.
-- Corrected Mind Thrust augmentation to a flat 1d10 at every tier. Augmenting
-  buys only the save-DC penalty, matching the tabletop augment line, instead of
-  also scaling damage to 9d10. Note that this leaves the 2, 4, 6 and 8 PP tiers
-  buying nothing over the tier below, since the DC improves every 2 PP; pruning
-  the selector to 1, 3, 5, 7 and 9 PP is worth a follow-up.
 - Corrected Force Screen to the tabletop +4 shield bonus, up from +2.
 - Corrected Power Resistance to `12 + manifester level` (21 at the first legal
   manifestation level), down from an incorrect `20 + manifester level`.

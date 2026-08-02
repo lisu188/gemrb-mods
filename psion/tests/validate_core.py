@@ -220,10 +220,10 @@ def validate_builders() -> None:
     assert "savebonus = ps_save_penalty" in mind_vigor
     assert "save_bonus = ps_save_penalty" not in mind_vigor
 
-    # Mind Thrust deals a flat 1d10 at every augmentation tier; augmenting buys
-    # only the save-DC penalty, never extra damage dice.
-    assert "dicenumber = 1" in mind_vigor
-    assert "dicenumber = ps_cost" not in mind_vigor
+    # Mind Thrust augments damage by 1d10 per additional power point, and the
+    # save DC by 1 for each extra 2d10, so the penalty is floor((cost - 1) / 2).
+    assert "dicenumber = ps_cost" in mind_vigor
+    assert "ps_save_penalty = (0 - ((ps_cost - 1) / 2))" in mind_vigor
 
 
 def validate_augmentation() -> None:
