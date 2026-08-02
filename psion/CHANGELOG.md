@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- Renamed four powers to their Expanded Psionics Handbook names: Spatial Step
+  to Dimension Slide, Spatial Disruption to Baleful Teleport, Compulsion to
+  Dominate (Psionic) and Psionic Flight to Fly (Psionic). Resrefs are
+  unchanged; `PS5BALT` already read as Baleful Teleport.
+- Settled Psionic Repair Damage on one name. `PS2RPRD` was called
+  `REPAIR_CONSTRUCT` in `psionpowers.2da`, `Repair Construct` in
+  `power-data.tpa` and `Psionic Repair Damage` in its builder.
+- Deleted the `psion_power_name`, `psion_power_template` and
+  `psion_power_level` arrays from `power-data.tpa`. Nothing in the repository
+  read them; they were prototype scaffolding duplicating `psionpowers.2da`, and
+  that duplication is how the `PS2RPRD` naming drifted unnoticed.
+- Added a `validate_core.py` invariant that pins `psionpowers.2da`'s `NAME`
+  column to the builders' `ps_name`. The column is never read at runtime, so it
+  could previously drift without symptom. The walk covers every module under
+  `lib/`, which is what catches the three augment parents that are built twice.
+- Moved Energy Push to its correct 2nd level as `PS2EPUS`, at 3 PP and 2d6.
+- Added Matter Agitation (`PS1MAGI`) as the Kineticist's level-1 exclusive.
+  Energy Push held that slot, and the progression invariant requires exactly
+  one discipline exclusive per odd character level at the tier maximum, so
+  moving Energy Push had to be paired with a replacement rather than a reslot.
+- Replaced Mental Stasis with Crisis of Breath (`PS3CBRE`) and Cognitive
+  Overload with Psychic Crush (`PS5PCRU`). Neither replaced power was an EPH
+  power; Mental Stasis's own comment admitted its name came from the prototype
+  catalogue, and no CLAB table granted Cognitive Overload, so no character
+  could learn it.
+- The power catalogue grows from 60 to 61 entries.
+
 - Extended every augmentation ladder to the manifester-level cap of 20 power
   points. The cap was already enforced correctly, but each ladder stopped at
   9 PP, so a Psion above level 9 could never reach it. Energy Ray now runs
@@ -38,7 +65,7 @@
   exposes no way to vary an installed SPL's `savebonus` by the caster's runtime
   stats. `ModifyEffect` only moves an effect's target coordinates, and
   `PrepareSpontaneousCast`, the one substitution hook, would require a separate
-  resource per Intelligence bracket across all sixty powers.
+  resource per Intelligence bracket across all sixty-one powers.
 - Added a `validate_core.py` invariant that pins the per-level constants and
   fails if any save-bearing effect is left without its penalty.
 

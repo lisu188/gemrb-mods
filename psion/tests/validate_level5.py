@@ -6,7 +6,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 
 LEVEL5_REFS = {
-    "PS5ADBD", "PS5CATP", "PS5PRES", "PS5COGL", "PS5TRUE", "PS5TELE",
+    "PS5ADBD", "PS5CATP", "PS5PRES", "PS5PCRU", "PS5TRUE", "PS5TELE",
     "PS5SCHN", "PS5HOCR", "PS5ECUR", "PS5PFDB", "PS5BALT", "PS5MPRB",
 }
 
@@ -54,9 +54,9 @@ def main() -> None:
             "parameter1 = 30", "duration = 30", "savingthrow = BIT0",
         ),
         "PS5PRES": ("opcode = 166", "parameter1 = 21", "duration = 540"),
-        "PS5COGL": (
-            "opcode = 12", "dicenumber = 6", "dicesize = 6", "opcode = 40",
-            "parameter1 = 50", "duration = 18",
+        "PS5PCRU": (
+            "opcode = 12", "dicenumber = 8", "dicesize = 6", "special = BIT8",
+            "opcode = 175", "duration = 12",
         ),
         "PS5TRUE": ("opcode = 193", "opcode = 292", "parameter2 = 74", "duration = 60"),
         "PS5TELE": ("opcode = 124", "target = 1", "parameter2 = 1"),
@@ -82,8 +82,14 @@ def main() -> None:
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 2" in second_chance
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2)" not in second_chance
 
-    for resref in ("PS5CATP", "PS5COGL", "PS5HOCR", "PS5ECUR", "PS5BALT", "PS5MPRB"):
+    for resref in ("PS5CATP", "PS5PCRU", "PS5HOCR", "PS5ECUR", "PS5BALT", "PS5MPRB"):
         assert "ps_flags = psion_level5_hostile_flags" in section(builder, resref)
+
+    # Psychic Crush is heavy damage plus a brief hold, deliberately not the
+    # tabletop save-or-die. Opcode 13 (Death) must never appear here.
+    assert "opcode = 13 " not in section(builder, "PS5PCRU")
+    # Cognitive Overload was not an EPH power; nothing may reintroduce it.
+    assert "PS5COGL" not in builder
 
     for resref in ("PS5ADBD", "PS5PRES", "PS5TRUE", "PS5SCHN", "PS5PFDB"):
         assert "opcode = 321" in section(builder, resref)

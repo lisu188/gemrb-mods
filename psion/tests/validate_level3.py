@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 LEVEL3_REFS = {
     "PS3DPSI", "PS3BADJ", "PS3EBLT", "PS3MBAR", "PS3TSGT", "PS3THOP",
-    "PS3DANG", "PS3COCO", "PS3ECON", "PS3HUST", "PS3SSTP", "PS3MSTL",
+    "PS3DANG", "PS3COCO", "PS3ECON", "PS3HUST", "PS3SSTP", "PS3CBRE",
 }
 
 
@@ -52,15 +52,22 @@ def main() -> None:
         "PS3ECON": ("psion_cone_projectile", "dicenumber = 5", "savingthrow = BIT1"),
         "PS3HUST": ("opcode = 321", "parameter1 = 200", "parameter2 = 2", "duration = 6"),
         "PS3SSTP": ("opcode = 124", "parameter2 = 1", "ps_target = 4"),
-        "PS3MSTL": ("opcode = 175", "opcode = 38", "opcode = 40", "duration = 18"),
+        # Crisis of Breath: choking damage plus silence and slow. Asserting the
+        # absence of opcode 175 pins the replacement of Mental Stasis, whose
+        # signature led with hold.
+        "PS3CBRE": ("opcode = 12", "dicenumber = 3", "opcode = 38", "opcode = 40", "duration = 18"),
     }
     for resref, fragments in required.items():
         power = section(builder, resref)
         for fragment in fragments:
             assert fragment in power, (resref, fragment)
 
-    for resref in ("PS3DPSI", "PS3EBLT", "PS3THOP", "PS3COCO", "PS3ECON", "PS3MSTL"):
+    for resref in ("PS3DPSI", "PS3EBLT", "PS3THOP", "PS3COCO", "PS3ECON", "PS3CBRE"):
         assert "ps_flags = psion_level3_hostile_flags" in section(builder, resref)
+
+    # Mental Stasis was not an EPH power; nothing may reintroduce it.
+    assert "opcode = 175" not in section(builder, "PS3CBRE")
+    assert "PS3MSTL" not in builder
 
     # Body Adjustment heals a flat 1d12; the tabletop power has no +5 rider.
     body_adjustment = section(builder, "PS3BADJ")

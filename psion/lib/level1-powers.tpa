@@ -199,7 +199,17 @@ COPY_EXISTING ~PS1ACON.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 1 timing = 1 duration = 36 STR_VAR resource = ~PSACON01~ END
 BUT_ONLY
 
-// Energy Push: electricity damage plus a save-negated wing-buffet push.
+// Matter Agitation: excite a target's substance into damaging heat. This is
+// the Kineticist's level-1 exclusive, replacing Energy Push when that power
+// moved to its correct 2nd level.
+//
+// SNIPPET-SOURCED. The SRD psionics power list gives Matter Agitation as a
+// 1st-level Psychokinesis power, "you heat a creature or object", but every
+// SRD mirror is blocked by this environment's network policy, so the full
+// entry could not be read. The damage figure and the burn rider below are an
+// Infinity Engine approximation on the level-1 damage budget, not a rules
+// quotation. Confirm against the Expanded Psionics Handbook before relying on
+// the numbers.
 LAF psion_create_level1_power
   INT_VAR
     ps_target = 2
@@ -207,14 +217,14 @@ LAF psion_create_level1_power
     ps_projectile = psion_none_projectile
     ps_flags = psion_hostile_flags
   STR_VAR
-    ps_resref = ~PS1EPUS~
-    ps_name = ~Energy Push~
-    ps_description = ~The target suffers 1d6 electrical damage and is pushed away. A save vs breath prevents the push but not the damage.~
-    ps_icon = ~spwi113~
+    ps_resref = ~PS1MAGI~
+    ps_name = ~Matter Agitation~
+    ps_description = ~The manifester agitates the target's substance into heat, dealing 1d6 fire damage with a save vs spell for half. The lingering burn worsens Armor Class by 1 for three rounds.~
+    ps_icon = ~spwi103~
 END
-COPY_EXISTING ~PS1EPUS.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 1 dicesize = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 4 savingthrow = BIT1 savebonus = psion_level1_save_penalty END
+COPY_EXISTING ~PS1MAGI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~) dicenumber = 1 dicesize = 6 savingthrow = BIT0 savebonus = psion_level1_save_penalty special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level1_save_penalty END
 BUT_ONLY
 
 // Thicken Skin: natural armor approximation.

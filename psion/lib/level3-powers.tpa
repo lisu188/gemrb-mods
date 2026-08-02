@@ -222,8 +222,8 @@ COPY_EXISTING ~PS3HUST.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 200 parameter2 = 2 timing = 0 duration = 6 END
 BUT_ONLY
 
-// Spatial Step: teleport the manifester to the selected point. Opcode 124 mode
-// 1 moves the source to the spell target location.
+// Dimension Slide: teleport the manifester to the selected point. Opcode
+// 124 mode 1 moves the source to the spell target location.
 LAF psion_create_level3_power
   INT_VAR
     ps_target = 4
@@ -231,7 +231,7 @@ LAF psion_create_level3_power
     ps_projectile = psion_none_projectile
   STR_VAR
     ps_resref = ~PS3SSTP~
-    ps_name = ~Spatial Step~
+    ps_name = ~Dimension Slide~
     ps_description = ~The Nomad teleports to a visible point within 30 feet. Areas or plot states that block teleportation may prevent the movement.~
     ps_icon = ~spwi402~
 END
@@ -239,8 +239,18 @@ COPY_EXISTING ~PS3SSTP.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 1 resist_dispel = BIT1 parameter2 = 1 timing = 1 END
 BUT_ONLY
 
-// Mental Stasis: table name retained from the prototype catalogue. It freezes
-// thought and action using hold, silence and slow for three rounds.
+// Crisis of Breath: disrupt the target's breathing. Replaces Mental Stasis,
+// which was not an Expanded Psionics Handbook power at all -- its own comment
+// admitted the name was retained from the prototype catalogue. This slot is
+// the Telepath's level-5 discipline exclusive, so the replacement had to be a
+// 3rd-level Telepathy power.
+//
+// SNIPPET-SOURCED. The SRD psionics power list gives Crisis of Breath as a
+// 3rd-level Telepathy power, "disrupt subject's breathing", but every SRD
+// mirror is blocked by this environment's network policy, so the full entry
+// could not be read. Suffocation has no Infinity Engine opcode; the choking is
+// approximated with damage plus silence and slow, reusing opcodes already
+// proven in this codebase. Confirm the numbers against the book.
 LAF psion_create_level3_power
   INT_VAR
     ps_target = 2
@@ -248,13 +258,13 @@ LAF psion_create_level3_power
     ps_projectile = psion_none_projectile
     ps_flags = psion_level3_hostile_flags
   STR_VAR
-    ps_resref = ~PS3MSTL~
-    ps_name = ~Mental Stasis~
-    ps_description = ~One intelligent target is held, silenced, and slowed for three rounds unless it succeeds on a save vs spell. Magic resistance applies.~
+    ps_resref = ~PS3CBRE~
+    ps_name = ~Crisis of Breath~
+    ps_description = ~The target's breathing seizes, dealing 3d6 damage with a save vs spell for half. A failed save also leaves it unable to speak and slowed for three rounds. Magic resistance applies.~
     ps_icon = ~spwi319~
 END
-COPY_EXISTING ~PS3MSTL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
+COPY_EXISTING ~PS3CBRE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 savingthrow = BIT0 savebonus = psion_level3_save_penalty special = BIT8 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 38 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
 BUT_ONLY
