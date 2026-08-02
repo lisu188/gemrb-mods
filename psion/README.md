@@ -1,6 +1,6 @@
-# D&D 3e Psion for GemRB
+# D&D 3.5e Psion for GemRB
 
-This mod adds a point-based D&D 3e Psion class to BG1-family conversions and
+This mod adds a point-based D&D 3.5e Psion class to BG1-family conversions and
 Enhanced Edition campaigns running through GemRB.
 
 The six selectable discipline classes are:
@@ -36,7 +36,7 @@ for a manual full-campaign playthrough on every supported game configuration.
 
 - Six dynamically allocated custom class identifiers.
 - Normalized split, native EE split and legacy combined class-table support.
-- D&D 3e base power-point progression through level 20.
+- D&D 3.5e base power-point progression through level 20.
 - Intelligence bonus pool:
 
   `floor(Intelligence modifier × Psion level / 2)`
@@ -174,7 +174,7 @@ Spatial Disruption and Mind Probe.
 
 ## Deliberate engine approximations
 
-The Infinity Engine does not expose every D&D 3e psionic mechanism. The
+The Infinity Engine does not expose every D&D 3.5e psionic mechanism. The
 following portable approximations are intentional and documented in source
 comments and in-game descriptions:
 

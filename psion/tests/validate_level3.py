@@ -48,9 +48,9 @@ def main() -> None:
         "PS3TSGT": ("opcode = 193", "opcode = 292", "parameter2 = 74"),
         "PS3THOP": ("opcode = 213", "duration = 18", "savingthrow = BIT0"),
         "PS3DANG": ("opcode = 91", "parameter1 = 20", "parameter1 = (0 - 2)", "opcode = 292"),
-        "PS3COCO": ("opcode = 175", "parameter1 = 50", "duration = 18"),
+        "PS3COCO": ("opcode = 175", "duration = 18", "savingthrow = BIT1"),
         "PS3ECON": ("psion_cone_projectile", "dicenumber = 5", "savingthrow = BIT1"),
-        "PS3HUST": ("opcode = 321", "parameter1 = 200", "parameter2 = 2", "opcode = 1", "duration = 6"),
+        "PS3HUST": ("opcode = 321", "parameter1 = 200", "parameter2 = 2", "duration = 6"),
         "PS3SSTP": ("opcode = 124", "parameter2 = 1", "ps_target = 4"),
         "PS3MSTL": ("opcode = 175", "opcode = 38", "opcode = 40", "duration = 18"),
     }
@@ -59,8 +59,23 @@ def main() -> None:
         for fragment in fragments:
             assert fragment in power, (resref, fragment)
 
-    for resref in ("PS3EBLT", "PS3THOP", "PS3COCO", "PS3ECON", "PS3MSTL"):
+    for resref in ("PS3DPSI", "PS3EBLT", "PS3THOP", "PS3COCO", "PS3ECON", "PS3MSTL"):
         assert "ps_flags = psion_level3_hostile_flags" in section(builder, resref)
+
+    # Body Adjustment heals a flat 1d12; the tabletop power has no +5 rider.
+    body_adjustment = section(builder, "PS3BADJ")
+    assert "opcode = 17" in body_adjustment
+    assert "parameter1 = 5" not in body_adjustment
+
+    # Hustle grants an extra move action, never an extra attack (opcode 1).
+    hustle = section(builder, "PS3HUST")
+    assert "opcode = 1 target" not in hustle
+
+    # The cocoon's hardness belongs to the shell, so the trapped creature must
+    # not receive damage resistance (opcodes 86-89).
+    cocoon = section(builder, "PS3COCO")
+    assert "ps_resist_opcode" not in cocoon
+    assert "parameter1 = 50" not in cocoon
 
     for resref in ("PS3MBAR", "PS3TSGT", "PS3DANG", "PS3HUST"):
         assert "opcode = 321" in section(builder, resref)

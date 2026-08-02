@@ -128,12 +128,12 @@ LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1FSCR~
     ps_name = ~Force Screen~
-    ps_description = ~A telekinetic shield improves Armor Class by 2 and blocks Magic Missile for one turn.~
+    ps_description = ~A telekinetic shield improves Armor Class by 4 and blocks Magic Missile for one turn.~
     ps_icon = ~spwi114~
 END
 COPY_EXISTING ~PS1FSCR.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1FSCR~ END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 60 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 STR_VAR resource = ~SPWI112~ END
 BUT_ONLY
 

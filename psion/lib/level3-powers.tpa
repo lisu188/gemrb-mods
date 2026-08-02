@@ -54,6 +54,7 @@ LAF psion_create_level3_power
     ps_target = 4
     ps_range = 30
     ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level3_hostile_flags
   STR_VAR
     ps_resref = ~PS3DPSI~
     ps_name = ~Dispel Psionics~
@@ -64,16 +65,16 @@ COPY_EXISTING ~PS3DPSI.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 58 target = 2 resist_dispel = BIT1 parameter1 = 5 parameter2 = 1 timing = 1 END
 BUT_ONLY
 
-// Body Adjustment: base 5-PP manifestation heals 1d12 + 5 hit points.
+// Body Adjustment: base 5-PP manifestation heals 1d12 hit points.
 LAF psion_create_level3_power
   STR_VAR
     ps_resref = ~PS3BADJ~
     ps_name = ~Body Adjustment~
-    ps_description = ~The manifester repairs bodily damage and regains 1d12+5 hit points. Later augmentation will add extra healing dice and condition removal.~
+    ps_description = ~The manifester repairs bodily damage and regains 1d12 hit points. Later augmentation will add extra healing dice and condition removal.~
     ps_icon = ~sppr314~
 END
 COPY_EXISTING ~PS3BADJ.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 resist_dispel = BIT1 parameter1 = 5 dicenumber = 1 dicesize = 12 timing = 1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 resist_dispel = BIT1 dicenumber = 1 dicesize = 12 timing = 1 END
 BUT_ONLY
 
 // Energy Bolt: a line of electrical energy, save vs breath for half.
@@ -166,8 +167,10 @@ COPY_EXISTING ~PS3DANG.spl~ ~override~
 BUT_ONLY
 
 // Ectoplasmic Cocoon: a breakable hit-point shell requires GemRB-side state.
-// The portable approximation holds the victim while granting 50% physical
-// resistance for three rounds; a save vs spell negates the entire effect.
+// The portable approximation holds the victim for three rounds; a save vs
+// breath negates it, matching the tabletop power's Reflex save. The shell's
+// hardness belongs to the cocoon, not the creature, so no damage resistance is
+// granted to the target.
 LAF psion_create_level3_power
   INT_VAR
     ps_target = 2
@@ -177,14 +180,11 @@ LAF psion_create_level3_power
   STR_VAR
     ps_resref = ~PS3COCO~
     ps_name = ~Ectoplasmic Cocoon~
-    ps_description = ~A failed save vs spell encases the target for three rounds, holding it and granting 50 percent resistance to physical damage. A later GemRB implementation will replace this approximation with a destructible cocoon shell.~
+    ps_description = ~A failed save vs breath encases the target for three rounds, holding it helpless. A later GemRB implementation will replace this approximation with a destructible cocoon shell.~
     ps_icon = ~spwi308~
 END
 COPY_EXISTING ~PS3COCO.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
-  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 2 resist_dispel = BIT0 parameter1 = 50 timing = 0 duration = 18 savingthrow = BIT0 END
-  END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT1 END
 BUT_ONLY
 
 // Energy Cone: cone projectile and electrical damage, save vs breath for half.
@@ -204,19 +204,19 @@ COPY_EXISTING ~PS3ECON.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
 BUT_ONLY
 
-// Hustle: the portable action-economy approximation grants movement and one
-// extra attack for a single round.
+// Hustle: the tabletop power grants one extra move action, explicitly not an
+// extra attack. Doubled movement is the portable approximation of that move
+// action, so no attacks-per-round effect is applied.
 LAF psion_create_level3_power
   STR_VAR
     ps_resref = ~PS3HUST~
     ps_name = ~Hustle~
-    ps_description = ~For one round the Egoist moves at double speed and gains one additional attack per round. Recasting refreshes rather than stacks the effect.~
+    ps_description = ~For one round the Egoist moves at double speed. Recasting refreshes rather than stacks the effect.~
     ps_icon = ~spwi305~
 END
 COPY_EXISTING ~PS3HUST.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS3HUST~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 200 parameter2 = 2 timing = 0 duration = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 6 END
 BUT_ONLY
 
 // Spatial Step: teleport the manifester to the selected point. Opcode 124 mode

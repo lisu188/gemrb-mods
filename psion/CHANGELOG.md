@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+Rules-fidelity corrections from a review against the D&D 3.5 Expanded Psionics
+Handbook. The core economy (power-point table, powers known, `(2 x level) - 1`
+base costs, the manifester-level spending cap and the `Int >= 10 + power level`
+requirement) was already correct and is unchanged.
+
+- Relabelled the component, README, changelog and source comments as D&D 3.5e.
+  The implemented tables were always the 3.5 Expanded Psionics Handbook ones;
+  only the label said 3e.
+- Corrected Force Screen to the tabletop +4 shield bonus, up from +2.
+- Corrected Power Resistance to `12 + manifester level` (21 at the first legal
+  manifestation level), down from an incorrect `20 + manifester level`.
+- Corrected Body Adjustment to heal a flat 1d12, removing a +5 rider that the
+  tabletop power does not have.
+- Removed the damage resistance Ectoplasmic Cocoon granted to its own victim.
+  The shell's hardness belongs to the cocoon, not the trapped creature, so the
+  power was making held targets harder to kill.
+- Removed the extra attack from Hustle. The tabletop power grants an extra move
+  action, which the existing doubled movement already approximates.
+- Normalised energy-area saving throws to save vs breath, the mod's Reflex
+  proxy: Energy Missile, Energy Ball and Energy Current now match Swarm of
+  Crystals, Energy Bolt and Energy Cone.
+- Changed Baleful Teleport (`PS5BALT`) to save vs death, the mod's Fortitude
+  proxy, matching the tabletop power's Fortitude save.
+- Added the missing hostile spell flags to Dispel Psionics, which every other
+  offensive level-3 power already set.
+- Extended the validation suites to lock in each correction, including negative
+  assertions against the previous values.
+
 ## 1.0.0
 
 - Promoted the Psion component from alpha to the first installable release.
@@ -206,7 +236,7 @@
 ## 0.1.0-alpha
 
 - Added six Psion discipline classes with dynamic class identifiers.
-- Added D&D 3e pool and powers-known progressions.
+- Added D&D 3.5e pool and powers-known progressions.
 - Added persistent Intelligence-based point accounting and rest restoration.
 - Added 60 level 1–5 prototype power definitions.
 - Added documented discipline, skill, feat and augmentation metadata.

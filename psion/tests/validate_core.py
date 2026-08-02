@@ -195,6 +195,7 @@ def validate_builders() -> None:
         "PS1ERAY": (level1, "psion_create_level1_power", ("opcode = 12", "dicesize = 6")),
         "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
         "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
+        "PS1FSCR": (level1, "psion_create_level1_power", ("opcode = 0", "parameter1 = (0 - 4)", "opcode = 206")),
         "PS1PREC": (level1, "psion_create_level1_power", ("opcode = 54", "parameter1 = 1", "parameter1 = (0 - 1)")),
         "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
         "PS1BRST": (level1, "psion_create_level1_power", ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
@@ -218,6 +219,11 @@ def validate_builders() -> None:
 
     assert "savebonus = ps_save_penalty" in mind_vigor
     assert "save_bonus = ps_save_penalty" not in mind_vigor
+
+    # Mind Thrust augments damage by 1d10 per additional power point, and the
+    # save DC by 1 for each extra 2d10, so the penalty is floor((cost - 1) / 2).
+    assert "dicenumber = ps_cost" in mind_vigor
+    assert "ps_save_penalty = (0 - ((ps_cost - 1) / 2))" in mind_vigor
 
 
 def validate_augmentation() -> None:

@@ -74,7 +74,7 @@ def manifester_level(actor):
 
 
 def maximum_pool(actor):
-    """Return D&D 3e base PP plus the Intelligence bonus PP."""
+    """Return D&D 3.5e base PP plus the Intelligence bonus PP."""
     level = manifester_level(actor)
     if not level:
         return 0
@@ -310,7 +310,7 @@ def _meets_base_requirements(actor, info):
 
 
 def _variant_is_affordable(actor, info):
-    """Check the D&D 3e spending cap and the actor's current PP reserve."""
+    """Check the D&D 3.5e spending cap and the actor's current PP reserve."""
     return (
         info["cost"] <= manifester_level(actor)
         and ensure_pool(actor) >= info["cost"]
