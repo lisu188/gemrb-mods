@@ -15,6 +15,30 @@ OUTER_SET smc_split_class_tables = 0
 OUTER_SET smc_classes_cols = 0
 OUTER_SET smc_clastext_cols = 0
 OUTER_SET smc_clskills_cols = 0
+OUTER_SET smc_clskills_rows = 0
+OUTER_SET smc_clskills_id = (0 - 1)
+OUTER_SET smc_clskills_matches = 0
+OUTER_SET smc_expected_class_id = (0 - 1)
+OUTER_SET smc_class_id = (0 - 1)
+OUTER_SET smc_class_table_matches = 0
+OUTER_SET smc_class_id_conflict = 0
+OUTER_SET smc_valid_class_ids = 0
+OUTER_SET smc_cleric_clskills_id = (0 - 1)
+OUTER_SET smc_sorcerer_clskills_id = (0 - 1)
+OUTER_SET smc_monk_clskills_id = (0 - 1)
+OUTER_SET smc_cleric_class_id = (0 - 1)
+OUTER_SET smc_sorcerer_class_id = (0 - 1)
+OUTER_SET smc_monk_class_id = (0 - 1)
+OUTER_SET smc_ids_class_id = (0 - 1)
+OUTER_SET smc_ids_numeric_conflict = 0
+OUTER_SET smc_fistweap_cols = 0
+OUTER_SET smc_fistweap_id_conflict = 0
+OUTER_SET smc_xpcap = (0 - 2)
+OUTER_SET smc_xpcap_cols = 0
+OUTER_SET smc_found_cleric_xpcap = 0
+OUTER_SET smc_found_sorcerer_xpcap = 0
+OUTER_SET smc_found_monk_xpcap = 0
+OUTER_SPRINT smc_ids_class_symbol ~~
 
 // Preflight the active GemRB schemas before modifying any table or allocating
 // translated TLK strings. HPCLASS.2DA can exist alongside the released combined
@@ -42,11 +66,199 @@ ACTION_IF smc_split_class_tables = 1 THEN BEGIN
   END
 END
 
+// The class ID must equal the class's CLSKILLS row index. Fresh installs use
+// the next row, which is 21 on classic BG2-style layouts and 22 on EE layouts
+// that include Shaman. The fixed MULTI mask assumes Cleric=3, Sorcerer=19 and
+// Monk=20, so verify those component slots before using it.
 COPY_EXISTING ~clskills.2da~ ~override~
   COUNT_2DA_COLS smc_clskills_cols
+  READ_2DA_ENTRIES_NOW ~smc_clskills~ smc_clskills_cols
+  SET smc_clskills_rows = smc_clskills
+  FOR (smc_i = 0; smc_i < smc_clskills; ++smc_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~smc_clskills~ smc_i 0 smc_skill_class
+    PATCH_IF (~%smc_skill_class%~ STRING_EQUAL_CASE ~CLERIC~) BEGIN
+      SET smc_cleric_clskills_id = smc_i
+    END
+    PATCH_IF (~%smc_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+      SET smc_sorcerer_clskills_id = smc_i
+    END
+    PATCH_IF (~%smc_skill_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      SET smc_monk_clskills_id = smc_i
+    END
+    PATCH_IF (~%smc_skill_class%~ STRING_EQUAL_CASE ~SORCERER_MONK_CLERIC~) BEGIN
+      SET smc_clskills_matches += 1
+      SET smc_clskills_id = smc_i
+    END
+  END
 BUT_ONLY
+
 ACTION_IF (smc_clskills_cols != 16) AND (smc_clskills_cols != 17) THEN BEGIN
   FAIL @8
+END
+ACTION_IF smc_clskills_matches > 1 THEN BEGIN
+  FAIL @14
+END
+ACTION_IF (smc_cleric_clskills_id != 3) OR (smc_sorcerer_clskills_id != 19) OR (smc_monk_clskills_id != 20) THEN BEGIN
+  FAIL @10
+END
+
+ACTION_IF smc_clskills_id >= 0 THEN BEGIN
+  OUTER_SET smc_expected_class_id = smc_clskills_id
+END ELSE BEGIN
+  OUTER_SET smc_expected_class_id = smc_clskills_rows
+END
+ACTION_IF (smc_expected_class_id < 1) OR (smc_expected_class_id > 31) THEN BEGIN
+  FAIL @9
+END
+
+// Validate the active class-ID table against CLSKILLS and reserve the expected
+// ID before any changes are made.
+ACTION_IF smc_split_class_tables = 1 THEN BEGIN
+  COPY_EXISTING ~clastext.2da~ ~override~
+    READ_2DA_ENTRIES_NOW ~smc_classtext~ smc_clastext_cols
+    FOR (smc_i = 0; smc_i < smc_classtext; ++smc_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~smc_classtext~ smc_i 0 smc_class_name
+      READ_2DA_ENTRY_FORMER ~smc_classtext~ smc_i 1 smc_existing_id
+      PATCH_IF IS_AN_INT ~%smc_existing_id%~ BEGIN
+        SET smc_valid_class_ids += 1
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~CLERIC~) BEGIN
+          SET smc_cleric_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+          SET smc_sorcerer_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          SET smc_monk_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~SORCERER_MONK_CLERIC~) BEGIN
+          SET smc_class_table_matches += 1
+          SET smc_class_id = smc_existing_id
+        END ELSE PATCH_IF smc_existing_id = smc_expected_class_id BEGIN
+          SET smc_class_id_conflict = 1
+        END
+      END
+    END
+  BUT_ONLY
+END ELSE BEGIN
+  COPY_EXISTING ~classes.2da~ ~override~
+    READ_2DA_ENTRIES_NOW ~smc_classes~ smc_classes_cols
+    FOR (smc_i = 0; smc_i < smc_classes; ++smc_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~smc_classes~ smc_i 0 smc_class_name
+      READ_2DA_ENTRY_FORMER ~smc_classes~ smc_i 6 smc_existing_id
+      PATCH_IF IS_AN_INT ~%smc_existing_id%~ BEGIN
+        SET smc_valid_class_ids += 1
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~CLERIC~) BEGIN
+          SET smc_cleric_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+          SET smc_sorcerer_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          SET smc_monk_class_id = smc_existing_id
+        END
+        PATCH_IF (~%smc_class_name%~ STRING_EQUAL_CASE ~SORCERER_MONK_CLERIC~) BEGIN
+          SET smc_class_table_matches += 1
+          SET smc_class_id = smc_existing_id
+        END ELSE PATCH_IF smc_existing_id = smc_expected_class_id BEGIN
+          SET smc_class_id_conflict = 1
+        END
+      END
+    END
+  BUT_ONLY
+END
+
+ACTION_IF smc_class_table_matches > 1 THEN BEGIN
+  FAIL @14
+END
+ACTION_IF (smc_cleric_class_id != 3) OR (smc_sorcerer_class_id != 19) OR (smc_monk_class_id != 20) THEN BEGIN
+  FAIL @10
+END
+ACTION_IF smc_valid_class_ids < 1 THEN BEGIN
+  FAIL @11
+END
+ACTION_IF smc_class_id_conflict = 1 THEN BEGIN
+  FAIL @11
+END
+ACTION_IF (smc_class_id >= 0) AND (smc_class_id != smc_expected_class_id) THEN BEGIN
+  FAIL @11
+END
+ACTION_IF smc_class_id < 0 THEN BEGIN
+  OUTER_SET smc_class_id = smc_expected_class_id
+END
+
+// CLASS.IDS must agree in both directions with the allocated numeric ID.
+OUTER_SET smc_ids_class_id = IDS_OF_SYMBOL (~class~ ~SORCERER_MONK_CLERIC~)
+ACTION_IF (smc_ids_class_id >= 0) AND (smc_ids_class_id != smc_class_id) THEN BEGIN
+  FAIL @12
+END
+OUTER_PATCH ~~ BEGIN
+  LOOKUP_IDS_SYMBOL_OF_INT smc_ids_class_symbol ~class~ smc_class_id
+END
+ACTION_IF IS_AN_INT ~%smc_ids_class_symbol%~ THEN BEGIN
+  OUTER_SET smc_ids_numeric_conflict = 0
+END ELSE BEGIN
+  ACTION_IF !(~%smc_ids_class_symbol%~ STRING_EQUAL_CASE ~SORCERER_MONK_CLERIC~) THEN BEGIN
+    OUTER_SET smc_ids_numeric_conflict = 1
+  END
+END
+ACTION_IF smc_ids_numeric_conflict = 1 THEN BEGIN
+  FAIL @12
+END
+
+// FISTWEAP rows are keyed only by numeric class ID. A stale/custom row at the
+// allocated ID has ambiguous ownership, so reject it instead of silently binding
+// another class's fist progression to Sorcerer/Monk/Cleric.
+COPY_EXISTING ~fistweap.2da~ ~override~
+  COUNT_2DA_COLS smc_fistweap_cols
+  READ_2DA_ENTRIES_NOW ~smc_fistweap~ smc_fistweap_cols
+  FOR (smc_i = 0; smc_i < smc_fistweap; ++smc_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~smc_fistweap~ smc_i 0 smc_fistweap_class_id
+    PATCH_IF IS_AN_INT ~%smc_fistweap_class_id%~ BEGIN
+      PATCH_IF smc_fistweap_class_id = smc_class_id BEGIN
+        SET smc_fistweap_id_conflict = 1
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF smc_fistweap_id_conflict = 1 THEN BEGIN
+  FAIL @13
+END
+
+// XP caps are campaign-specific. Inherit the most restrictive cap among the
+// three component classes. -1 is the conventional uncapped value and behaves
+// as infinity when another component has a finite cap.
+COPY_EXISTING ~xpcap.2da~ ~override~
+  COUNT_2DA_COLS smc_xpcap_cols
+  READ_2DA_ENTRIES_NOW ~smc_xpcaps~ smc_xpcap_cols
+  FOR (smc_i = 0; smc_i < smc_xpcaps; ++smc_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~smc_xpcaps~ smc_i 0 smc_xpcap_class
+    PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~CLERIC~) OR (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) OR (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      READ_2DA_ENTRY_FORMER ~smc_xpcaps~ smc_i 1 smc_xpcap_value
+      PATCH_IF IS_AN_INT ~%smc_xpcap_value%~ BEGIN
+        PATCH_IF smc_xpcap_value >= (0 - 1) BEGIN
+          PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~CLERIC~) BEGIN
+            SET smc_found_cleric_xpcap = 1
+          END ELSE PATCH_IF (~%smc_xpcap_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+            SET smc_found_sorcerer_xpcap = 1
+          END ELSE BEGIN
+            SET smc_found_monk_xpcap = 1
+          END
+          PATCH_IF smc_xpcap_value = (0 - 1) BEGIN
+            PATCH_IF smc_xpcap = (0 - 2) BEGIN
+              SET smc_xpcap = (0 - 1)
+            END
+          END ELSE PATCH_IF smc_xpcap_value >= 0 BEGIN
+            PATCH_IF (smc_xpcap < 0) OR (smc_xpcap_value < smc_xpcap) BEGIN
+              SET smc_xpcap = smc_xpcap_value
+            END
+          END
+        END
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF (smc_found_cleric_xpcap != 1) OR (smc_found_sorcerer_xpcap != 1) OR (smc_found_monk_xpcap != 1) OR (smc_xpcap < (0 - 1)) THEN BEGIN
+  FAIL @15
 END
 
 OUTER_SET smc_lower = RESOLVE_STR_REF (@1)
@@ -62,10 +274,13 @@ UNLESS ~SORCERER_MONK_CLERIC ~
 APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK_CLERIC  0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
-APPEND ~profs.2da~ ~SORCERER_MONK_CLERIC  2 5~
+// GemRB's multiclass proficiency logic uses the combined class RATE while
+// selecting the fastest component's level. Match Monk, the fastest component,
+// at one proficiency point every four levels; keep Monk's two starting points.
+APPEND ~profs.2da~ ~SORCERER_MONK_CLERIC 2 4~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
-APPEND ~xpcap.2da~ ~SORCERER_MONK_CLERIC  8000000~
+APPEND ~xpcap.2da~ ~SORCERER_MONK_CLERIC %smc_xpcap%~
 UNLESS ~SORCERER_MONK_CLERIC ~
 
 APPEND_COL ~25stweap.2da~ ~$ $ SORCERER_MONK_CLERIC  * * HELM19 BAG23 RING31 RING27 CLCK02 BOOT05 AMUL21 BRAC09 BELT10 * BULL03,40 * POTN52,5 * * * * *~
@@ -93,31 +308,36 @@ APPEND ~lunumab.2da~ ~SORCERER_MONK_CLERIC 14          1          99           1
 // avatar class value (partial Animation ID)
 APPEND ~avprefc.2da~ ~SORCERER_MONK_CLERIC          0x500~
 
-// Class details. Current GemRB split tables use the class name as the
-// CLASSTEXT row label; native EE variants add biography/brief/fallen fields.
+// True multiclasses derive saving throws and hit points from their component
+// classes. The combined metadata therefore uses '*' rather than selecting
+// Cleric saves or full Monk hit points. The race intersection is human-only.
 ACTION_IF smc_split_class_tables = 1 THEN BEGIN
   ACTION_IF smc_clastext_cols = 6 THEN BEGIN
-    OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 * %smc_lower% %smc_desc% %smc_mixed%~
+    OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC %smc_class_id% * %smc_lower% %smc_desc% %smc_mixed%~
   END ELSE BEGIN
     ACTION_IF smc_clastext_cols = 9 THEN BEGIN
-      OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief%~
+      OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC %smc_class_id% 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief%~
     END ELSE BEGIN
-      OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC 22 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief% -1~
+      OUTER_SPRINT smc_classtext_row ~SORCERER_MONK_CLERIC %smc_class_id% 16384 %smc_lower% %smc_desc% %smc_mixed% -1 0 %smc_brief% -1~
     END
   END
 
   APPEND ~clastext.2da~ ~%smc_classtext_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~clsrcreq.2da~ ~SORCERER_MONK_CLERIC  1 1 1 0 0 2 0~
+  APPEND ~clsrcreq.2da~ ~SORCERER_MONK_CLERIC 1 0 0 0 0 0 0~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~hpclass.2da~ ~SORCERER_MONK_CLERIC  HPMONK~
+  APPEND ~hpclass.2da~ ~SORCERER_MONK_CLERIC *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
-  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC  SAVEPRS 786436 0x40000 -1 0 9~
+  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC * 786436 0x40000 -1 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 22 * 0x40000 -1 1 1 1 0 0 2 0 0 9~
+  APPEND ~classes.2da~ ~SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 0 0 0 0 0 0 0 9~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 END
+
+// Register the runtime class ID for scripts and other mods.
+APPEND ~class.ids~ ~%smc_class_id% SORCERER_MONK_CLERIC~
+  UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK_CLERIC\([ %TAB%]\|$\)~
 
 // Class skills. The released layout contains the legacy NO_PROF column while
 // current GemRB removes it; both rows include the final SPONCAST field.
@@ -130,16 +350,17 @@ END ELSE BEGIN
 END
 
 // add monk fists
-APPEND ~fistweap.2da~ ~22       MFIST1     MFIST1     MFIST2     MFIST2     MFIST2     MFIST3     MFIST3     MFIST3     MFIST4     MFIST4     MFIST4     MFIST5     MFIST5     MFIST5     MFIST6     MFIST6     MFIST6     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST7     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8     MFIST8~
+APPEND ~fistweap.2da~ ~%smc_class_id% MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
+  UNLESS ~^[ %TAB%]*%smc_class_id%\([ %TAB%]\|$\)~
 
 // action bar setup
 APPEND ~qslots.2da~ ~SORCERER_MONK_CLERIC       0          3          4          2          8          9          11         12        13~
 
-// monk "thieving" skills
+// Monk is the only component with THIEFSKILL, so use Monk's availability and
+// progression. Current GemRB uses the combined class's THIEFSCL/THIEFSKL data.
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
-  // gemrb since 0.9.5-git
   APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK_CLERIC 0 0 1 1 1 0 0~
-  APPEND ~thiefskl.2da~ ~SORCERER_MONK_CLERIC 10 5~
+  APPEND ~thiefskl.2da~ ~SORCERER_MONK_CLERIC 0 10~
 END ELSE BEGIN
-  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK_CLERIC 10 5 -1 -1 -1 1 1 -1 -1~
+  APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK_CLERIC 10 10 -1 -1 1 1 1 -1 -1~
 END

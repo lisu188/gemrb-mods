@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 from weidu_smoke import ROOT, build_fixture, run_weidu, write_2da
+from weidu_smc_layout_smoke import add_cleric_identity
 
 
 SMC = ROOT / "sorcerer-monk-cleric"
@@ -25,6 +26,7 @@ def prepare_both(game):
     build_fixture(game)
     shutil.copytree(SMC, game / "sorcerer-monk-cleric")
     override = game / "override"
+    add_cleric_identity(override)
     write_2da(
         override / "25stweap.2da",
         ["MAGE"],
