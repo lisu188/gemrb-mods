@@ -1,5 +1,5 @@
 // Allocate six consecutive class IDs above every class already registered by
-// the game or earlier mods. GemRB's normalized split CLASSTEXT layout has six
+// the game or earlier mods. GemRB's normalized split CLASTEXT layout has six
 // fields including the row label, while native Enhanced Edition tables have ten.
 // Do not use COUNT_2DA_COLS here: some GemRB tables end with explanatory # lines
 // containing more tokens than the real header.
@@ -12,7 +12,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
 
   COPY_EXISTING ~clastext.2da~ ~override~
     // BIOGRAPHY is unique to the native EE layout. INDEX_BUFFER inspects the
-    // active game resource, so this also works when CLASSTEXT is stored in a BIF.
+    // active game resource, so this also works when CLASTEXT is stored in a BIF.
     SET ps_detect_cols = 6
     PATCH_IF (INDEX_BUFFER (~BIOGRAPHY~) >= 0) BEGIN
       SET ps_detect_cols = 10
