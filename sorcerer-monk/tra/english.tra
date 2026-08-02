@@ -14,7 +14,7 @@ Dual-classing is not supported.~
 @8 = ~A lawful spontaneous arcane caster trained in unarmed combat and monastic disciplines.~
 @9 = ~Could not determine the existing numeric class identifiers from the GemRB class tables.~
 @10 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
-@12 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
+@12 = ~Unsupported CLASTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
 @13 = ~The GemRB class tables and CLSKILLS.2DA disagree about the numeric class identifier required for Sorcerer/Monk. Remove or reorder conflicting custom-class mods before installing.~
 @14 = ~Could not determine valid Sorcerer and Monk experience caps from XPCAP.2DA.~
 @15 = ~Unsupported CLASSES.2DA layout. Expected the released combined or current split GemRB format.~

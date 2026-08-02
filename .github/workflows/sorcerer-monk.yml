@@ -49,8 +49,8 @@ jobs:
         run: python sorcerer-monk/tests/weidu_smoke.py weidu
       - name: Real WeiDU released and split layout smoke tests
         run: python sorcerer-monk/tests/weidu_layout_smoke.py weidu
-      - name: Real WeiDU native EE CLASSTEXT smoke tests
-        run: python sorcerer-monk/tests/weidu_native_classtext_smoke.py weidu
+      - name: Real WeiDU native EE CLASTEXT smoke tests
+        run: python sorcerer-monk/tests/weidu_native_clastext_smoke.py weidu
       - name: Real WeiDU sibling exclusion smoke tests
         run: python sorcerer-monk/tests/weidu_sibling_exclusion_smoke.py weidu
       - name: Real WeiDU Sorcerer Monk Cleric layout smoke tests

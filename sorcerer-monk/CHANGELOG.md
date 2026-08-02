@@ -10,8 +10,8 @@
 - Added canonical base-class checks requiring Sorcerer ID/row 19 and Monk ID/row 20 before using the fixed Sorcerer/Monk multiclass mask.
 - Added bidirectional `CLASS.IDS` consistency checks so neither the `SORCERER_MONK` symbol nor its allocated numeric ID can conflict with another registration.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
-- Added support for development GemRB versions that split class data across `CLASSTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
-- Added explicit handling for normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` formats.
+- Added support for development GemRB versions that split class data across `CLASTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
+- Added explicit handling for normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASTEXT.2DA` formats.
 - Added Tutu, Tutu_TotSC, BGEE and Classic Adventures to the supported game list.
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
