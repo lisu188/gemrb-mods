@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Extended every augmentation ladder to the manifester-level cap of 20 power
+  points. The cap was already enforced correctly, but each ladder stopped at
+  9 PP, so a Psion above level 9 could never reach it. Energy Ray now runs
+  1-20 PP per energy type, Mind Thrust and Vigor 1-20, and Swarm of Crystals
+  3-20. Generated augment children go from 57 to 142.
+- Added the missing Swarm of Crystals augmentation (+1d4 per additional power
+  point). It is now an opcode-214 selector built by `swarm-augment.tpa`, and
+  the dead direct build has been removed from `level2-powers.tpa` rather than
+  left to be deleted and rebuilt during install.
+- Fixed Animal Affinity so its augment line is reachable. Each child now strips
+  only its own resource instead of all its siblings, so boosting a second
+  ability no longer cancels the first, and Charisma joins Strength, Dexterity
+  and Constitution as a legal choice.
+- Extended the Vigor refresh strip to the whole ladder. It covered only the
+  first nine tiers, so a 10 PP or higher Vigor would have stacked on top of a
+  lower one instead of replacing it.
+- Replaced the hand-written augmentation arrays with loops bounded by a single
+  `psion_max_augment_cost` constant in `power-data.tpa`, and added
+  `psion/tools/generate_augment_tables.py` as the sole producer of the checked-in
+  table data. The ladder was previously written out three times -- the augment
+  table, the selector tables and the WeiDU arrays -- which does not scale to 142
+  rows. CI now runs the generator's `--check` mode so the committed tables
+  cannot drift from the constant.
+- Removed the `AUGMENT_STEP` column from `psionpowers.2da` and `Psionics.py`.
+  It was read into the runtime dictionary and never used.
+
 - Added saving-throw difficulty scaled by power level. Previously every
   generated effect left `savebonus = 0`, so neither a power's level nor the
   manifester's Intelligence had any bearing on whether it landed — Intelligence

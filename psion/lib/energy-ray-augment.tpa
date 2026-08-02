@@ -63,106 +63,88 @@ LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1ERAY~
     ps_name = ~Energy Ray~
-    ps_description = ~Choose an energy type and spend 1 to 9 power points. Damage dice equal total PP spent and cannot exceed manifester level.~
+    ps_description = ~Choose an energy type and spend power points up to your manifester level. Damage dice equal total PP spent.~
     ps_icon = ~spwi112~
 END
 COPY_EXISTING ~PS1ERAY.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS1ERAY~ END
 BUT_ONLY
 
-ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_fire BEGIN
-  ~PSRF01~ => 1
-  ~PSRF02~ => 2
-  ~PSRF03~ => 3
-  ~PSRF04~ => 4
-  ~PSRF05~ => 5
-  ~PSRF06~ => 6
-  ~PSRF07~ => 7
-  ~PSRF08~ => 8
-  ~PSRF09~ => 9
-END
-ACTION_PHP_EACH psion_energy_fire AS ps_variant => ps_cost BEGIN
-  LAF psion_create_energy_ray_variant
-    INT_VAR
-      ps_cost = ps_cost
-      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~)
-      ps_dice_size = 6
-      ps_flat_bonus = 1
-    STR_VAR
-      ps_resref = ~%ps_variant%~
-      ps_energy_name = ~Fire~
-      ps_icon = ~spwi103~
+// Each energy ladder runs from 1 PP to the manifester-level ceiling defined by
+// psion_max_augment_cost, so a high-level Psion can spend up to their level on
+// a single ray as the tabletop rules allow. The four energy definitions stay
+// explicit because they differ in damage type, die size, the fire rider and
+// icon; only the per-cost rows are generated.
+//
+// PSIONAUGMENT.2DA and PS1ERAY.2DA are produced from the same ceiling by
+// psion/tools/generate_augment_tables.py. Resrefs are zero padded to two
+// digits; OUTER_SPRINT has no printf padding, hence the explicit branch.
+DEFINE_ACTION_FUNCTION psion_build_energy_ray_ladder
+INT_VAR
+  ps_damage_type = 0
+  ps_dice_size = 6
+  ps_flat_bonus = 0
+STR_VAR
+  ps_prefix = ~~
+  ps_energy_name = ~~
+  ps_icon = ~spwi112~
+BEGIN
+  OUTER_FOR (ps_ladder_cost = 1; ps_ladder_cost <= psion_max_augment_cost; ++ps_ladder_cost) BEGIN
+    OUTER_SPRINT ps_ladder_index ~%ps_ladder_cost%~
+    ACTION_IF (ps_ladder_cost < 10) BEGIN
+      OUTER_SPRINT ps_ladder_index ~0%ps_ladder_cost%~
+    END
+    LAF psion_create_energy_ray_variant
+      INT_VAR
+        ps_cost = ps_ladder_cost
+        ps_damage_type = ps_damage_type
+        ps_dice_size = ps_dice_size
+        ps_flat_bonus = ps_flat_bonus
+      STR_VAR
+        ps_resref = ~%ps_prefix%%ps_ladder_index%~
+        ps_energy_name = ~%ps_energy_name%~
+        ps_icon = ~%ps_icon%~
+    END
   END
 END
 
-ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_cold BEGIN
-  ~PSRC01~ => 1
-  ~PSRC02~ => 2
-  ~PSRC03~ => 3
-  ~PSRC04~ => 4
-  ~PSRC05~ => 5
-  ~PSRC06~ => 6
-  ~PSRC07~ => 7
-  ~PSRC08~ => 8
-  ~PSRC09~ => 9
-END
-ACTION_PHP_EACH psion_energy_cold AS ps_variant => ps_cost BEGIN
-  LAF psion_create_energy_ray_variant
-    INT_VAR
-      ps_cost = ps_cost
-      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~COLD~)
-      ps_dice_size = 6
-    STR_VAR
-      ps_resref = ~%ps_variant%~
-      ps_energy_name = ~Cold~
-      ps_icon = ~spwi202~
-  END
+LAF psion_build_energy_ray_ladder
+  INT_VAR
+    ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~)
+    ps_dice_size = 6
+    ps_flat_bonus = 1
+  STR_VAR
+    ps_prefix = ~PSRF~
+    ps_energy_name = ~Fire~
+    ps_icon = ~spwi103~
 END
 
-ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_electricity BEGIN
-  ~PSRE01~ => 1
-  ~PSRE02~ => 2
-  ~PSRE03~ => 3
-  ~PSRE04~ => 4
-  ~PSRE05~ => 5
-  ~PSRE06~ => 6
-  ~PSRE07~ => 7
-  ~PSRE08~ => 8
-  ~PSRE09~ => 9
-END
-ACTION_PHP_EACH psion_energy_electricity AS ps_variant => ps_cost BEGIN
-  LAF psion_create_energy_ray_variant
-    INT_VAR
-      ps_cost = ps_cost
-      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~)
-      ps_dice_size = 6
-    STR_VAR
-      ps_resref = ~%ps_variant%~
-      ps_energy_name = ~Electricity~
-      ps_icon = ~spwi113~
-  END
+LAF psion_build_energy_ray_ladder
+  INT_VAR
+    ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~COLD~)
+    ps_dice_size = 6
+  STR_VAR
+    ps_prefix = ~PSRC~
+    ps_energy_name = ~Cold~
+    ps_icon = ~spwi202~
 END
 
-ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_sonic BEGIN
-  ~PSRS01~ => 1
-  ~PSRS02~ => 2
-  ~PSRS03~ => 3
-  ~PSRS04~ => 4
-  ~PSRS05~ => 5
-  ~PSRS06~ => 6
-  ~PSRS07~ => 7
-  ~PSRS08~ => 8
-  ~PSRS09~ => 9
+LAF psion_build_energy_ray_ladder
+  INT_VAR
+    ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~)
+    ps_dice_size = 6
+  STR_VAR
+    ps_prefix = ~PSRE~
+    ps_energy_name = ~Electricity~
+    ps_icon = ~spwi113~
 END
-ACTION_PHP_EACH psion_energy_sonic AS ps_variant => ps_cost BEGIN
-  LAF psion_create_energy_ray_variant
-    INT_VAR
-      ps_cost = ps_cost
-      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
-      ps_dice_size = 4
-    STR_VAR
-      ps_resref = ~%ps_variant%~
-      ps_energy_name = ~Sonic~
-      ps_icon = ~spwi212~
-  END
+
+LAF psion_build_energy_ray_ladder
+  INT_VAR
+    ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
+    ps_dice_size = 4
+  STR_VAR
+    ps_prefix = ~PSRS~
+    ps_energy_name = ~Sonic~
+    ps_icon = ~spwi212~
 END

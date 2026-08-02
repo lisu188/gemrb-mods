@@ -20,6 +20,7 @@ COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
 COPY ~psion/tables/ps1mthr.2da~ ~override/ps1mthr.2da~
 COPY ~psion/tables/ps1vigr.2da~ ~override/ps1vigr.2da~
+COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 

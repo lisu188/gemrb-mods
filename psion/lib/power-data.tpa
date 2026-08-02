@@ -25,6 +25,20 @@
 // tractability, and it is balance-affecting: setting it to 0 reverts every
 // power to the engine's default save difficulty.
 OUTER_SET psion_key_ability_save_penalty = (0 - 2)
+
+// Augmentation ceiling.
+//
+// D&D 3.5 caps a single manifestation at the manifester's level in power
+// points, and the Psion table runs to level 20, so an augment ladder should
+// reach 20 PP rather than stopping at the highest base cost. The runtime
+// already refuses tiers above the actor's level (Psionics.py), so a long ladder
+// costs nothing at low level beyond the generated resources themselves.
+//
+// This must match MAX_AUGMENT_COST in psion/tools/generate_augment_tables.py,
+// which produces PSIONAUGMENT.2DA and the per-parent selector tables from the
+// same number. validate_core.py asserts the two agree. Lowering it here and
+// rerunning the generator is the supported way to shrink the ladders.
+OUTER_SET psion_max_augment_cost = 20
 ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_power_name BEGIN
   ~PS1ERAY~ => ~Energy Ray~
   ~PS1MTHR~ => ~Mind Thrust~
