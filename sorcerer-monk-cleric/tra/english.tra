@@ -1,7 +1,17 @@
-@0 = ~Sorcerer/Monk/Cleric multiclass mod 1.7~
+@0 = ~Sorcerer/Monk/Cleric multiclass for GemRB~
 @1 = ~sorcerer/monk/cleric~
 @2 = ~SORCERER/MONK/CLERIC:
 This is a multiclass-only combination, no dualclassing possible. Mage race and item restrictions, monk avatar, combined starting gear in tob, no detecting traps or turn undead (custom actionbar) ...~
 @3 = ~SORCERER/MONK/CLERIC~
 @4 = ~Sorcerer/Monk/Cleric cannot be installed while Sorcerer/Monk is installed. The two legacy mods share a WeiDU backup namespace and can corrupt each other's uninstall state. Uninstall Sorcerer/Monk first.~
-
+@5 = ~A spontaneous arcane and divine caster trained in monastic disciplines.~
+@6 = ~Unsupported CLASSES.2DA layout. Expected the released combined or current split GemRB format.~
+@7 = ~Unsupported CLASSTEXT.2DA layout. Expected the normalized GemRB or native Enhanced Edition format.~
+@8 = ~Unsupported CLSKILLS.2DA layout. Expected the released or development GemRB format.~
+@9 = ~No compatible GemRB class slot is available for Sorcerer/Monk/Cleric. The class ID must match its CLSKILLS.2DA row index and remain below 32.~
+@10 = ~Cleric, Sorcerer and Monk must retain GemRB class IDs and CLSKILLS.2DA row indices 3, 19 and 20. The current tables are incompatible with the Sorcerer/Monk/Cleric multiclass mask.~
+@11 = ~The GemRB class tables and CLSKILLS.2DA disagree about the numeric class identifier required for Sorcerer/Monk/Cleric. Remove or reorder conflicting custom-class mods before installing.~
+@12 = ~CLASS.IDS conflicts with the numeric class identifier required for Sorcerer/Monk/Cleric. Remove stale symbol or numeric mappings before installing.~
+@13 = ~FISTWEAP.2DA already contains a row for the numeric class identifier allocated to Sorcerer/Monk/Cleric. Remove the conflicting custom-class row before installing.~
+@14 = ~Multiple SORCERER_MONK_CLERIC identity rows already exist in CLSKILLS.2DA or the active class table. Remove the duplicate rows before installing.~
+@15 = ~Could not determine valid Cleric, Sorcerer and Monk experience caps from XPCAP.2DA.~

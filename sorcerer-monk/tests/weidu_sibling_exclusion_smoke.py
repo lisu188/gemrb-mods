@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 from weidu_smoke import ROOT, build_fixture, run_weidu, write_2da
+from weidu_smc_layout_smoke import add_cleric_identity
 
 
 SMC = ROOT / "sorcerer-monk-cleric"
@@ -25,6 +26,7 @@ def prepare_both(game):
     build_fixture(game)
     shutil.copytree(SMC, game / "sorcerer-monk-cleric")
     override = game / "override"
+    add_cleric_identity(override)
     write_2da(
         override / "25stweap.2da",
         ["MAGE"],
@@ -34,7 +36,14 @@ def prepare_both(game):
     write_2da(
         override / "lunumab.2da",
         ["FIRST_LEVEL", "RATE", "MAX_LEVEL", "NUM_ALLOWED"],
-        [("SORCERER", [14, 1, 99, 1]), ("MONK", [14, 1, 99, 1]), ("CLERIC", [14, 1, 99, 1])],
+        [
+            ("SORCERER", [14, 1, 99, 1]),
+            ("MONK", [14, 1, 99, 1]),
+            ("CLERIC", [14, 1, 99, 1]),
+            ("MULTI2SORCERER", [14, 1, 99, 1]),
+            ("MULTI2MONK", [14, 1, 99, 1]),
+            ("MULTI2CLERIC", [14, 1, 99, 1]),
+        ],
     )
 
 
@@ -75,6 +84,18 @@ def assert_blocked(result, expected_message):
     output = result.stdout.casefold()
     print(result.stdout, flush=True)
     assert expected_message.casefold() in output, output
+
+
+def assert_triple_hla_rows(override):
+    rows = [
+        line.split()[0]
+        for line in (override / "lunumab.2da").read_text(encoding="utf-8").splitlines()
+        if line.split()
+    ]
+    for component in ("SORCERER", "MONK", "CLERIC"):
+        assert rows.count(f"MULTI2{component}") == 1, rows
+        assert rows.count(f"MULTI3{component}") == 1, rows
+    assert rows.count("SORCERER_MONK_CLERIC") == 1, rows
 
 
 def exercise_sm_then_smc(weidu):
@@ -118,6 +139,7 @@ def exercise_smc_then_sm(weidu):
             "sorcerer-monk-cleric/setup-sorcerer-monk-cleric.tp2",
             "--force-install-list", "0",
         )
+        assert_triple_hla_rows(override)
         installed = snapshot(override)
         blocked = run_component(
             weidu,
@@ -139,7 +161,7 @@ def exercise_smc_then_sm(weidu):
             "--force-uninstall", "0",
         )
         assert_snapshot(override, originals, "SMC uninstall after blocked SM")
-        print("SMC -> blocked SM -> uninstall SMC: OK", flush=True)
+        print("SMC -> triple HLA rows -> blocked SM -> uninstall SMC: OK", flush=True)
 
 
 def main():
