@@ -72,7 +72,7 @@ See `CHANGELOG.md` for the itemised list.
 
 ## Compatibility notes
 
-The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in GemRB's normalized six-column form and in native EE nine- or ten-column forms.
+The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASTEXT.2DA` is accepted in GemRB's normalized six-column form and in native EE nine- or ten-column forms.
 
 GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. `CLSKILLS.2DA` and the active class table must each contain at most one `SORCERER_MONK` identity row; duplicates are rejected before installation can depend on lookup order. The Sorcerer/Monk component mask is built for Sorcerer ID 19 and Monk ID 20, so the installer also verifies those base-class IDs and their `CLSKILLS.2DA` row positions before making changes. `CLASS.IDS` must agree in both directions: `SORCERER_MONK` must resolve to the allocated ID, and the allocated ID must not already resolve to another class symbol.
 
