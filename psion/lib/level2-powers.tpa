@@ -41,6 +41,9 @@ END
 
 OUTER_SET psion_level2_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
 
+// Power-level share of the tabletop save DC; see level1-powers.tpa.
+OUTER_SET psion_level2_save_penalty = (psion_key_ability_save_penalty - 1)
+
 // BG-family games use New_Cone_Of_Cold, while IWDEE retains the older symbol.
 // Use WeiDU's game predicate instead of relying on an undeclared helper variable.
 OUTER_SET psion_cone_projectile = IDS_OF_SYMBOL (~missile~ ~New_Cone_Of_Cold~)
@@ -131,22 +134,11 @@ COPY_EXISTING ~PS2BIOF.spl~ ~override~
   END
 BUT_ONLY
 
-// Swarm of Crystals: a cone of slashing shards, save vs breath for half.
-LAF psion_create_level2_power
-  INT_VAR
-    ps_target = 4
-    ps_range = 25
-    ps_projectile = psion_cone_projectile
-    ps_flags = psion_level2_hostile_flags
-  STR_VAR
-    ps_resref = ~PS2SWCR~
-    ps_name = ~Swarm of Crystals~
-    ps_description = ~A cone of razor-edged crystals deals 3d4 slashing damage. A successful save vs breath halves the damage.~
-    ps_icon = ~spwi217~
-END
-COPY_EXISTING ~PS2SWCR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~) dicenumber = 3 dicesize = 4 savingthrow = BIT1 special = BIT8 END
-BUT_ONLY
+// Swarm of Crystals is augmentable (+1d4 per additional power point), so it is
+// built entirely in swarm-augment.tpa as an opcode-214 selector over its
+// PSSC03-PSSC20 children. Creating a direct version here would only be deleted
+// and rebuilt later in the install, which is the dead-resource pattern the
+// Energy Ray and Mind Thrust builds still carry.
 
 // Clairvoyant Sense: remote cameras are area/script specific. The portable
 // implementation grants enhanced vision, invisibility detection and trap lore.
@@ -196,7 +188,7 @@ LAF psion_create_level2_power
     ps_icon = ~spwi215~
 END
 COPY_EXISTING ~PS2EMIS.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 3 dicesize = 6 savingthrow = BIT1 savebonus = psion_level2_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Animal Affinity becomes a free selector. Its three children are generated in
@@ -205,7 +197,7 @@ LAF psion_create_level2_power
   STR_VAR
     ps_resref = ~PS2AAFF~
     ps_name = ~Animal Affinity~
-    ps_description = ~Choose Strength, Dexterity, or Constitution. The selected physical ability increases by 4 for one turn. The choice costs 3 power points in total.~
+    ps_description = ~Choose Strength, Dexterity, Constitution, or Charisma. The selected ability increases by 4 for one turn at a cost of 3 power points. Manifest again to boost an additional ability.~
     ps_icon = ~sppr205~
 END
 COPY_EXISTING ~PS2AAFF.spl~ ~override~
@@ -243,5 +235,5 @@ LAF psion_create_level2_power
     ps_icon = ~spwi211~
 END
 COPY_EXISTING ~PS2BRLK.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level2_save_penalty END
 BUT_ONLY

@@ -10,4 +10,5 @@ INCLUDE ~psion/lib/level4-powers.tpa~
 INCLUDE ~psion/lib/level5-powers.tpa~
 INCLUDE ~psion/lib/energy-ray-augment.tpa~
 INCLUDE ~psion/lib/mind-vigor-augment.tpa~
+INCLUDE ~psion/lib/swarm-augment.tpa~
 INCLUDE ~psion/lib/animal-affinity.tpa~

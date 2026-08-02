@@ -8,12 +8,14 @@ ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_animal_affinity_stat BEGIN
   ~PSAASTR~ => 44 // Strength modifier
   ~PSAADEX~ => 15 // Dexterity modifier
   ~PSAACON~ => 10 // Constitution modifier
+  ~PSAACHA~ => 6  // Charisma modifier
 END
 
 ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_animal_affinity_name BEGIN
   ~PSAASTR~ => ~Animal Affinity: Strength~
   ~PSAADEX~ => ~Animal Affinity: Dexterity~
   ~PSAACON~ => ~Animal Affinity: Constitution~
+  ~PSAACHA~ => ~Animal Affinity: Charisma~
 END
 
 ACTION_PHP_EACH psion_animal_affinity_stat AS ps_resref => ps_opcode BEGIN
@@ -22,7 +24,7 @@ ACTION_PHP_EACH psion_animal_affinity_stat AS ps_resref => ps_opcode BEGIN
   COPY_EXISTING ~%ps_resref%.spl~ ~override~
     SAY NAME1 ~%ps_name%~
     WRITE_LONG NAME2 0xffffffff
-    SAY UNIDENTIFIED_DESC ~The selected physical ability increases by 4 for one turn. This manifestation costs 3 power points.~
+    SAY UNIDENTIFIED_DESC ~The selected ability increases by 4 for one turn. This manifestation costs 3 power points. Manifesting again for a different ability adds that bonus alongside this one.~
     WRITE_LONG DESC 0xffffffff
     WRITE_SHORT 0x1c 4
     WRITE_LONG 0x18 (BIT14 BOR BIT25)
@@ -32,11 +34,12 @@ ACTION_PHP_EACH psion_animal_affinity_stat AS ps_resref => ps_opcode BEGIN
       INT_VAR target = 5 range = 0x7fff speed = 3 projectile = 1
       STR_VAR icon = ~sppr205B~
     END
-    // Refresh the entire parent power rather than allowing multiple physical
-    // ability choices to coexist from repeated manifestations.
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAASTR~ END
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAADEX~ END
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAACON~ END
+    // Strip only this child's own resource, so re-manifesting the same ability
+    // refreshes rather than stacks while a different ability can run alongside
+    // it. The tabletop augment line grants +4 to an additional ability for
+    // every 4 extra power points; stripping the siblings here, as an earlier
+    // revision did, made that outcome unreachable no matter how much was spent.
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~%ps_resref%~ END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_opcode target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
   BUT_ONLY
 END

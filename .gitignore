@@ -1,0 +1,5 @@
+# Python bytecode caches. The Psion validators call py_compile on
+# guiscripts/Psionics.py and tools/install_guiscripts.py to prove they parse,
+# which writes __pycache__ next to each source file on every run.
+__pycache__/
+*.py[cod]

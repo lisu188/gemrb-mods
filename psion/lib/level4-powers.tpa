@@ -41,6 +41,9 @@ END
 
 OUTER_SET psion_level4_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
 
+// Power-level share of the tabletop save DC; see level1-powers.tpa.
+OUTER_SET psion_level4_save_penalty = (psion_key_ability_save_penalty - 3)
+
 // Energy Adaptation: the tabletop power protects against one chosen energy
 // type. Until a dedicated four-way selector is added, the portable version
 // grants a smaller 25% bonus to acid, cold, electricity and fire together.
@@ -128,8 +131,8 @@ LAF psion_create_level4_power
     ps_icon = ~spwi412~
 END
 COPY_EXISTING ~PS4TKMN.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 8 savingthrow = BIT1 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 39 target = 2 resist_dispel = BIT0 parameter2 = 0 timing = 0 duration = 6 savingthrow = BIT1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 8 savingthrow = BIT1 savebonus = psion_level4_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 39 target = 2 resist_dispel = BIT0 parameter2 = 0 timing = 0 duration = 6 savingthrow = BIT1 savebonus = psion_level4_save_penalty END
 BUT_ONLY
 
 // Power Leech: custom PP transfer requires access to both actors' persistent
@@ -149,7 +152,7 @@ LAF psion_create_level4_power
 END
 COPY_EXISTING ~PS4PLEE.spl~ ~override~
   PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 20 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 20 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level4_save_penalty END
   END
 BUT_ONLY
 
@@ -201,7 +204,7 @@ LAF psion_create_level4_power
     ps_icon = ~spwi414~
 END
 COPY_EXISTING ~PS4EBAL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 7 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 7 dicesize = 6 savingthrow = BIT1 savebonus = psion_level4_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Metamorphosis: the first portable form is a powerful bear-like body. A later
@@ -257,5 +260,5 @@ LAF psion_create_level4_power
     ps_icon = ~spwi405~
 END
 COPY_EXISTING ~PS4COMP.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level4_save_penalty END
 BUT_ONLY

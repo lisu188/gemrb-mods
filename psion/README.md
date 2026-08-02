@@ -53,6 +53,12 @@ for a manual full-campaign playthrough on every supported game configuration.
 - Full PP restoration after ordinary and temple resting.
 - Base costs of 1, 3, 5, 7 and 9 PP for power levels 1–5.
 - Maximum PP expenditure per manifestation equal to Psion level.
+- Power-level scaled saving-throw difficulty. The tabletop DC of
+  `10 + power level + Intelligence modifier` has no Infinity Engine equivalent,
+  so each generated effect carries a `savebonus` combining a power-level term
+  of `-(level - 1)` with the `+2` key-ability modifier guaranteed by the
+  Intelligence 15 chargen minimum. Intelligence above 15 does not further
+  improve save difficulty; see below.
 - Discipline, Intelligence, manifester-level and current-pool validation.
 - Cancellation-safe two-phase PP transactions.
 - Quickslot/action-bar configuration is excluded from PP transactions, so
@@ -93,7 +99,8 @@ for a manual full-campaign playthrough on every supported game configuration.
 - ToB `LUNUMAB` rows keep HLA arithmetic valid while postponing HLA eligibility;
   version 1.0 intentionally does not implement epic Psion powers.
 - Purpose-built resources for all sixty powers at levels 1–5.
-- Fifty-seven registered augmentation or choice child resources.
+- 142 registered augmentation or choice child resources, generated from the
+  `psion_max_augment_cost` ceiling rather than hand-written.
 - Backup-safe GemRB GUI-script installation and removal.
 - Ownership-aware installation of the standalone `Psionics.py` runtime module.
 - Read-only GUI compatibility preflight before the installer writes any file.
@@ -135,10 +142,19 @@ PP runtime remains the same resource GemRB casts.
 
 Current selectors:
 
-- **Energy Ray:** fire, cold, electricity and sonic variants costing 1–9 PP.
-- **Mind Thrust:** 1d10–9d10 variants costing 1–9 PP.
-- **Vigor:** 5–45 temporary-HP-equivalent variants costing 1–9 PP.
-- **Animal Affinity:** +4 Strength, Dexterity or Constitution for 3 PP.
+- **Energy Ray:** fire, cold, electricity and sonic variants costing 1–20 PP.
+- **Mind Thrust:** 1d10–20d10 variants costing 1–20 PP.
+- **Vigor:** 5–100 temporary-HP-equivalent variants costing 1–20 PP.
+- **Swarm of Crystals:** 3d4–20d4 cone variants costing 3–20 PP.
+- **Animal Affinity:** +4 Strength, Dexterity, Constitution or Charisma for
+  3 PP each. Manifesting again for a different ability adds that bonus
+  alongside the first, which is how the tabletop augment line is reached.
+
+Ladders run to 20 PP because D&D 3.5 caps a single manifestation at the
+manifester's level in power points. The ceiling is `psion_max_augment_cost` in
+`psion/lib/power-data.tpa`; `psion/tools/generate_augment_tables.py` produces
+`PSIONAUGMENT.2DA` and the selector tables from the same number, and CI checks
+they agree.
 
 ## Power catalogue
 
@@ -179,6 +195,12 @@ following portable approximations are intentional and documented in source
 comments and in-game descriptions:
 
 - Will saves use save vs spell or broad BG saving-throw modifiers.
+- Saving-throw difficulty scales with power level but not with the manifester's
+  Intelligence. GemRB exposes no way to vary an installed SPL's `savebonus` by
+  the caster's runtime stats: `ModifyEffect` only moves an effect's target
+  coordinates, and `PrepareSpontaneousCast`, the one substitution hook, would
+  need a separate resource per Intelligence bracket for all sixty powers. The
+  guaranteed `+2` from the Intelligence 15 chargen minimum is baked in instead.
 - Vigor uses timed HP effects instead of native temporary HP.
 - Concealment uses Blur, AC and saving-throw bonuses.
 - Biofeedback uses percentage rather than flat damage reduction.

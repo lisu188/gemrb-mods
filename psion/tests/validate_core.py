@@ -52,7 +52,7 @@ def section(text: str, function: str, resref: str) -> str:
 
 def validate_tables() -> None:
     expected = {
-        "psionpowers.2da": ["NAME", "LEVEL", "DISCIPLINE", "BASE_COST", "AUGMENT_STEP", "TEMPLATE"],
+        "psionpowers.2da": ["NAME", "LEVEL", "DISCIPLINE", "BASE_COST", "TEMPLATE"],
         "psionaugment.2da": ["PARENT", "TOTAL_COST", "EFFECT", "VALUE"],
         "ps1eray.2da": ["ResRef", "Type"],
         "ps1mthr.2da": ["ResRef", "Type"],
@@ -177,11 +177,25 @@ def validate_builders() -> None:
     assert "COPY_EXISTING" not in compatibility
     assert "ACTION_PHP_EACH" not in compatibility
 
+    # Augmentable powers are built by their own selector module instead of the
+    # level builder, so that module is where their parent resource is created.
+    AUGMENT_MODULES = {"PS2SWCR": "swarm-augment.tpa"}
+
     for level, expected_refs in LEVEL_REFS.items():
         filename = f"level{level}-powers.tpa"
         assert filename in driver
         text = (ROOT / "lib" / filename).read_text(encoding="utf-8")
         created = set(re.findall(fr"ps_resref = ~(PS{level}[A-Z0-9]+)~", text))
+        for resref, module in AUGMENT_MODULES.items():
+            if resref not in expected_refs:
+                continue
+            assert module in driver, module
+            module_text = (ROOT / "lib" / module).read_text(encoding="utf-8")
+            assert f"ps_resref = ~{resref}~" in module_text, (resref, module)
+            # The level builder must not also create it; a resource built twice
+            # is silently discarded by the later DELETE and misleads the reader.
+            assert resref not in created, (resref, filename)
+            created.add(resref)
         assert created == expected_refs, (level, created ^ expected_refs)
         assert f"WRITE_LONG 0x34 {level}" in text
         assert "WRITE_LONG 0x18 ps_flags" in text
@@ -213,9 +227,22 @@ def validate_builders() -> None:
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 1" in precognition
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1)" not in precognition
 
-    for resref, opcode in (("PSAASTR", "44"), ("PSAADEX", "15"), ("PSAACON", "10")):
+    # Charisma is a legal Animal Affinity choice alongside the three physical
+    # abilities, and each ability maps to its own engine opcode.
+    for resref, opcode in (
+        ("PSAASTR", "44"),
+        ("PSAADEX", "15"),
+        ("PSAACON", "10"),
+        ("PSAACHA", "6"),
+    ):
         assert f"~{resref}~ => {opcode}" in affinity
-        assert f"resource = ~{resref}~" in affinity
+
+    # Each child strips only itself. Stripping the siblings, as an earlier
+    # revision did, made the tabletop augment line -- +4 to an additional
+    # ability for every 4 extra power points -- unreachable at any cost.
+    assert "resource = ~%ps_resref%~" in affinity
+    for resref in ("PSAASTR", "PSAADEX", "PSAACON", "PSAACHA"):
+        assert f"resource = ~{resref}~" not in affinity
 
     assert "savebonus = ps_save_penalty" in mind_vigor
     assert "save_bonus = ps_save_penalty" not in mind_vigor
@@ -223,18 +250,60 @@ def validate_builders() -> None:
     # Mind Thrust augments damage by 1d10 per additional power point, and the
     # save DC by 1 for each extra 2d10, so the penalty is floor((cost - 1) / 2).
     assert "dicenumber = ps_cost" in mind_vigor
-    assert "ps_save_penalty = (0 - ((ps_cost - 1) / 2))" in mind_vigor
+    assert (
+        "ps_save_penalty = (psion_level1_save_penalty - ((ps_cost - 1) / 2))"
+        in mind_vigor
+    )
+
+
+def augment_ceiling() -> int:
+    """The augment ladder ceiling, read from the WeiDU constant.
+
+    D&D 3.5 caps a manifestation at the manifester's level in power points, so
+    the ladders run to 20 rather than stopping at the highest base cost. The
+    number lives in exactly two places -- power-data.tpa for the installer and
+    generate_augment_tables.py for the table data -- and the assertions below
+    pin them together so they cannot drift apart.
+    """
+    text = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
+    match = re.search(r"OUTER_SET psion_max_augment_cost = (\d+)", text)
+    assert match, "power-data.tpa must define psion_max_augment_cost"
+    return int(match.group(1))
 
 
 def validate_augmentation() -> None:
+    ceiling = augment_ceiling()
+
+    generator = (ROOT / "tools" / "generate_augment_tables.py").read_text(encoding="utf-8")
+    match = re.search(r"^MAX_AUGMENT_COST = (\d+)$", generator, re.MULTILINE)
+    assert match, "the generator must define MAX_AUGMENT_COST"
+    assert int(match.group(1)) == ceiling, (
+        f"generator ceiling {match.group(1)} != psion_max_augment_cost {ceiling}"
+    )
+
     augment = rows("psionaugment.2da")
-    assert len(augment) == len({row[0] for row in augment}) == 57
-    selectors = {
-        "PS1ERAY": ("ps1eray.2da", 36),
-        "PS1MTHR": ("ps1mthr.2da", 9),
-        "PS1VIGR": ("ps1vigr.2da", 9),
-        "PS2AAFF": ("ps2aaff.2da", 3),
+
+    # Energy Ray has one ladder per energy type; Swarm of Crystals is a 2nd
+    # level power so its ladder starts at its 3 PP base cost; Animal Affinity
+    # is a mode selector at a flat cost rather than a ladder.
+    expected = {
+        "PS1ERAY": ("ps1eray.2da", 4 * ceiling),
+        "PS1MTHR": ("ps1mthr.2da", ceiling),
+        "PS1VIGR": ("ps1vigr.2da", ceiling),
+        "PS2SWCR": ("ps2swcr.2da", ceiling - 2),
+        "PS2AAFF": ("ps2aaff.2da", 4),
     }
+    total = sum(count for _, count in expected.values())
+    assert len(augment) == len({row[0] for row in augment}) == total, (
+        len(augment),
+        total,
+    )
+
+    # No child may cost more than a 20th-level manifester could legally spend.
+    for row in augment:
+        assert 1 <= int(row[2]) <= ceiling, row
+
+    selectors = expected
     all_children: set[str] = set()
     for parent, (filename, count) in selectors.items():
         data = rows(filename)
@@ -243,6 +312,48 @@ def validate_augmentation() -> None:
         assert children == {row[0] for row in augment if row[1] == parent}
         all_children |= children
     assert all_children == {row[0] for row in augment}
+
+
+def validate_save_dc_scheme() -> None:
+    """Every save-bearing effect carries its power level's save penalty.
+
+    D&D 3.5 sets a power's save DC at 10 + power level + key ability modifier.
+    The engine has no DC, so the translation splits into a power-level term of
+    -(N - 1) and the guaranteed key-ability term from the Intelligence 15
+    chargen minimum. This check pins both constants and the fact that no
+    save-bearing effect is left without one, which is the shape of regression
+    that silently reverts the scheme.
+    """
+    shared = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
+    assert "OUTER_SET psion_key_ability_save_penalty = (0 - 2)" in shared
+
+    for level in range(1, 6):
+        text = (ROOT / "lib" / f"level{level}-powers.tpa").read_text(encoding="utf-8")
+        constant = f"psion_level{level}_save_penalty"
+        expected = (
+            "psion_key_ability_save_penalty"
+            if level == 1
+            else f"(psion_key_ability_save_penalty - {level - 1})"
+        )
+        assert f"OUTER_SET {constant} = {expected}" in text, (level, expected)
+
+    # Walk every module, not just the level builders. The augment modules
+    # delete and rebuild some level-1 resources, so a check scoped to
+    # level*-powers.tpa would pass while the resources players actually
+    # manifest carry no penalty at all.
+    for path in sorted((ROOT / "lib").glob("*.tpa")):
+        body = path.read_text(encoding="utf-8")
+        rendered = body.splitlines()
+        for number, line in enumerate(rendered, start=1):
+            if "savingthrow = BIT" not in line:
+                continue
+            # The multi-line INT_VAR form puts savebonus on its own line.
+            following = rendered[number] if number < len(rendered) else ""
+            if "save_penalty" in line or "save_penalty" in following:
+                continue
+            raise AssertionError(
+                f"{path.name}:{number} sets a saving throw without a save penalty"
+            )
 
 
 def validate_installer() -> None:
@@ -266,6 +377,7 @@ def main() -> None:
     validate_release_infrastructure()
     validate_builders()
     validate_augmentation()
+    validate_save_dc_scheme()
     validate_installer()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)

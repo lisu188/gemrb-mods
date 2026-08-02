@@ -187,7 +187,6 @@ def _base_power_info(key):
             "level": int(table.GetValue(key, "LEVEL")),
             "discipline": str(table.GetValue(key, "DISCIPLINE")).upper(),
             "cost": int(table.GetValue(key, "BASE_COST")),
-            "augment_step": int(table.GetValue(key, "AUGMENT_STEP")),
             "selector": False,
             "variant": False,
         }

@@ -27,6 +27,8 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Verify generated augment tables are current
+        run: python psion/tools/generate_augment_tables.py --check
       - name: Validate tables, installer source and Python
         run: python psion/tests/validate.py
       - name: Validate class XP, THAC0, and saving throw progression

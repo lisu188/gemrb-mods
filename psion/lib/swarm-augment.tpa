@@ -1,0 +1,77 @@
+// Swarm of Crystals augmentation variants.
+//
+// The tabletop power sprays a cone of shards for 3d4 slashing damage and
+// augments by +1d4 per additional power point. Like Energy Ray and Mind Thrust,
+// the learned PS2SWCR resource becomes an opcode-214 selector and each child
+// carries its own total PP cost in PSIONAUGMENT.2DA.
+//
+// This is a level-2 power, so the ladder starts at its 3 PP base cost rather
+// than at 1, and each child carries psion_level2_save_penalty.
+
+DEFINE_ACTION_FUNCTION psion_create_swarm_variant
+INT_VAR
+  ps_cost = 3
+STR_VAR
+  ps_resref = ~~
+BEGIN
+  OUTER_SPRINT ps_variant_name ~Swarm of Crystals (%ps_cost% PP)~
+  OUTER_SPRINT ps_variant_description ~A cone of razor-edged crystals deals %ps_cost%d4 slashing damage. A successful save vs breath halves the damage.~
+
+  LAF psion_create_level2_power
+    INT_VAR
+      ps_target = 4
+      ps_range = 25
+      ps_projectile = psion_cone_projectile
+      ps_flags = psion_level2_hostile_flags
+    STR_VAR
+      ps_resref = ~%ps_resref%~
+      ps_name = ~%ps_variant_name%~
+      ps_description = ~%ps_variant_description%~
+      ps_icon = ~spwi217~
+  END
+
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR
+        opcode = 12
+        target = 2
+        resist_dispel = BIT0
+        parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~SLASHING~)
+        dicenumber = ps_cost
+        dicesize = 4
+        savingthrow = BIT1
+        savebonus = psion_level2_save_penalty
+        special = BIT8
+    END
+  BUT_ONLY
+END
+
+// Replace the non-augmented base resource with a free selector.
+DELETE ~override/PS2SWCR.spl~
+LAF psion_create_level2_power
+  STR_VAR
+    ps_resref = ~PS2SWCR~
+    ps_name = ~Swarm of Crystals~
+    ps_description = ~Spend power points up to your manifester level. Damage dice equal total PP spent. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi217~
+END
+COPY_EXISTING ~PS2SWCR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS2SWCR~ END
+BUT_ONLY
+
+// The ladder runs from the 3 PP base cost to psion_max_augment_cost.
+// PSIONAUGMENT.2DA and PS2SWCR.2DA are produced from the same ceiling by
+// psion/tools/generate_augment_tables.py.
+OUTER_FOR (ps_ladder_cost = 3; ps_ladder_cost <= psion_max_augment_cost; ++ps_ladder_cost) BEGIN
+  OUTER_SPRINT ps_ladder_index ~%ps_ladder_cost%~
+  ACTION_IF (ps_ladder_cost < 10) BEGIN
+    OUTER_SPRINT ps_ladder_index ~0%ps_ladder_cost%~
+  END
+
+  LAF psion_create_swarm_variant
+    INT_VAR
+      ps_cost = ps_ladder_cost
+    STR_VAR
+      ps_resref = ~PSSC%ps_ladder_index%~
+  END
+END

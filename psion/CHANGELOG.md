@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+- Extended every augmentation ladder to the manifester-level cap of 20 power
+  points. The cap was already enforced correctly, but each ladder stopped at
+  9 PP, so a Psion above level 9 could never reach it. Energy Ray now runs
+  1-20 PP per energy type, Mind Thrust and Vigor 1-20, and Swarm of Crystals
+  3-20. Generated augment children go from 57 to 142.
+- Added the missing Swarm of Crystals augmentation (+1d4 per additional power
+  point). It is now an opcode-214 selector built by `swarm-augment.tpa`, and
+  the dead direct build has been removed from `level2-powers.tpa` rather than
+  left to be deleted and rebuilt during install.
+- Fixed Animal Affinity so its augment line is reachable. Each child now strips
+  only its own resource instead of all its siblings, so boosting a second
+  ability no longer cancels the first, and Charisma joins Strength, Dexterity
+  and Constitution as a legal choice.
+- Extended the Vigor refresh strip to the whole ladder. It covered only the
+  first nine tiers, so a 10 PP or higher Vigor would have stacked on top of a
+  lower one instead of replacing it.
+- Replaced the hand-written augmentation arrays with loops bounded by a single
+  `psion_max_augment_cost` constant in `power-data.tpa`, and added
+  `psion/tools/generate_augment_tables.py` as the sole producer of the checked-in
+  table data. The ladder was previously written out three times -- the augment
+  table, the selector tables and the WeiDU arrays -- which does not scale to 142
+  rows. CI now runs the generator's `--check` mode so the committed tables
+  cannot drift from the constant.
+- Removed the `AUGMENT_STEP` column from `psionpowers.2da` and `Psionics.py`.
+  It was read into the runtime dictionary and never used.
+
+- Added saving-throw difficulty scaled by power level. Previously every
+  generated effect left `savebonus = 0`, so neither a power's level nor the
+  manifester's Intelligence had any bearing on whether it landed — Intelligence
+  bought power points and nothing else. Each save-bearing effect now carries a
+  `savebonus` combining a power-level term of `-(level - 1)` with the `+2`
+  key-ability modifier guaranteed by the Intelligence 15 chargen minimum.
+- Documented why Intelligence above 15 cannot improve save difficulty: GemRB
+  exposes no way to vary an installed SPL's `savebonus` by the caster's runtime
+  stats. `ModifyEffect` only moves an effect's target coordinates, and
+  `PrepareSpontaneousCast`, the one substitution hook, would require a separate
+  resource per Intelligence bracket across all sixty powers.
+- Added a `validate_core.py` invariant that pins the per-level constants and
+  fails if any save-bearing effect is left without its penalty.
+
 Rules-fidelity corrections from a review against the D&D 3.5 Expanded Psionics
 Handbook. The core economy (power-point table, powers known, `(2 x level) - 1`
 base costs, the manifester-level spending cap and the `Int >= 10 + power level`

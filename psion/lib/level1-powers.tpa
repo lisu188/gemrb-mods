@@ -45,6 +45,9 @@ END
 OUTER_SET psion_none_projectile = IDS_OF_SYMBOL (~missile~ ~None~)
 OUTER_SET psion_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
 
+// Power-level share of the tabletop save DC; see power-data.tpa.
+OUTER_SET psion_level1_save_penalty = psion_key_ability_save_penalty
+
 // Energy Ray: one ranged touch-equivalent packet of psychic/force damage.
 LAF psion_create_level1_power
   INT_VAR
@@ -93,6 +96,7 @@ COPY_EXISTING ~PS1MTHR.spl~ ~override~
       dicenumber = 1
       dicesize = 10
       savingthrow = BIT0
+      savebonus = psion_level1_save_penalty
   END
 BUT_ONLY
 
@@ -210,7 +214,7 @@ LAF psion_create_level1_power
 END
 COPY_EXISTING ~PS1EPUS.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 1 dicesize = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 4 savingthrow = BIT1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 4 savingthrow = BIT1 savebonus = psion_level1_save_penalty END
 BUT_ONLY
 
 // Thicken Skin: natural armor approximation.
@@ -253,5 +257,5 @@ LAF psion_create_level1_power
     ps_icon = ~spwi104~
 END
 COPY_EXISTING ~PS1CHAR.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 60 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 60 savingthrow = BIT0 savebonus = psion_level1_save_penalty END
 BUT_ONLY

@@ -40,6 +40,9 @@ BEGIN
 END
 
 OUTER_SET psion_level3_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+
+// Power-level share of the tabletop save DC; see level1-powers.tpa.
+OUTER_SET psion_level3_save_penalty = (psion_key_ability_save_penalty - 2)
 OUTER_SET psion_level3_line_projectile = IDS_OF_SYMBOL (~missile~ ~Lightning_Bolt~)
 ACTION_IF psion_level3_line_projectile < 0 BEGIN
   // Lightning Bolt is projectile 5 in the classic BG-family MISSILE.IDS.
@@ -91,7 +94,7 @@ LAF psion_create_level3_power
     ps_icon = ~spwi326~
 END
 COPY_EXISTING ~PS3EBLT.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 savebonus = psion_level3_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Mental Barrier: immediate one-round defense. BG has no reaction-casting
@@ -144,7 +147,7 @@ LAF psion_create_level3_power
     ps_icon = ~spwi305~
 END
 COPY_EXISTING ~PS3THOP.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
 BUT_ONLY
 
 // Danger Sense: trap awareness and anticipation are represented by trap skill,
@@ -184,7 +187,7 @@ LAF psion_create_level3_power
     ps_icon = ~spwi308~
 END
 COPY_EXISTING ~PS3COCO.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT1 savebonus = psion_level3_save_penalty END
 BUT_ONLY
 
 // Energy Cone: cone projectile and electrical damage, save vs breath for half.
@@ -201,7 +204,7 @@ LAF psion_create_level3_power
     ps_icon = ~spwi304~
 END
 COPY_EXISTING ~PS3ECON.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 savebonus = psion_level3_save_penalty special = BIT8 END
 BUT_ONLY
 
 // Hustle: the tabletop power grants one extra move action, explicitly not an
@@ -251,7 +254,7 @@ LAF psion_create_level3_power
     ps_icon = ~spwi319~
 END
 COPY_EXISTING ~PS3MSTL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 38 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 38 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
 BUT_ONLY
