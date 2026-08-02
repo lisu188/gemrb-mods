@@ -6,6 +6,9 @@
 - Prevented simultaneous installation with Sorcerer/Monk/Cleric because the two legacy packages share the same WeiDU backup namespace and the older triple-class installer can also collide on class ID 22.
 - Replaced hardcoded class ID 21 with an ID derived from the Sorcerer/Monk `CLSKILLS.2DA` row index.
 - Added explicit checks for conflicting class IDs and GemRB's below-32 class-mask limit.
+- Rejected duplicate `SORCERER_MONK` identity rows in `CLSKILLS.2DA` and the active class table instead of allowing lookup order to select an ambiguous class ID.
+- Added canonical base-class checks requiring Sorcerer ID/row 19 and Monk ID/row 20 before using the fixed Sorcerer/Monk multiclass mask.
+- Added bidirectional `CLASS.IDS` consistency checks so neither the `SORCERER_MONK` symbol nor its allocated numeric ID can conflict with another registration.
 - Preserved compatibility with released GemRB versions that use combined `CLASSES.2DA` rows.
 - Added support for development GemRB versions that split class data across `CLASSTEXT.2DA`, `HPCLASS.2DA` and `CLSRCREQ.2DA`.
 - Added explicit handling for normalized GemRB plus older nine-column and newer ten-column native Enhanced Edition `CLASSTEXT.2DA` formats.
@@ -13,6 +16,7 @@
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
 - Derived the class XP cap from the active game's Sorcerer and Monk `XPCAP.2DA` rows instead of forcing the BG2/ToB 8,000,000 cap.
+- Required valid `XPCAP.2DA` entries for both Sorcerer and Monk before deriving the multiclass cap.
 - Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.
 - Added standard combined class prerequisites: DEX 9, CON 9, INT 9, WIS 9 and CHA 9, with no STR minimum.
 - Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned.
@@ -36,10 +40,12 @@
 - Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Copied the game's own Monk `FISTWEAP.2DA` row instead of compensating for a rounded multiclass-level lookup: GemRB resolves fists by the Monk component level, so the multiclass now reaches every fist tier at the same Monk level as a single-class Monk.
+- Rejected pre-existing `FISTWEAP.2DA` rows for the allocated numeric class ID instead of silently preserving ambiguous numeric ownership or appending a duplicate row.
 - Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
 - Tightened the `MULTI2SORCERER` and `MULTI2MONK` HLA guards to exact row-name matching.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.
 - Added real WeiDU smoke coverage for released combined, current split, and native EE nine-/ten-column class-text layouts.
 - Added real WeiDU tests proving both sibling installation orders are rejected before table changes and that uninstall restores the first component's original fixture state byte-for-byte.
+- Added real WeiDU metadata-guard tests for duplicate identity rows, stale/reversed `CLASS.IDS`, noncanonical component class IDs, incomplete `XPCAP.2DA`, and pre-existing `FISTWEAP.2DA` numeric collisions.
 - Added WeiDU syntax validation to CI for both sibling TP2 installers.
 - Removed the stale version number and redundant engine warning from translated component text.

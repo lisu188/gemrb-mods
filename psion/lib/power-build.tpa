@@ -1,0 +1,4 @@
+// All sixty level 1-5 powers are generated from empty SPL resources by their
+// dedicated level builders. This file remains as the stable include point used
+// by older development branches and external tooling; it intentionally creates
+// no spell resources and has no dependency on wizard or priest template spells.

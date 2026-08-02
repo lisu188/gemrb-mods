@@ -1,0 +1,261 @@
+// Purpose-built level-4 Psion powers.
+//
+// Every resource is generated from an empty SPL. Mechanics without a portable
+// one-to-one Infinity Engine representation are documented in source and in the
+// in-game description instead of inheriting unrelated wizard spell effects.
+
+DEFINE_ACTION_FUNCTION psion_create_level4_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 5
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi407~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4 // Innate power granted through a discipline CLAB.
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 4
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level4_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+
+// Energy Adaptation: the tabletop power protects against one chosen energy
+// type. Until a dedicated four-way selector is added, the portable version
+// grants a smaller 25% bonus to acid, cold, electricity and fire together.
+LAF psion_create_level4_power
+  STR_VAR
+    ps_resref = ~PS4EADP~
+    ps_name = ~Energy Adaptation~
+    ps_description = ~For seven turns the manifester gains 25 percent resistance to acid, cold, electricity, and fire. This broad portable effect replaces the tabletop choice of 50 percent resistance to one energy type.~
+    ps_icon = ~sppr403~
+END
+COPY_EXISTING ~PS4EADP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4EADP~ END
+  FOR (ps_energy_opcode = 27; ps_energy_opcode <= 30; ++ps_energy_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_energy_opcode target = 1 resist_dispel = BIT1 parameter1 = 25 timing = 0 duration = 420 END
+  END
+BUT_ONLY
+
+// Freedom of Movement: cure current hold, restore movement, then protect from
+// the common movement and restraint opcodes for seven turns.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS4FOMV~
+    ps_name = ~Freedom of Movement~
+    ps_description = ~For seven turns the target moves normally through magical restraint and is protected from hold, slow, movement-rate penalties, entangle, web, and grease effects. Existing hold and movement penalties are removed when the power is manifested.~
+    ps_icon = ~sppr409~
+END
+COPY_EXISTING ~PS4FOMV.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS4FOMV~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 162 target = 2 resist_dispel = BIT1 timing = 1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 163 target = 2 resist_dispel = BIT1 timing = 1 END
+  PATCH_FOR_EACH ps_blocked_opcode IN 40 109 126 154 155 157 158 175 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = ps_blocked_opcode timing = 0 duration = 420 END
+  END
+BUT_ONLY
+
+// Dimension Door: source-to-target teleport using opcode 124 mode 1.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 0x7fff
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS4DDOR~
+    ps_name = ~Dimension Door~
+    ps_description = ~The manifester teleports to any visible walkable point in the current area. Area scripts and plot states may block teleportation.~
+    ps_icon = ~spwi402~
+END
+COPY_EXISTING ~PS4DDOR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 1 resist_dispel = BIT1 parameter2 = 1 timing = 1 END
+BUT_ONLY
+
+// Intellect Fortress: a true party aura needs a repeating GemRB-side emitter.
+// The portable version protects the manifester for three rounds.
+LAF psion_create_level4_power
+  STR_VAR
+    ps_resref = ~PS4IFOR~
+    ps_name = ~Intellect Fortress~
+    ps_description = ~For three rounds the manifester gains +2 to all saving throws and 50 percent resistance to magical damage. A later GemRB emitter will extend this protection to nearby allies as a true aura.~
+    ps_icon = ~spwi407~
+END
+COPY_EXISTING ~PS4IFOR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4IFOR~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 31 target = 1 resist_dispel = BIT1 parameter1 = 50 timing = 0 duration = 18 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 18 END
+  END
+BUT_ONLY
+
+// Telekinetic Maneuver: combines a strong push with a one-round knockdown.
+// Disarm and pull modes remain future selector children.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level4_hostile_flags
+  STR_VAR
+    ps_resref = ~PS4TKMN~
+    ps_name = ~Telekinetic Maneuver~
+    ps_description = ~A failed save vs breath hurls the target away and knocks it unconscious for one round. This portable mode represents the push and trip options; pull and disarm will become selectable variants later.~
+    ps_icon = ~spwi412~
+END
+COPY_EXISTING ~PS4TKMN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 8 savingthrow = BIT1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 39 target = 2 resist_dispel = BIT0 parameter2 = 0 timing = 0 duration = 6 savingthrow = BIT1 END
+BUT_ONLY
+
+// Power Leech: custom PP transfer requires access to both actors' persistent
+// stat 239. The portable SPL imposes spell and innate failure for five rounds;
+// the runtime transfer remains an explicit follow-up task.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level4_hostile_flags
+  STR_VAR
+    ps_resref = ~PS4PLEE~
+    ps_name = ~Power Leech~
+    ps_description = ~For five rounds the target suffers 20 percent failure when casting mage, priest, or innate powers unless it succeeds on a save vs spell. The current portable resource does not yet transfer drained power points to the manifester.~
+    ps_icon = ~spwi409~
+END
+COPY_EXISTING ~PS4PLEE.spl~ ~override~
+  PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 20 parameter2 = ps_failure_type timing = 0 duration = 30 savingthrow = BIT0 END
+  END
+BUT_ONLY
+
+// Remote Viewing: portable enhanced perception. Quest scripts can detect the
+// active resource and reveal remote scenes or dialogue information.
+LAF psion_create_level4_power
+  STR_VAR
+    ps_resref = ~PS4RVIE~
+    ps_name = ~Remote Viewing~
+    ps_description = ~For five rounds the Seer detects invisible creatures and gains +30 Lore and +30 trap detection. Quest scripts may use the active power to reveal distant scenes and information.~
+    ps_icon = ~spwi401~
+END
+COPY_EXISTING ~PS4RVIE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4RVIE~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 21 target = 1 resist_dispel = BIT1 parameter1 = 30 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 91 target = 1 resist_dispel = BIT1 parameter1 = 30 timing = 0 duration = 30 END
+BUT_ONLY
+
+// Wall of Ectoplasm: a continuous destructible wall requires multiple spawned
+// blockers and pathfinding coordination. This alpha summons one temporary
+// construct node at the chosen point as a tactical obstruction.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS4WECT~
+    ps_name = ~Wall of Ectoplasm~
+    ps_description = ~Creates one temporary astral-construct node at the selected point for one turn. This is a portable tactical obstruction; a later GemRB implementation will create a continuous destructible wall with multiple segments.~
+    ps_icon = ~spwi422~
+END
+COPY_EXISTING ~PS4WECT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 2 resist_dispel = BIT1 timing = 1 duration = 60 STR_VAR resource = ~PSACON01~ END
+BUT_ONLY
+
+// Energy Ball: small-area electrical burst, save vs spell for half.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 40
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level4_hostile_flags
+  STR_VAR
+    ps_resref = ~PS4EBAL~
+    ps_name = ~Energy Ball~
+    ps_description = ~An electrical explosion deals 7d6 damage in a small area. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi414~
+END
+COPY_EXISTING ~PS4EBAL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 7 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+BUT_ONLY
+
+// Metamorphosis: the first portable form is a powerful bear-like body. A later
+// selector will add wolf, spider, ogre and troll forms with distinct drawbacks.
+LAF psion_create_level4_power
+  STR_VAR
+    ps_resref = ~PS4META~
+    ps_name = ~Metamorphosis~
+    ps_description = ~For one turn the Egoist assumes a bear-like combat form, gaining +4 Strength, +4 Constitution, +2 Armor Class, one additional attack per round, and 10 percent physical resistance. Recasting refreshes rather than stacks the form.~
+    ps_icon = ~spwi416~
+END
+COPY_EXISTING ~PS4META.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4META~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 44 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 10 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 60 END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 1 resist_dispel = BIT1 parameter1 = 10 timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Psionic Flight: BG maps remain two-dimensional. Flight is represented by
+// speed, melee defense, backstab protection and immunity to ground restraints.
+LAF psion_create_level4_power
+  STR_VAR
+    ps_resref = ~PS4PFLY~
+    ps_name = ~Psionic Flight~
+    ps_description = ~For one turn the Nomad moves 50 percent faster, gains +2 Armor Class, cannot be backstabbed or pushed, and ignores common entangle, web, and grease effects. The engine cannot cross arbitrary unwalkable terrain.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PS4PFLY.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS4PFLY~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 150 parameter2 = 2 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  PATCH_FOR_EACH ps_flight_immunity IN 154 155 157 158 238 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = ps_flight_immunity timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Compulsion: direct domination for five rounds, save vs spell negates.
+LAF psion_create_level4_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level4_hostile_flags
+  STR_VAR
+    ps_resref = ~PS4COMP~
+    ps_name = ~Compulsion~
+    ps_description = ~The Telepath controls one living target for five rounds unless it succeeds on a save vs spell. Plot-critical creatures may be immune.~
+    ps_icon = ~spwi405~
+END
+COPY_EXISTING ~PS4COMP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 END
+BUT_ONLY

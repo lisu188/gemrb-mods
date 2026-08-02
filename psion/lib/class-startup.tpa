@@ -1,0 +1,91 @@
+// Character-generation startup data for Psion single classes.
+//
+// GemRB's BG-family chargen scripts index STRTGOLD.2DA by exact class row.
+// Custom Psion classes therefore need explicit rows or they receive the table
+// default (normally zero). Clone the active game's complete MAGE row instead of
+// hard-coding campaign-specific gold dice.
+
+ACTION_IF FILE_EXISTS_IN_GAME ~strtgold.2da~ THEN BEGIN
+  OUTER_SET ps_startgold_found = 0
+  OUTER_SPRINT ps_startgold_values ~~
+
+  COPY_EXISTING ~strtgold.2da~ ~override~
+    COUNT_2DA_COLS ps_startgold_cols
+    COUNT_2DA_ROWS ps_startgold_cols ps_startgold_rows
+    FOR (ps_row = 0; ps_row < ps_startgold_rows; ++ps_row) BEGIN
+      READ_2DA_ENTRY ps_row 0 ps_startgold_cols ps_class_name
+      PATCH_IF ~%ps_class_name%~ STRING_EQUAL_CASE ~MAGE~ BEGIN
+        SPRINT ps_values ~~
+        FOR (ps_col = 1; ps_col < ps_startgold_cols; ++ps_col) BEGIN
+          READ_2DA_ENTRY ps_row ps_col ps_startgold_cols ps_value
+          SPRINT ps_values ~%ps_values% %ps_value%~
+        END
+        INNER_ACTION BEGIN
+          OUTER_SPRINT ps_startgold_values ~%ps_values%~
+          OUTER_SET ps_startgold_found = 1
+        END
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF ps_startgold_found != 1 THEN BEGIN
+    FAIL ~The Psion mod could not locate the MAGE row in STRTGOLD.2DA.~
+  END
+
+  APPEND ~strtgold.2da~ ~PSION_SEER%ps_startgold_values%~ UNLESS ~PSION_SEER~
+  APPEND ~strtgold.2da~ ~PSION_SHAPER%ps_startgold_values%~ UNLESS ~PSION_SHAPER~
+  APPEND ~strtgold.2da~ ~PSION_KINETICIST%ps_startgold_values%~ UNLESS ~PSION_KINETICIST~
+  APPEND ~strtgold.2da~ ~PSION_EGOIST%ps_startgold_values%~ UNLESS ~PSION_EGOIST~
+  APPEND ~strtgold.2da~ ~PSION_NOMAD%ps_startgold_values%~ UNLESS ~PSION_NOMAD~
+  APPEND ~strtgold.2da~ ~PSION_TELEPATH%ps_startgold_values%~ UNLESS ~PSION_TELEPATH~
+END
+
+// Throne of Bhaal character creation indexes 25STWEAP.2DA by exact class/kit
+// column. GemRB already treats Sorcerers as Mages here; Psions use the same
+// canonical Mage starter package. The table contract has exactly twenty slot
+// rows, matching GemRB's CharGenEnd.RealSlots mapping. Refuse an unknown shape
+// rather than appending a shifted column that could equip items into wrong slots.
+//
+// Mage column, in slot order:
+// armor, shield, helm, bag, rings, cloak, boots, amulet, bracers, belt,
+// ammunition x3, consumables x3, sling bullets, darts, staff.
+OUTER_SPRINT ps_tob_mage_equipment ~* * * BAG29 RING06 RING40 * BOOT01 AMUL21 BRAC15 BELT10 AROW11,40 BULL03,40 BOLT06,40 POTN52,5 POTN04,2 POTN14,5 SLNG05 DAGG05,20 STAF20~
+
+ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
+  OUTER_SET ps_25stweap_valid = 0
+
+  COPY_EXISTING ~25stweap.2da~ ~override~
+    COUNT_2DA_COLS ps_25stweap_cols
+    COUNT_2DA_ROWS ps_25stweap_cols ps_25stweap_rows
+    PATCH_IF ps_25stweap_rows = 20 BEGIN
+      INNER_ACTION BEGIN
+        OUTER_SET ps_25stweap_valid = 1
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF ps_25stweap_valid != 1 THEN BEGIN
+    FAIL ~The Psion mod requires the standard twenty-row 25STWEAP.2DA layout.~
+  END
+
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_SEER %ps_tob_mage_equipment%~ UNLESS ~PSION_SEER~
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_SHAPER %ps_tob_mage_equipment%~ UNLESS ~PSION_SHAPER~
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_KINETICIST %ps_tob_mage_equipment%~ UNLESS ~PSION_KINETICIST~
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_EGOIST %ps_tob_mage_equipment%~ UNLESS ~PSION_EGOIST~
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_NOMAD %ps_tob_mage_equipment%~ UNLESS ~PSION_NOMAD~
+  APPEND_COL ~25stweap.2da~ ~$ $ PSION_TELEPATH %ps_tob_mage_equipment%~ UNLESS ~PSION_TELEPATH~
+END
+
+// GemRB's ToB level-up path indexes LUNUMAB.2DA by exact class name and then
+// divides the pending HLA count by RATE. A missing custom-class row can resolve
+// to the table default (0), causing invalid HLA arithmetic before the HLA UI is
+// even opened. Version 1.0 intentionally has no epic/HLA subsystem, so postpone
+// HLA eligibility beyond the supported level range while keeping RATE nonzero.
+ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
+  APPEND ~lunumab.2da~ ~PSION_SEER 99 1 99 1~ UNLESS ~PSION_SEER~
+  APPEND ~lunumab.2da~ ~PSION_SHAPER 99 1 99 1~ UNLESS ~PSION_SHAPER~
+  APPEND ~lunumab.2da~ ~PSION_KINETICIST 99 1 99 1~ UNLESS ~PSION_KINETICIST~
+  APPEND ~lunumab.2da~ ~PSION_EGOIST 99 1 99 1~ UNLESS ~PSION_EGOIST~
+  APPEND ~lunumab.2da~ ~PSION_NOMAD 99 1 99 1~ UNLESS ~PSION_NOMAD~
+  APPEND ~lunumab.2da~ ~PSION_TELEPATH 99 1 99 1~ UNLESS ~PSION_TELEPATH~
+END

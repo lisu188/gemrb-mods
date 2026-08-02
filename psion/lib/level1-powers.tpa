@@ -1,0 +1,257 @@
+// Purpose-built level-1 Psion powers.
+//
+// These spells are created from empty SPL files so their behavior does not
+// depend on the effects or scaling of a template wizard or priest spell.
+
+DEFINE_ACTION_FUNCTION psion_create_level1_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 2
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi112~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+
+    // CLAB GA_ entries grant these as innate abilities. BIT25 allows mental
+    // manifestation while silenced; BIT14 ignores dead/wild-magic processing.
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 1
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_none_projectile = IDS_OF_SYMBOL (~missile~ ~None~)
+OUTER_SET psion_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+
+// Energy Ray: one ranged touch-equivalent packet of psychic/force damage.
+LAF psion_create_level1_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_hostile_flags
+  STR_VAR
+    ps_resref = ~PS1ERAY~
+    ps_name = ~Energy Ray~
+    ps_description = ~A focused ray deals 1d6 points of magical damage to one creature. It allows magic resistance but no saving throw.~
+    ps_icon = ~spwi112~
+END
+COPY_EXISTING ~PS1ERAY.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR
+      opcode = 12
+      target = 2
+      resist_dispel = BIT0
+      parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
+      dicenumber = 1
+      dicesize = 6
+  END
+BUT_ONLY
+
+// Mind Thrust: a Will-equivalent save is represented by save vs spell.
+LAF psion_create_level1_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_hostile_flags
+  STR_VAR
+    ps_resref = ~PS1MTHR~
+    ps_name = ~Mind Thrust~
+    ps_description = ~A direct mental attack deals 1d10 points of magical damage. A successful save vs spell negates the damage.~
+    ps_icon = ~spwi105~
+END
+COPY_EXISTING ~PS1MTHR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR
+      opcode = 12
+      target = 2
+      resist_dispel = BIT0
+      parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
+      dicenumber = 1
+      dicesize = 10
+      savingthrow = BIT0
+  END
+BUT_ONLY
+
+// Inertial Armor: non-stacking +4 armor-equivalent AC for one hour.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1IARM~
+    ps_name = ~Inertial Armor~
+    ps_description = ~A field of telekinetic force improves Armor Class by 4 for one hour. Recasting refreshes rather than stacks the protection.~
+    ps_icon = ~spwi102~
+END
+COPY_EXISTING ~PS1IARM.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1IARM~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 3600 END
+BUT_ONLY
+
+// Vigor: the IE approximation raises maximum and current HP for one turn.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1VIGR~
+    ps_name = ~Vigor~
+    ps_description = ~The manifester gains 5 temporary hit points for one turn. Recasting refreshes the same pool rather than stacking it.~
+    ps_icon = ~sppr103~
+END
+COPY_EXISTING ~PS1VIGR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1VIGR~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 18 target = 1 resist_dispel = BIT1 parameter1 = 5 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 parameter1 = 5 timing = 1 END
+BUT_ONLY
+
+// Force Screen: shield AC and immunity to the canonical Magic Missile spell.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1FSCR~
+    ps_name = ~Force Screen~
+    ps_description = ~A telekinetic shield improves Armor Class by 4 and blocks Magic Missile for one turn.~
+    ps_icon = ~spwi114~
+END
+COPY_EXISTING ~PS1FSCR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1FSCR~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 STR_VAR resource = ~SPWI112~ END
+BUT_ONLY
+
+// Empty Mind: BG has no Will-only save stat, so this grants +2 to every save
+// for one round. This is deliberately short and non-stacking.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1EMND~
+    ps_name = ~Empty Mind~
+    ps_description = ~The manifester suppresses conscious thought, gaining a +2 bonus to all saving throws for one round.~
+    ps_icon = ~sppr101~
+END
+COPY_EXISTING ~PS1EMND.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1EMND~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+BUT_ONLY
+
+// Precognition: short, broad insight into immediate danger.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1PREC~
+    ps_name = ~Precognition~
+    ps_description = ~Brief insight into the immediate future grants +1 to attack rolls, Armor Class, and all saving throws for three rounds.~
+    ps_icon = ~sppr115~
+END
+COPY_EXISTING ~PS1PREC.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1PREC~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 33 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 34 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 35 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 36 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
+BUT_ONLY
+
+// Astral Construct: clone a universally available wolf body and summon it
+// through opcode 67. Later versions will replace its animation and statistics.
+ACTION_IF FILE_EXISTS_IN_GAME ~WOLF.CRE~ THEN BEGIN
+  COPY_EXISTING ~WOLF.CRE~ ~override/PSACON01.CRE~
+    SAY NAME1 ~Astral Construct~
+    SAY NAME2 ~Astral Construct~
+  BUT_ONLY
+END ELSE BEGIN
+  FAIL ~The Psion mod requires WOLF.CRE as the level-1 Astral Construct body.~
+END
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1ACON~
+    ps_name = ~Astral Construct~
+    ps_description = ~Creates a temporary ectoplasmic construct under the manifester's control.~
+    ps_icon = ~spwi123~
+END
+COPY_EXISTING ~PS1ACON.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 1 timing = 1 duration = 36 STR_VAR resource = ~PSACON01~ END
+BUT_ONLY
+
+// Energy Push: electricity damage plus a save-negated wing-buffet push.
+LAF psion_create_level1_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_hostile_flags
+  STR_VAR
+    ps_resref = ~PS1EPUS~
+    ps_name = ~Energy Push~
+    ps_description = ~The target suffers 1d6 electrical damage and is pushed away. A save vs breath prevents the push but not the damage.~
+    ps_icon = ~spwi113~
+END
+COPY_EXISTING ~PS1EPUS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 1 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 4 savingthrow = BIT1 END
+BUT_ONLY
+
+// Thicken Skin: natural armor approximation.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1TSKN~
+    ps_name = ~Thicken Skin~
+    ps_description = ~The manifester's skin hardens, improving Armor Class by 1 for one turn.~
+    ps_icon = ~sppr202~
+END
+COPY_EXISTING ~PS1TSKN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1TSKN~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 60 END
+BUT_ONLY
+
+// Burst: movement rate is set to 130 percent through percentage mode.
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1BRST~
+    ps_name = ~Burst~
+    ps_description = ~A brief psychometabolic surge increases movement speed by 30 percent for one round.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PS1BRST.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS1BRST~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 130 parameter2 = 2 timing = 0 duration = 6 END
+BUT_ONLY
+
+// Psionic Charm: humanoid restriction is inherited from opcode 5 mode 1.
+LAF psion_create_level1_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_hostile_flags
+  STR_VAR
+    ps_resref = ~PS1CHAR~
+    ps_name = ~Psionic Charm~
+    ps_description = ~One humanoid becomes friendly for one turn unless it succeeds on a save vs spell. Magic resistance applies.~
+    ps_icon = ~spwi104~
+END
+COPY_EXISTING ~PS1CHAR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 60 savingthrow = BIT0 END
+BUT_ONLY

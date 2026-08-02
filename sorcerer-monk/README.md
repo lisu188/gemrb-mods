@@ -37,6 +37,11 @@ Version 2.0 is a correctness pass over the 1.9 installer. The user-visible resul
 
 - The class ID is derived from the live `CLSKILLS.2DA` row instead of being hardcoded, and the
   installer refuses to build a class whose metadata GemRB would misread at runtime.
+- Ambiguous class metadata is rejected rather than worked around: duplicate `SORCERER_MONK` rows,
+  `CLASS.IDS` conflicts in either direction, a `FISTWEAP.2DA` row already claiming the allocated
+  numeric ID, Sorcerer or Monk moved off GemRB IDs 19 and 20, a `QSLOTS.2DA` out of step with the
+  class tables, and partial `XPCAP.2DA` component entries all stop the install before any table is
+  modified.
 - Released, development and native Enhanced Edition class-table layouts are all supported, and an
   unrecognised layout stops the install instead of producing a broken class.
 - Campaign-specific values are inherited from the live Sorcerer and Monk rows rather than assumed:
@@ -69,9 +74,9 @@ See `CHANGELOG.md` for the itemised list.
 
 The installer has two documented class-table branches: the combined format used by released GemRB versions and the split format used by development builds. Split `CLASSTEXT.2DA` is accepted in GemRB's normalized six-column form and in native EE nine- or ten-column forms.
 
-GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. The installer fails instead of creating a character whose class metadata would be interpreted incorrectly at runtime.
+GemRB uses class IDs as indices into several class tables and tracks class categories with 32-bit masks. For that reason, custom-class table order is significant: the Sorcerer/Monk ID must equal its `CLSKILLS.2DA` row index and must remain below 32. `CLSKILLS.2DA` and the active class table must each contain at most one `SORCERER_MONK` identity row; duplicates are rejected before installation can depend on lookup order. The Sorcerer/Monk component mask is built for Sorcerer ID 19 and Monk ID 20, so the installer also verifies those base-class IDs and their `CLSKILLS.2DA` row positions before making changes. `CLASS.IDS` must agree in both directions: `SORCERER_MONK` must resolve to the allocated ID, and the allocated ID must not already resolve to another class symbol.
 
-GemRB resolves `FISTWEAP.2DA` by the Monk component level rather than by the rounded average multiclass level, so the multiclass can use the Monk progression unchanged. The installer copies the game's own Monk row under the new class ID: fists improve at exactly the Monk levels a single-class Monk would see. Lower-cap campaigns naturally stop at lower fist tiers.
+GemRB resolves `FISTWEAP.2DA` by the Monk component level rather than by the rounded average multiclass level, so the multiclass can use the Monk progression unchanged. The installer copies the game's own Monk row under the new class ID: fists improve at exactly the Monk levels a single-class Monk would see. Lower-cap campaigns naturally stop at lower fist tiers. Because `FISTWEAP.2DA` identifies rows only by numeric class ID, an existing row for the ID allocated to Sorcerer/Monk is treated as a collision and installation stops before modifying game tables.
 
 GemRB's high-level-ability screen resolves an unkitted multiclass through its own `LUABBR.2DA` row rather than through the component rows, so both halves of the class end up loading one table. The installer builds that table, `LUSM0.2DA`, by merging the game's Sorcerer and Monk HLA lists at install time; where either source table is missing there is nothing to merge and no `LUABBR.2DA` row is added.
 

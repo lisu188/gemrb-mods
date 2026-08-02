@@ -265,6 +265,33 @@ def main():
         print("real WeiDU uninstall restore: OK", flush=True)
 
     verify_short_qslots_is_rejected(weidu)
+    verify_taken_hla_abbreviation_is_rejected(weidu)
+
+
+def install_expecting_failure(weidu, game):
+    result = subprocess.run(
+        [weidu, "sorcerer-monk/setup-sorcerer-monk.tp2", "--game", str(game),
+         "--language", "0", "--noautoupdate", "--force-install-list", "0"],
+        cwd=game, capture_output=True, text=True,
+        stdin=subprocess.DEVNULL, timeout=120,
+    )
+    assert result.returncode != 0, result.stdout
+    assert "SORCERER_MONK" not in (game / "override" / "classes.2da").read_text(encoding="utf-8")
+
+
+def verify_taken_hla_abbreviation_is_rejected(weidu):
+    """LUSM0.2DA is a new file, so an existing SM0 owner must not be clobbered."""
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-sm0-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        write_2da(
+            game / "override" / "luabbr.2da",
+            ["ABBREV"],
+            [("SORCERER", ["SO0"]), ("MONK", ["MO0"]), ("SOME_OTHER_CLASS", ["SM0"])],
+        )
+        install_expecting_failure(weidu, game)
+        assert not (game / "override" / "lusm0.2da").exists(), "lusm0.2da was written anyway"
+        print("real WeiDU taken-SM0 rejection: OK", flush=True)
 
 
 def verify_short_qslots_is_rejected(weidu):
@@ -280,13 +307,7 @@ def verify_short_qslots_is_rejected(weidu):
         lines = qslots.read_text(encoding="utf-8").splitlines()
         qslots.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")
 
-        result = subprocess.run(
-            [weidu, "sorcerer-monk/setup-sorcerer-monk.tp2", "--game", str(game),
-             "--language", "0", "--noautoupdate", "--force-install-list", "0"],
-            cwd=game, capture_output=True, text=True,
-        )
-        assert result.returncode != 0, "short QSLOTS.2DA was accepted"
-        assert "SORCERER_MONK" not in (game / "override" / "classes.2da").read_text(encoding="utf-8")
+        install_expecting_failure(weidu, game)
         print("real WeiDU short-qslots rejection: OK", flush=True)
 
 

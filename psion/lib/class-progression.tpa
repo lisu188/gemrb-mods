@@ -1,0 +1,100 @@
+// Explicit advancement tables for the six Psion single classes.
+//
+// XPLEVEL uses the active game's complete MAGE row so BG1-family 20-level
+// tables, BG2/EE extended tables, and converted campaigns all inherit the
+// intended mage XP thresholds without hard-coding a table width.
+//
+// THAC0 follows the Psion design's half-rate attack progression:
+//     THAC0(level) = max(0, 20 - floor(level / 2))
+// and is generated for every level column exposed by the active game.
+//
+// GemRB's level-up script reads LORE.2DA directly by class row name and has no
+// generic fallback for custom classes, so each discipline receives the design's
+// explicit +5 Lore per level rate.
+
+OUTER_SET ps_xp_found = 0
+OUTER_SPRINT ps_xp_values ~~
+
+COPY_EXISTING ~xplevel.2da~ ~override~
+  COUNT_2DA_COLS ps_xp_cols
+  COUNT_2DA_ROWS ps_xp_cols ps_xp_rows
+  FOR (ps_row = 0; ps_row < ps_xp_rows; ++ps_row) BEGIN
+    READ_2DA_ENTRY ps_row 0 ps_xp_cols ps_class_name
+    PATCH_IF (~%ps_class_name%~ STRING_EQUAL_CASE ~MAGE~) BEGIN
+      SPRINT ps_values ~~
+      FOR (ps_col = 1; ps_col < ps_xp_cols; ++ps_col) BEGIN
+        READ_2DA_ENTRY ps_row ps_col ps_xp_cols ps_value
+        SPRINT ps_values ~%ps_values% %ps_value%~
+      END
+      INNER_ACTION BEGIN
+        OUTER_SPRINT ps_xp_values ~%ps_values%~
+        OUTER_SET ps_xp_found = 1
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF ps_xp_found != 1 THEN BEGIN
+  FAIL ~The Psion mod could not locate the MAGE progression in XPLEVEL.2DA.~
+END
+
+APPEND ~xplevel.2da~ ~PSION_SEER%ps_xp_values%~ UNLESS ~PSION_SEER~
+APPEND ~xplevel.2da~ ~PSION_SHAPER%ps_xp_values%~ UNLESS ~PSION_SHAPER~
+APPEND ~xplevel.2da~ ~PSION_KINETICIST%ps_xp_values%~ UNLESS ~PSION_KINETICIST~
+APPEND ~xplevel.2da~ ~PSION_EGOIST%ps_xp_values%~ UNLESS ~PSION_EGOIST~
+APPEND ~xplevel.2da~ ~PSION_NOMAD%ps_xp_values%~ UNLESS ~PSION_NOMAD~
+APPEND ~xplevel.2da~ ~PSION_TELEPATH%ps_xp_values%~ UNLESS ~PSION_TELEPATH~
+
+OUTER_SET ps_thac0_valid = 0
+OUTER_SPRINT ps_thac0_values ~~
+
+COPY_EXISTING ~thac0.2da~ ~override~
+  COUNT_2DA_COLS ps_thac0_cols
+  PATCH_IF ps_thac0_cols > 1 BEGIN
+    SPRINT ps_values ~~
+    // Column 0 is the row label. Data column 1 is character level 1.
+    FOR (ps_col = 1; ps_col < ps_thac0_cols; ++ps_col) BEGIN
+      SET ps_value = 20 - (ps_col / 2)
+      PATCH_IF ps_value < 0 BEGIN
+        SET ps_value = 0
+      END
+      SPRINT ps_values ~%ps_values% %ps_value%~
+    END
+    INNER_ACTION BEGIN
+      OUTER_SPRINT ps_thac0_values ~%ps_values%~
+      OUTER_SET ps_thac0_valid = 1
+    END
+  END
+BUT_ONLY
+
+ACTION_IF ps_thac0_valid != 1 THEN BEGIN
+  FAIL ~The Psion mod could not determine the level columns in THAC0.2DA.~
+END
+
+APPEND ~thac0.2da~ ~PSION_SEER%ps_thac0_values%~ UNLESS ~PSION_SEER~
+APPEND ~thac0.2da~ ~PSION_SHAPER%ps_thac0_values%~ UNLESS ~PSION_SHAPER~
+APPEND ~thac0.2da~ ~PSION_KINETICIST%ps_thac0_values%~ UNLESS ~PSION_KINETICIST~
+APPEND ~thac0.2da~ ~PSION_EGOIST%ps_thac0_values%~ UNLESS ~PSION_EGOIST~
+APPEND ~thac0.2da~ ~PSION_NOMAD%ps_thac0_values%~ UNLESS ~PSION_NOMAD~
+APPEND ~thac0.2da~ ~PSION_TELEPATH%ps_thac0_values%~ UNLESS ~PSION_TELEPATH~
+
+OUTER_SET ps_lore_valid = 0
+COPY_EXISTING ~lore.2da~ ~override~
+  COUNT_2DA_COLS ps_lore_cols
+  PATCH_IF ps_lore_cols = 2 BEGIN
+    INNER_ACTION BEGIN
+      OUTER_SET ps_lore_valid = 1
+    END
+  END
+BUT_ONLY
+
+ACTION_IF ps_lore_valid != 1 THEN BEGIN
+  FAIL ~The Psion mod requires the standard single-RATE LORE.2DA layout.~
+END
+
+APPEND ~lore.2da~ ~PSION_SEER 5~ UNLESS ~PSION_SEER~
+APPEND ~lore.2da~ ~PSION_SHAPER 5~ UNLESS ~PSION_SHAPER~
+APPEND ~lore.2da~ ~PSION_KINETICIST 5~ UNLESS ~PSION_KINETICIST~
+APPEND ~lore.2da~ ~PSION_EGOIST 5~ UNLESS ~PSION_EGOIST~
+APPEND ~lore.2da~ ~PSION_NOMAD 5~ UNLESS ~PSION_NOMAD~
+APPEND ~lore.2da~ ~PSION_TELEPATH 5~ UNLESS ~PSION_TELEPATH~

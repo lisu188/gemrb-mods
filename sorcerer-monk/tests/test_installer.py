@@ -112,7 +112,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SET sm_xpcap = (0 - 1)", TP2)
         self.assertIn("sm_xpcap_value < sm_xpcap", TP2)
         self.assertIn("SORCERER_MONK %sm_xpcap%", payloads("APPEND", "xpcap.2da"))
-        self.assertIn("ACTION_IF sm_xpcap < (0 - 1)", TP2)
+        self.assertIn("sm_found_sorcerer_xpcap != 1", TP2)
+        self.assertIn("sm_found_monk_xpcap != 1", TP2)
+        self.assertIn("sm_xpcap < (0 - 1)", TP2)
         self.assertIn("FAIL @14", TP2)
 
     def test_component_derived_rows_are_not_hardcoded(self):
@@ -157,8 +159,16 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("COUNT_2DA_ROWS sm_qslots_cols sm_qslots_rows", TP2)
         self.assertIn("ACTION_IF sm_qslots_rows != (sm_class_id - 1)", TP2)
 
-    def test_both_component_rows_are_required(self):
-        self.assertIn("ACTION_IF (sm_sorcerer_found = 0) OR (sm_monk_id < 0)", TP2)
+    def test_fist_row_is_copied_from_the_monk_class_id(self):
+        # A missing Monk row is already rejected by the Sorcerer 19 / Monk 20
+        # identity guard, so the copy only has to key off that row index.
+        self.assertIn("STRING_EQUAL_CASE ~%sm_monk_clskills_id%~", TP2)
+
+    def test_hla_abbreviation_collision_is_rejected(self):
+        self.assertIn("SET sm_sm0_taken = 1", TP2)
+        self.assertIn("ACTION_IF sm_sm0_taken = 1", TP2)
+        self.assertLess(TP2.index("ACTION_IF sm_sm0_taken = 1"),
+                        TP2.index("APPEND ~lusm0.2da~"))
 
     def test_hla_table_is_generated_rather_than_referenced(self):
         # The LUABBR row may only be added together with the table it names.
