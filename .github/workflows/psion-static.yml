@@ -1,0 +1,103 @@
+name: Psion validation
+
+on:
+  pull_request:
+    paths:
+      - "psion/**"
+      - ".github/workflows/psion-static.yml"
+  push:
+    paths:
+      - "psion/**"
+      - ".github/workflows/psion-static.yml"
+
+env:
+  WEIDU_VERSION: "251.00"
+  GEMRB_FIXTURE_COMMIT: "8c853a764ab489eee7e990a713eeb24dc8cc2d53"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out Psion branch
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate tables, installer source and Python
+        run: python psion/tests/validate.py
+      - name: Validate class XP, THAC0, and saving throw progression
+        run: python psion/tests/validate_class_progression.py
+      - name: Validate character-generation startup tables
+        run: python psion/tests/validate_startup.py
+      - name: Validate Psion action-bar slots
+        run: python psion/tests/validate_qslots.py
+      - name: Validate fake-GemRB runtime
+        run: python psion/tests/validate_runtime.py
+      - name: Validate GUI patch lifecycle
+        run: python psion/tests/validate_patcher.py
+      - name: Validate level-3 powers
+        run: python psion/tests/validate_level3.py
+      - name: Validate level-4 powers
+        run: python psion/tests/validate_level4.py
+      - name: Validate level-5 powers
+        run: python psion/tests/validate_level5.py
+
+      - name: Install official WeiDU release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive_dir="$RUNNER_TEMP/weidu-archive"
+          bin_dir="$RUNNER_TEMP/weidu-bin"
+          mkdir -p "$archive_dir" "$bin_dir"
+
+          gh release download "v${WEIDU_VERSION}" \
+            --repo WeiDUorg/weidu \
+            --pattern '*Linux*' \
+            --dir "$RUNNER_TEMP"
+          archive="$(find "$RUNNER_TEMP" -maxdepth 1 -type f -iname '*linux*' -print -quit)"
+          test -n "$archive"
+          unzip -q "$archive" -d "$archive_dir"
+
+          executable="$(find "$archive_dir" -type f -iname weidu -print -quit)"
+          test -n "$executable"
+          cp "$executable" "$bin_dir/weidu"
+          chmod +x "$bin_dir/weidu"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+
+      - name: Parse complete WeiDU installer
+        run: bash psion/tests/validate_weidu.sh
+
+      - name: Check out pinned GemRB fixture data
+        uses: actions/checkout@v4
+        with:
+          repository: gemrb/gemrb
+          ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
+          path: vendor/gemrb
+          fetch-depth: 1
+
+      - name: Seed missing Mage saving throw fixture
+        run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
+
+      - name: Install, uninstall and reinstall every class-table layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          for layout in normalized native legacy; do
+            echo "Validating $layout class-table layout"
+            bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
+            python psion/tests/validate_qslots_install.py "$RUNNER_TEMP/psion-weidu-game-$layout" "$layout"
+          done
+
+      - name: Validate Psion saving throw install lifecycle
+        shell: bash
+        run: bash psion/tests/validate_save_weidu.sh vendor/gemrb
+
+      - name: Install, uninstall and reinstall BG2 startup tables
+        shell: bash
+        run: bash psion/tests/validate_startup_weidu.sh vendor/gemrb

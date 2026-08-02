@@ -1,0 +1,42 @@
+// Animal Affinity selector children.
+//
+// The parent PS2AAFF is free and only opens PS2AAFF.2DA. Each child is listed
+// in PSIONAUGMENT.2DA with the full 3-PP cost, so ordinary transaction and
+// filtered-selector logic applies without a special-case runtime path.
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_animal_affinity_stat BEGIN
+  ~PSAASTR~ => 44 // Strength modifier
+  ~PSAADEX~ => 15 // Dexterity modifier
+  ~PSAACON~ => 10 // Constitution modifier
+END
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_animal_affinity_name BEGIN
+  ~PSAASTR~ => ~Animal Affinity: Strength~
+  ~PSAADEX~ => ~Animal Affinity: Dexterity~
+  ~PSAACON~ => ~Animal Affinity: Constitution~
+END
+
+ACTION_PHP_EACH psion_animal_affinity_stat AS ps_resref => ps_opcode BEGIN
+  OUTER_SPRINT ps_name $psion_animal_affinity_name(~%ps_resref%~)
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~The selected physical ability increases by 4 for one turn. This manifestation costs 3 power points.~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 (BIT14 BOR BIT25)
+    WRITE_LONG 0x34 2
+    WRITE_ASCII 0x3a ~sppr205C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR target = 5 range = 0x7fff speed = 3 projectile = 1
+      STR_VAR icon = ~sppr205B~
+    END
+    // Refresh the entire parent power rather than allowing multiple physical
+    // ability choices to coexist from repeated manifestations.
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAASTR~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAADEX~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSAACON~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_opcode target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 60 END
+  BUT_ONLY
+END

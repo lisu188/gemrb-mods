@@ -1,0 +1,168 @@
+// Energy Ray augmentation vertical slice.
+//
+// The learned PS1ERAY resource becomes an opcode-214 selector. Each selected
+// subspell is a real power resource whose total PP cost is defined in
+// PSIONAUGMENT.2DA and enforced by Psionics.py. Damage dice equal total PP,
+// subject to the normal manifester-level cap.
+
+DEFINE_ACTION_FUNCTION psion_create_energy_ray_variant
+INT_VAR
+  ps_cost = 1
+  ps_damage_type = 0
+  ps_dice_size = 6
+  ps_flat_bonus = 0
+STR_VAR
+  ps_resref = ~~
+  ps_energy_name = ~~
+  ps_icon = ~spwi112~
+BEGIN
+  OUTER_SPRINT ps_variant_name ~Energy Ray: %ps_energy_name% (%ps_cost% PP)~
+  OUTER_SPRINT ps_variant_description ~A %ps_energy_name% ray deals %ps_cost%d%ps_dice_size% damage. Total PP spent is limited by manifester level.~
+
+  LAF psion_create_level1_power
+    INT_VAR
+      ps_target = 2
+      ps_range = 30
+      ps_projectile = psion_none_projectile
+      ps_flags = psion_hostile_flags
+    STR_VAR
+      ps_resref = ~%ps_resref%~
+      ps_name = ~%ps_variant_name%~
+      ps_description = ~%ps_variant_description%~
+      ps_icon = ~%ps_icon%~
+  END
+
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR
+        opcode = 12
+        target = 2
+        resist_dispel = BIT0
+        parameter2 = ps_damage_type
+        dicenumber = ps_cost
+        dicesize = ps_dice_size
+    END
+    PATCH_IF ps_flat_bonus > 0 BEGIN
+      // Fire follows the 3e energy-power rider: +1 damage per die.
+      LPF ADD_SPELL_EFFECT
+        INT_VAR
+          opcode = 12
+          target = 2
+          resist_dispel = BIT0
+          parameter1 = ps_cost
+          parameter2 = ps_damage_type
+      END
+    END
+  BUT_ONLY
+END
+
+// Replace the non-augmented base resource with a variant selector. Selectors
+// are free; only the chosen child resource reserves and spends PP.
+DELETE ~override/PS1ERAY.spl~
+LAF psion_create_level1_power
+  STR_VAR
+    ps_resref = ~PS1ERAY~
+    ps_name = ~Energy Ray~
+    ps_description = ~Choose an energy type and spend 1 to 9 power points. Damage dice equal total PP spent and cannot exceed manifester level.~
+    ps_icon = ~spwi112~
+END
+COPY_EXISTING ~PS1ERAY.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PS1ERAY~ END
+BUT_ONLY
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_fire BEGIN
+  ~PSRF01~ => 1
+  ~PSRF02~ => 2
+  ~PSRF03~ => 3
+  ~PSRF04~ => 4
+  ~PSRF05~ => 5
+  ~PSRF06~ => 6
+  ~PSRF07~ => 7
+  ~PSRF08~ => 8
+  ~PSRF09~ => 9
+END
+ACTION_PHP_EACH psion_energy_fire AS ps_variant => ps_cost BEGIN
+  LAF psion_create_energy_ray_variant
+    INT_VAR
+      ps_cost = ps_cost
+      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~)
+      ps_dice_size = 6
+      ps_flat_bonus = 1
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+      ps_energy_name = ~Fire~
+      ps_icon = ~spwi103~
+  END
+END
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_cold BEGIN
+  ~PSRC01~ => 1
+  ~PSRC02~ => 2
+  ~PSRC03~ => 3
+  ~PSRC04~ => 4
+  ~PSRC05~ => 5
+  ~PSRC06~ => 6
+  ~PSRC07~ => 7
+  ~PSRC08~ => 8
+  ~PSRC09~ => 9
+END
+ACTION_PHP_EACH psion_energy_cold AS ps_variant => ps_cost BEGIN
+  LAF psion_create_energy_ray_variant
+    INT_VAR
+      ps_cost = ps_cost
+      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~COLD~)
+      ps_dice_size = 6
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+      ps_energy_name = ~Cold~
+      ps_icon = ~spwi202~
+  END
+END
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_electricity BEGIN
+  ~PSRE01~ => 1
+  ~PSRE02~ => 2
+  ~PSRE03~ => 3
+  ~PSRE04~ => 4
+  ~PSRE05~ => 5
+  ~PSRE06~ => 6
+  ~PSRE07~ => 7
+  ~PSRE08~ => 8
+  ~PSRE09~ => 9
+END
+ACTION_PHP_EACH psion_energy_electricity AS ps_variant => ps_cost BEGIN
+  LAF psion_create_energy_ray_variant
+    INT_VAR
+      ps_cost = ps_cost
+      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~)
+      ps_dice_size = 6
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+      ps_energy_name = ~Electricity~
+      ps_icon = ~spwi113~
+  END
+END
+
+ACTION_DEFINE_ASSOCIATIVE_ARRAY psion_energy_sonic BEGIN
+  ~PSRS01~ => 1
+  ~PSRS02~ => 2
+  ~PSRS03~ => 3
+  ~PSRS04~ => 4
+  ~PSRS05~ => 5
+  ~PSRS06~ => 6
+  ~PSRS07~ => 7
+  ~PSRS08~ => 8
+  ~PSRS09~ => 9
+END
+ACTION_PHP_EACH psion_energy_sonic AS ps_variant => ps_cost BEGIN
+  LAF psion_create_energy_ray_variant
+    INT_VAR
+      ps_cost = ps_cost
+      ps_damage_type = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~)
+      ps_dice_size = 4
+    STR_VAR
+      ps_resref = ~%ps_variant%~
+      ps_energy_name = ~Sonic~
+      ps_icon = ~spwi212~
+  END
+END

@@ -1,0 +1,257 @@
+// Purpose-built level-3 Psion powers.
+//
+// These resources replace the remaining level-3 template clones. Mechanics
+// without a portable one-to-one Infinity Engine representation are explicitly
+// described as approximations in both source comments and in-game text.
+
+DEFINE_ACTION_FUNCTION psion_create_level3_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 4
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi326~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4 // Innate power granted through a discipline CLAB.
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 3
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level3_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+OUTER_SET psion_level3_line_projectile = IDS_OF_SYMBOL (~missile~ ~Lightning_Bolt~)
+ACTION_IF psion_level3_line_projectile < 0 BEGIN
+  // Lightning Bolt is projectile 5 in the classic BG-family MISSILE.IDS.
+  OUTER_SET psion_level3_line_projectile = 5
+END
+
+// Dispel Psionics: the portable resource uses the engine's normal dispel
+// opcode at a fixed effective level of 5. The later GemRB implementation will
+// replace this with a manifester-level + Psicraft check.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 30
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+  STR_VAR
+    ps_resref = ~PS3DPSI~
+    ps_name = ~Dispel Psionics~
+    ps_description = ~Attempts to remove magical and psionic effects in a small area. This portable alpha uses the Infinity Engine dispel check at effective level 5; later GemRB integration will use manifester level and Psicraft.~
+    ps_icon = ~sppr326~
+END
+COPY_EXISTING ~PS3DPSI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 58 target = 2 resist_dispel = BIT1 parameter1 = 5 parameter2 = 1 timing = 1 END
+BUT_ONLY
+
+// Body Adjustment: base 5-PP manifestation heals 1d12 + 5 hit points.
+LAF psion_create_level3_power
+  STR_VAR
+    ps_resref = ~PS3BADJ~
+    ps_name = ~Body Adjustment~
+    ps_description = ~The manifester repairs bodily damage and regains 1d12+5 hit points. Later augmentation will add extra healing dice and condition removal.~
+    ps_icon = ~sppr314~
+END
+COPY_EXISTING ~PS3BADJ.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 resist_dispel = BIT1 parameter1 = 5 dicenumber = 1 dicesize = 12 timing = 1 END
+BUT_ONLY
+
+// Energy Bolt: a line of electrical energy, save vs breath for half.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 40
+    ps_projectile = psion_level3_line_projectile
+    ps_flags = psion_level3_hostile_flags
+  STR_VAR
+    ps_resref = ~PS3EBLT~
+    ps_name = ~Energy Bolt~
+    ps_description = ~A line of electrical energy deals 5d6 damage to creatures in its path. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi326~
+END
+COPY_EXISTING ~PS3EBLT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+BUT_ONLY
+
+// Mental Barrier: immediate one-round defense. BG has no reaction-casting
+// channel, so the player activates it normally before an expected attack.
+LAF psion_create_level3_power
+  STR_VAR
+    ps_resref = ~PS3MBAR~
+    ps_name = ~Mental Barrier~
+    ps_description = ~For one round the manifester gains +4 Armor Class, +2 to all saving throws, and immunity to backstab. Recasting refreshes rather than stacks the effect.~
+    ps_icon = ~spwi317~
+END
+COPY_EXISTING ~PS3MBAR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS3MBAR~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 6 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 6 END
+  END
+BUT_ONLY
+
+// Touchsight: detects invisible creatures and prevents blindness/backstab within
+// the limits of actor-local Infinity Engine effects.
+LAF psion_create_level3_power
+  STR_VAR
+    ps_resref = ~PS3TSGT~
+    ps_name = ~Touchsight~
+    ps_description = ~For one turn the manifester senses nearby creatures without relying on vision, detects invisibility, cannot be backstabbed, and becomes immune to new blindness effects. Recasting refreshes the effect.~
+    ps_icon = ~sppr303~
+END
+COPY_EXISTING ~PS3TSGT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS3TSGT~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 193 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 1 resist_dispel = BIT1 parameter2 = 74 timing = 0 duration = 60 END
+BUT_ONLY
+
+// Time Hop: Maze is the engine's portable temporary-removal mechanism. The
+// requested three-round duration is written explicitly, though individual game
+// implementations may still apply Maze-specific return handling.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level3_hostile_flags
+  STR_VAR
+    ps_resref = ~PS3THOP~
+    ps_name = ~Time Hop~
+    ps_description = ~The target is displaced outside normal time for approximately three rounds unless it succeeds on a save vs spell. The engine represents this temporary removal with its Maze effect.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PS3THOP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+BUT_ONLY
+
+// Danger Sense: trap awareness and anticipation are represented by trap skill,
+// general AC and backstab immunity.
+LAF psion_create_level3_power
+  STR_VAR
+    ps_resref = ~PS3DANG~
+    ps_name = ~Danger Sense~
+    ps_description = ~For one turn the Seer gains +20 to trap detection, +2 Armor Class, +2 to all saving throws, and immunity to backstab. This approximates supernatural warning against traps, missiles, and surprise.~
+    ps_icon = ~sppr306~
+END
+COPY_EXISTING ~PS3DANG.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS3DANG~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 91 target = 1 resist_dispel = BIT1 parameter1 = 20 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 60 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Ectoplasmic Cocoon: a breakable hit-point shell requires GemRB-side state.
+// The portable approximation holds the victim while granting 50% physical
+// resistance for three rounds; a save vs spell negates the entire effect.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level3_hostile_flags
+  STR_VAR
+    ps_resref = ~PS3COCO~
+    ps_name = ~Ectoplasmic Cocoon~
+    ps_description = ~A failed save vs spell encases the target for three rounds, holding it and granting 50 percent resistance to physical damage. A later GemRB implementation will replace this approximation with a destructible cocoon shell.~
+    ps_icon = ~spwi308~
+END
+COPY_EXISTING ~PS3COCO.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 2 resist_dispel = BIT0 parameter1 = 50 timing = 0 duration = 18 savingthrow = BIT0 END
+  END
+BUT_ONLY
+
+// Energy Cone: cone projectile and electrical damage, save vs breath for half.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 25
+    ps_projectile = psion_cone_projectile
+    ps_flags = psion_level3_hostile_flags
+  STR_VAR
+    ps_resref = ~PS3ECON~
+    ps_name = ~Energy Cone~
+    ps_description = ~A cone of electrical energy deals 5d6 damage. A successful save vs breath halves the damage.~
+    ps_icon = ~spwi304~
+END
+COPY_EXISTING ~PS3ECON.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 5 dicesize = 6 savingthrow = BIT1 special = BIT8 END
+BUT_ONLY
+
+// Hustle: the portable action-economy approximation grants movement and one
+// extra attack for a single round.
+LAF psion_create_level3_power
+  STR_VAR
+    ps_resref = ~PS3HUST~
+    ps_name = ~Hustle~
+    ps_description = ~For one round the Egoist moves at double speed and gains one additional attack per round. Recasting refreshes rather than stacks the effect.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PS3HUST.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS3HUST~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 200 parameter2 = 2 timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 6 END
+BUT_ONLY
+
+// Spatial Step: teleport the manifester to the selected point. Opcode 124 mode
+// 1 moves the source to the spell target location.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS3SSTP~
+    ps_name = ~Spatial Step~
+    ps_description = ~The Nomad teleports to a visible point within 30 feet. Areas or plot states that block teleportation may prevent the movement.~
+    ps_icon = ~spwi402~
+END
+COPY_EXISTING ~PS3SSTP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 1 resist_dispel = BIT1 parameter2 = 1 timing = 1 END
+BUT_ONLY
+
+// Mental Stasis: table name retained from the prototype catalogue. It freezes
+// thought and action using hold, silence and slow for three rounds.
+LAF psion_create_level3_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level3_hostile_flags
+  STR_VAR
+    ps_resref = ~PS3MSTL~
+    ps_name = ~Mental Stasis~
+    ps_description = ~One intelligent target is held, silenced, and slowed for three rounds unless it succeeds on a save vs spell. Magic resistance applies.~
+    ps_icon = ~spwi319~
+END
+COPY_EXISTING ~PS3MSTL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 38 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 END
+BUT_ONLY
