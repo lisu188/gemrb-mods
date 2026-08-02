@@ -66,8 +66,13 @@ def main() -> None:
         assert "ps_flags = psion_level3_hostile_flags" in section(builder, resref)
 
     # Mental Stasis was not an EPH power; nothing may reintroduce it.
-    assert "opcode = 175" not in section(builder, "PS3CBRE")
+    crisis_of_breath = section(builder, "PS3CBRE")
+    assert "opcode = 175" not in crisis_of_breath
     assert "PS3MSTL" not in builder
+
+    # SRD gives Crisis of Breath "Will negates", so the save must negate rather
+    # than halve. special = BIT8 on the damage would silently make it half.
+    assert "special = BIT8" not in crisis_of_breath
 
     # Body Adjustment heals a flat 1d12; the tabletop power has no +5 rider.
     body_adjustment = section(builder, "PS3BADJ")

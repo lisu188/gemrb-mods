@@ -55,7 +55,7 @@ def main() -> None:
         ),
         "PS5PRES": ("opcode = 166", "parameter1 = 21", "duration = 540"),
         "PS5PCRU": (
-            "opcode = 12", "dicenumber = 8", "dicesize = 6", "special = BIT8",
+            "opcode = 12", "dicenumber = 3", "dicesize = 6",
             "opcode = 175", "duration = 12",
         ),
         "PS5TRUE": ("opcode = 193", "opcode = 292", "parameter2 = 74", "duration = 60"),
@@ -85,9 +85,15 @@ def main() -> None:
     for resref in ("PS5CATP", "PS5PCRU", "PS5HOCR", "PS5ECUR", "PS5BALT", "PS5MPRB"):
         assert "ps_flags = psion_level5_hostile_flags" in section(builder, resref)
 
-    # Psychic Crush is heavy damage plus a brief hold, deliberately not the
-    # tabletop save-or-die. Opcode 13 (Death) must never appear here.
-    assert "opcode = 13 " not in section(builder, "PS5PCRU")
+    # Psychic Crush is 3d6 plus a hold, deliberately not the tabletop
+    # save-or-die. Opcode 13 (Death) must never appear here.
+    psychic_crush = section(builder, "PS5PCRU")
+    assert "opcode = 13 " not in psychic_crush
+    # 3d6 is the SRD's own save-succeeded damage. The 8d6 that shipped first was
+    # invented while the SRD was unreachable; nothing may restore it.
+    assert "dicenumber = 8" not in psychic_crush
+    # The damage lands regardless of the save, so it carries no save-for-half.
+    assert "dicenumber = 3 dicesize = 6 END" in psychic_crush
     # Cognitive Overload was not an EPH power; nothing may reintroduce it.
     assert "PS5COGL" not in builder
 

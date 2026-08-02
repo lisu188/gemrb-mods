@@ -245,12 +245,20 @@ BUT_ONLY
 // the Telepath's level-5 discipline exclusive, so the replacement had to be a
 // 3rd-level Telepathy power.
 //
-// SNIPPET-SOURCED. The SRD psionics power list gives Crisis of Breath as a
-// 3rd-level Telepathy power, "disrupt subject's breathing", but every SRD
-// mirror is blocked by this environment's network policy, so the full entry
-// could not be read. Suffocation has no Infinity Engine opcode; the choking is
-// approximated with damage plus silence and slow, reusing opcodes already
-// proven in this codebase. Confirm the numbers against the book.
+// SRD (Psionics, Telepath 3, 5 PP, Telepathy [Compulsion, Mind-Affecting]):
+// the subject purges its air and its autonomic breathing stops. "Saving Throw:
+// Will negates, Fortitude partial". A subject that fails the Will save must
+// keep spending actions to gasp for breath or risk blacking out; a failed
+// Fortitude save disables it at 0 hp, then drops it to -1 the round after.
+//
+// The save vs spell therefore negates outright rather than halving. The engine
+// has no suffocation track and no per-round Fortitude escalation, so the
+// blackout is approximated by silence and slow -- the subject spending itself
+// on breathing rather than acting -- plus damage standing in for the hit-point
+// loss the tabletop power reaches through 0 hp and -1. That substitution is an
+// approximation; the negating save and the 5 PP cost are the SRD's own. SRD
+// also restricts the target to one breathing humanoid, which this build does
+// not enforce.
 LAF psion_create_level3_power
   INT_VAR
     ps_target = 2
@@ -260,11 +268,11 @@ LAF psion_create_level3_power
   STR_VAR
     ps_resref = ~PS3CBRE~
     ps_name = ~Crisis of Breath~
-    ps_description = ~The target's breathing seizes, dealing 3d6 damage with a save vs spell for half. A failed save also leaves it unable to speak and slowed for three rounds. Magic resistance applies.~
+    ps_description = ~A save vs spell negates entirely. On a failed save the target's breathing seizes: 3d6 damage from oxygen starvation, and it is left unable to speak and slowed for three rounds. Magic resistance applies.~
     ps_icon = ~spwi319~
 END
 COPY_EXISTING ~PS3CBRE.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 savingthrow = BIT0 savebonus = psion_level3_save_penalty special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 38 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level3_save_penalty END
 BUT_ONLY

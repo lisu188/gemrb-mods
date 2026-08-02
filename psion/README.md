@@ -234,13 +234,21 @@ comments and in-game descriptions:
 - Wall of Ectoplasm creates one construct node instead of a segmented wall.
 - Metamorphosis provides one bear-like form.
 - Fly (Psionic) cannot cross arbitrary unwalkable map geometry.
-- Psychic Crush deals heavy damage plus a brief hold rather than reducing the
-  target to -1 hit points, which would be a save-or-die at the level it is
-  reachable.
-- Crisis of Breath approximates suffocation with damage, silence and slow;
-  the engine has no suffocation mechanic.
-- Matter Agitation is an Infinity Engine approximation on the level-1 damage
-  budget rather than a transcription of the tabletop entry.
+- Psychic Crush deals its tabletop 3d6 plus a hold, rather than dropping the
+  target to -1 hit points, which would be a save-or-die at the level it becomes
+  reachable. The +4 bonus the target gets on its save, and the augment line of
+  +1d6 per 2 additional power points, are not implemented.
+- Crisis of Breath approximates suffocation with damage, silence and slow; the
+  engine has no suffocation track and no per-round Fortitude escalation. The
+  save negates outright, as the tabletop power does. Its restriction to
+  breathing humanoids is not enforced.
+- Matter Agitation ramps 1 point, then 1d4, then 1d6 over three rounds and
+  allows no save, as the tabletop power does, but stops there instead of
+  running on concentration, and does not heat objects.
+- Energy Push hardcodes electrical damage; the tabletop power lets the
+  manifester choose cold, electricity, fire or sonic. Its knockback is gated on
+  the same save as the damage, standing in for a Strength check the engine
+  cannot express.
 - Adapt Body does not provide portable fatigue immunity.
 - Catapsi is stationary rather than following the manifester.
 - Teleport relocates within the current area only.

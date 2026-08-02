@@ -203,13 +203,18 @@ BUT_ONLY
 // the Kineticist's level-1 exclusive, replacing Energy Push when that power
 // moved to its correct 2nd level.
 //
-// SNIPPET-SOURCED. The SRD psionics power list gives Matter Agitation as a
-// 1st-level Psychokinesis power, "you heat a creature or object", but every
-// SRD mirror is blocked by this environment's network policy, so the full
-// entry could not be read. The damage figure and the burn rider below are an
-// Infinity Engine approximation on the level-1 damage budget, not a rules
-// quotation. Confirm against the Expanded Psionics Handbook before relying on
-// the numbers.
+// SRD (Psionics, Psion/wilder 1, 1 PP, Psychokinesis): the manifester excites
+// an object or creature's structure, heating it to combustion over successive
+// rounds -- 1 point of damage in the first round, 1d4 in the second, 1d6 in the
+// third and after. Saving Throw: None.
+//
+// The ramp is reproduced with the delayed-damage idiom Energy Current already
+// uses (timing = 4 with a tick delay, 6 ticks to the round). Two deliberate
+// departures: the tabletop power runs on Concentration up to 1 min./level,
+// which the engine cannot express, so it stops after the third round; and the
+// object-heating half (igniting tinder, melting lead) has no engine analogue.
+// Both are scope limits, not rebalances -- the damage and the absent save are
+// the SRD's own.
 LAF psion_create_level1_power
   INT_VAR
     ps_target = 2
@@ -219,12 +224,13 @@ LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1MAGI~
     ps_name = ~Matter Agitation~
-    ps_description = ~The manifester agitates the target's substance into heat, dealing 1d6 fire damage with a save vs spell for half. The lingering burn worsens Armor Class by 1 for three rounds.~
+    ps_description = ~The manifester agitates the target's substance into rising heat: 1 point of fire damage at once, 1d4 in the following round, and 1d6 in the round after that. The agitation allows no saving throw.~
     ps_icon = ~spwi103~
 END
 COPY_EXISTING ~PS1MAGI.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~) dicenumber = 1 dicesize = 6 savingthrow = BIT0 savebonus = psion_level1_save_penalty special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level1_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~) parameter1 = 1 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~) dicenumber = 1 dicesize = 4 timing = 4 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~FIRE~) dicenumber = 1 dicesize = 6 timing = 4 duration = 12 END
 BUT_ONLY
 
 // Thicken Skin: natural armor approximation.

@@ -36,6 +36,22 @@
   grants. Sixteen powers are built but unreachable while CLAB rows 10-20 stay
   empty; pinning the set means stranding a further power fails CI instead of
   shipping unnoticed, and the README now lists them.
+- Corrected all four new powers against the SRD, which turned out to be
+  readable from a GitHub mirror after every conventional mirror was refused by
+  this environment's network policy. Each had been written from search snippets
+  and each was wrong:
+  - Psychic Crush dealt an invented 8d6; the tabletop figure is 3d6, and it
+    lands regardless of the save rather than being halved by it.
+  - Matter Agitation allows no saving throw and ramps 1 point, then 1d4, then
+    1d6 over three rounds. It had a save for half, a flat 1d6 and an Armor
+    Class penalty with no basis in the power at all.
+  - Crisis of Breath is "Will negates", so its save negates outright rather
+    than halving.
+  - Energy Push is "Reflex half" on the damage with the knockback gated on a
+    Strength check. The build had the saves the other way round: damage
+    unavoidable, knockback avoidable.
+- Added assertions pinning the corrected figures, so the invented 8d6 and a
+  halving save on Crisis of Breath both fail CI if reintroduced.
 
 - Extended every augmentation ladder to the manifester-level cap of 20 power
   points. The cap was already enforced correctly, but each ladder stopped at
