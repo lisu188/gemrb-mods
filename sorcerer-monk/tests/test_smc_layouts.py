@@ -15,11 +15,11 @@ class SorcererMonkClericLayoutTests(unittest.TestCase):
 
     def test_combined_class_row_has_full_released_width(self):
         self.assertIn(
-            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0 0 9",
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 0 0 0 0 0 0 0 9",
             TP2,
         )
         self.assertNotIn(
-            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0~",
+            "SORCERER_MONK_CLERIC %smc_lower% %smc_desc% %smc_mixed% * 786436 %smc_class_id% * 0x40000 -1 1 1 1 0 0 2 0 0 9",
             TP2,
         )
 

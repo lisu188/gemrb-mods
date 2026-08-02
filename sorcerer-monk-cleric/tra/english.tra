@@ -14,3 +14,4 @@ This is a multiclass-only combination, no dualclassing possible. Mage race and i
 @12 = ~CLASS.IDS conflicts with the numeric class identifier required for Sorcerer/Monk/Cleric. Remove stale symbol or numeric mappings before installing.~
 @13 = ~FISTWEAP.2DA already contains a row for the numeric class identifier allocated to Sorcerer/Monk/Cleric. Remove the conflicting custom-class row before installing.~
 @14 = ~Multiple SORCERER_MONK_CLERIC identity rows already exist in CLSKILLS.2DA or the active class table. Remove the duplicate rows before installing.~
+@15 = ~Could not determine valid Cleric, Sorcerer and Monk experience caps from XPCAP.2DA.~
