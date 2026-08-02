@@ -27,11 +27,15 @@
 - Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
 - Corrected the legacy `SKILLS.2DA` availability mask so Find Traps is enabled alongside Move Silently and Hide in Shadows, matching the Monk column.
 - Corrected proficiency progression to the Monk/fastest-component rate of one point every four levels.
-- Added the component-compatible starting-gold row.
+- Copied the starting-gold formula and the avatar prefix out of the live Monk rows instead of hardcoding them, since both are read by column name at runtime.
 - Added a two-slot `NUMWSLOT.2DA` row instead of falling through to the table default.
+- Built the combined `LUSM0.2DA` high-level-ability table out of the game's own Sorcerer and Monk HLA tables. GemRB resolves an unkitted multiclass through its own `LUABBR.2DA` row, so the previous row pointed both components at a table that did not exist.
+- Gave the merged action bar the Monk's Search and Stealth buttons alongside the Sorcerer's spellbook and quick spell, and left out the Monk's third quick-weapon button because `NUMWSLOT.2DA` restricts the class to two weapon slots.
+- Rejected a `QSLOTS.2DA` that is out of step with `CLSKILLS.2DA` before making any changes. GemRB addresses the action bar by row index, so an appended row would otherwise be applied to a different class.
+- Rejected class tables that do not provide both a Sorcerer and a Monk row rather than silently installing a class with no starting experience.
 - Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
-- Reworked the custom `FISTWEAP.2DA` row around GemRB's rounded multiclass-level lookup so it never grants a tier before the Monk component reaches it and still permits high-tier fists where the campaign cap allows them.
+- Copied the game's own Monk `FISTWEAP.2DA` row instead of compensating for a rounded multiclass-level lookup: GemRB resolves fists by the Monk component level, so the multiclass now reaches every fist tier at the same Monk level as a single-class Monk.
 - Replaced substring `UNLESS` guards with exact class-token guards so Sorcerer/Monk and Sorcerer/Monk/Cleric rows and columns do not suppress each other.
 - Tightened the `MULTI2SORCERER` and `MULTI2MONK` HLA guards to exact row-name matching.
 - Added regression tests for class registration, multiclass metadata, combined class features, progression, prerequisites, upgrade behavior and character-generation defaults.

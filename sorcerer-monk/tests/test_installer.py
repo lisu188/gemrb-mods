@@ -45,16 +45,16 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("%sm_class_id% SORCERER_MONK", payloads("APPEND", "class.ids"))
         fist_rows = payloads("APPEND", "fistweap.2da")
         self.assertEqual(len(fist_rows), 1)
-        self.assertTrue(fist_rows[0].startswith("%sm_class_id% MFIST1 MFIST1 MFIST1"))
+        self.assertEqual(fist_rows[0], "%sm_class_id%%sm_fist_row%")
 
-    def test_class_id_matches_clskills_row_index(self):
+    def test_class_id_is_never_hardcoded(self):
+        # The allocated ID itself is checked end-to-end by the WeiDU smoke tests;
+        # this only guards against a literal creeping back into the tables.
         self.assertNotIn("sm_candidate_id", TP2)
-        self.assertIn("OUTER_SET sm_expected_class_id = sm_clskills_id", TP2)
-        self.assertIn("OUTER_SET sm_expected_class_id = sm_clskills_rows", TP2)
         self.assertIn("sm_expected_class_id > 31", TP2)
-        self.assertEqual(TP2.count("sm_existing_id = sm_expected_class_id"), 2)
-        self.assertIn("sm_class_id != sm_expected_class_id", TP2)
-        self.assertIn("OUTER_SET sm_class_id = sm_expected_class_id", TP2)
+        for table in ("class.ids", "fistweap.2da"):
+            for row in payloads("APPEND", table):
+                self.assertIn("%sm_class_id%", row)
 
     def test_exact_class_token_guards_do_not_match_triple_class(self):
         self.assertNotIn("UNLESS ~SORCERER_MONK~", TP2)
@@ -68,8 +68,6 @@ class InstallerTests(unittest.TestCase):
 
     def test_legacy_nonproficiency_penalty_follows_monk(self):
         self.assertIn("OUTER_SPRINT sm_no_prof ~-3~", TP2)
-        self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
-        self.assertIn("READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_no_prof", TP2)
         self.assertNotIn("OUTER_SPRINT sm_no_prof ~-4~", TP2)
 
     def test_sorcerer_and_monk_features_are_combined(self):
@@ -117,8 +115,9 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("ACTION_IF sm_xpcap < (0 - 1)", TP2)
         self.assertIn("FAIL @14", TP2)
 
-    def test_starting_gold_matches_components(self):
-        self.assertIn("SORCERER_MONK 4 1 1 10", payloads("APPEND", "strtgold.2da"))
+    def test_component_derived_rows_are_not_hardcoded(self):
+        self.assertIn("SORCERER_MONK%sm_gold_row%", payloads("APPEND", "strtgold.2da"))
+        self.assertIn("SORCERER_MONK%sm_avatar%", payloads("APPEND", "avprefc.2da"))
 
     def test_bgee_starts_unarmed(self):
         self.assertIn("SORCERER_MONK", payloads("APPEND", "stweapon.2da"))
@@ -129,25 +128,44 @@ class InstallerTests(unittest.TestCase):
     def test_monk_combat_progression_is_preserved(self):
         self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
 
-    def test_multiclass_fist_progression_uses_conservative_average_level_mapping(self):
-        fist_rows = payloads("APPEND", "fistweap.2da")
-        fists = fist_rows[0].split()[1:]
-        self.assertEqual(len(fists), 41)
+    def test_fist_progression_falls_back_to_the_stock_monk_table(self):
+        # GemRB indexes FISTWEAP by the Monk component level (Actor::SetupFist),
+        # so no average-level compensation is applied. The installed row is
+        # copied from the game's Monk row; this is only the fallback literal.
+        fallback = re.search(r"OUTER_SPRINT sm_fist_row ~([^~]*)~", TP2).group(1).split()
+        self.assertEqual(len(fallback), 41)
         expected_ranges = [
-            (0, 2, "MFIST1"),
-            (3, 5, "MFIST2"),
-            (6, 9, "MFIST3"),
-            (10, 12, "MFIST4"),
-            (13, 14, "MFIST5"),
-            (15, 17, "MFIST6"),
-            (18, 22, "MFIST7"),
-            (23, 40, "MFIST8"),
+            (0, 1, "MFIST1"),
+            (2, 4, "MFIST2"),
+            (5, 7, "MFIST3"),
+            (8, 10, "MFIST4"),
+            (11, 13, "MFIST5"),
+            (14, 16, "MFIST6"),
+            (17, 23, "MFIST7"),
+            (24, 40, "MFIST8"),
         ]
         for start, end, fist in expected_ranges:
-            self.assertEqual(fists[start : end + 1], [fist] * (end - start + 1))
+            self.assertEqual(fallback[start : end + 1], [fist] * (end - start + 1))
 
-    def test_merged_action_bar(self):
-        self.assertIn("SORCERER_MONK 0 3 4 2 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
+    def test_merged_action_bar_carries_both_components(self):
+        # QSPELL1 and CAST from Sorcerer, SEARCH and STEALTH from Monk, then the
+        # shared use/quick-item/innate buttons. The Monk's third quick-weapon
+        # button is excluded because NUMWSLOT restricts the class to two slots.
+        self.assertIn("SORCERER_MONK 3 2 22 0 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
+
+    def test_index_addressed_tables_are_preflighted(self):
+        self.assertIn("COUNT_2DA_ROWS sm_qslots_cols sm_qslots_rows", TP2)
+        self.assertIn("ACTION_IF sm_qslots_rows != (sm_class_id - 1)", TP2)
+
+    def test_both_component_rows_are_required(self):
+        self.assertIn("ACTION_IF (sm_sorcerer_found = 0) OR (sm_monk_id < 0)", TP2)
+
+    def test_hla_table_is_generated_rather_than_referenced(self):
+        # The LUABBR row may only be added together with the table it names.
+        abbrev = TP2.index("APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~")
+        merge = TP2.index("APPEND ~lusm0.2da~")
+        self.assertLess(merge, abbrev)
+        self.assertIn("LAUNCH_ACTION_MACRO sm_collect_hlas", TP2)
 
 
 if __name__ == "__main__":

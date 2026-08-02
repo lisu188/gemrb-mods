@@ -3,7 +3,10 @@ import shutil
 import sys
 import tempfile
 
-from weidu_smoke import build_fixture, count_token, run_weidu, write_2da
+from weidu_smoke import (
+    build_fixture, count_token, run_weidu, verify_component_derived_rows, write_2da,
+    write_qslots,
+)
 
 
 CLASS_HEADERS_COMBINED = [
@@ -86,6 +89,7 @@ def make_released_ee_layout(game):
         ],
     )
     write_clskills(override / "clskills.2da", modern=False)
+    write_qslots(override, CLASS_NAMES)
     write_2da(
         override / "hpclass.2da",
         ["HP"],
@@ -108,6 +112,7 @@ def make_current_split_layout(game):
         ],
     )
     write_clskills(override / "clskills.2da", modern=True)
+    write_qslots(override, CLASS_NAMES)
     write_2da(
         override / "clastext.2da",
         ["CLASSID", "KITID", "LOWER", "DESCSTR", "MIXED"],
@@ -151,6 +156,7 @@ def verify_released_ee(game):
     assert "22 SORCERER_MONK" in (override / "class.ids").read_text(encoding="utf-8")
     assert count_token(override / "clskills.2da", "SORCERER_MONK") == 1
     assert count_token(override / "skills.2da", "SORCERER_MONK") == 1
+    verify_component_derived_rows(game, class_id="22", monk_id="20")
 
 
 def verify_current_split(game):
@@ -164,6 +170,7 @@ def verify_current_split(game):
     assert "22 SORCERER_MONK" in (override / "class.ids").read_text(encoding="utf-8")
     assert count_token(override / "clskills.2da", "SORCERER_MONK") == 1
     assert count_token(override / "thiefscl.2da", "SORCERER_MONK") == 1
+    verify_component_derived_rows(game, class_id="22", monk_id="20")
 
 
 def exercise(weidu, builder, verifier, label):
@@ -180,6 +187,7 @@ def exercise(weidu, builder, verifier, label):
 
         for name, original in originals.items():
             assert (game / "override" / name).read_bytes() == original, f"{label}: {name}"
+        assert not (game / "override" / "lusm0.2da").exists(), f"{label}: lusm0.2da left behind"
         print(f"{label}: OK", flush=True)
 
 

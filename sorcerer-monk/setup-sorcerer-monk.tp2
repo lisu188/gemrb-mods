@@ -34,6 +34,8 @@ OUTER_SET sm_brief = RESOLVE_STR_REF (@8)
 OUTER_SET sm_class_id = (0 - 1)
 OUTER_SET sm_expected_class_id = (0 - 1)
 OUTER_SET sm_clskills_id = (0 - 1)
+OUTER_SET sm_monk_id = (0 - 1)
+OUTER_SET sm_sorcerer_found = 0
 OUTER_SET sm_class_id_conflict = 0
 OUTER_SET sm_valid_class_ids = 0
 OUTER_SET sm_split_class_tables = 0
@@ -43,9 +45,17 @@ OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
 OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
+OUTER_SET sm_qslots_cols = 0
+OUTER_SET sm_qslots_rows = 0
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
+// Leading separators are intentional: these are appended straight after the
+// row name. The literals are the stock BG2 Monk values and only survive when
+// the active tables do not provide a Monk row to copy.
+OUTER_SPRINT sm_gold_row ~ 4 1 1 10~
+OUTER_SPRINT sm_avatar ~ 0x500~
+OUTER_SPRINT sm_fist_row ~ MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
 
 // GemRB indexes several class-specific arrays directly with IE_CLASS and also
 // tracks class categories in a 32-bit mask. A custom class ID therefore has to
@@ -61,6 +71,7 @@ COPY_EXISTING ~clskills.2da~ ~override~
       SET sm_clskills_id = sm_i
     END
     PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+      SET sm_sorcerer_found = 1
       READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
       PATCH_IF sm_clskills_cols = 17 BEGIN
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 13 sm_startxp2
@@ -68,14 +79,25 @@ COPY_EXISTING ~clskills.2da~ ~override~
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_startxp2
       END
     END
-    PATCH_IF (sm_clskills_cols = 17) AND (~%sm_skill_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
-      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_no_prof
+    PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      // The Monk row index is the Monk class ID, which is how FISTWEAP.2DA
+      // rows are named.
+      SET sm_monk_id = sm_i
+      PATCH_IF sm_clskills_cols = 17 BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 12 sm_no_prof
+      END
     END
   END
 BUT_ONLY
 
 ACTION_IF (sm_clskills_cols != 16) AND (sm_clskills_cols != 17) THEN BEGIN
   FAIL @10
+END
+
+// Both component rows have to exist: everything the multiclass inherits is
+// copied from them.
+ACTION_IF (sm_sorcerer_found = 0) OR (sm_monk_id < 0) THEN BEGIN
+  FAIL @17
 END
 
 ACTION_IF sm_clskills_id >= 0 THEN BEGIN
@@ -186,6 +208,75 @@ ACTION_IF sm_xpcap < (0 - 1) THEN BEGIN
   FAIL @14
 END
 
+// QSLOTS.2DA is the one class table GemRB addresses by row index instead of by
+// row name: GemRB's InitActorTables fills GUIBTDefaults[i] from row i - 1, so
+// the appended action bar only reaches the new class when the table already
+// holds exactly sm_class_id - 1 rows. Every GemRB data set satisfies that
+// (CLSKILLS has one extra UNUSED row), but a third-party class mod need not.
+COPY_EXISTING ~qslots.2da~ ~override~
+  COUNT_2DA_COLS sm_qslots_cols
+  COUNT_2DA_ROWS sm_qslots_cols sm_qslots_rows
+BUT_ONLY
+
+ACTION_IF sm_qslots_rows != (sm_class_id - 1) THEN BEGIN
+  FAIL @18
+END
+
+// Copy the Monk starting-gold formula and avatar prefix instead of assuming a
+// fixed column order: both are read by column name at runtime, so a game whose
+// table is ordered differently would otherwise get the values transposed.
+ACTION_IF FILE_EXISTS_IN_GAME ~strtgold.2da~ THEN BEGIN
+  COPY_EXISTING ~strtgold.2da~ ~override~
+    COUNT_2DA_COLS sm_gold_cols
+    READ_2DA_ENTRIES_NOW ~sm_gold~ sm_gold_cols
+    FOR (sm_i = 0; sm_i < sm_gold; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_gold~ sm_i 0 sm_gold_class
+      PATCH_IF (~%sm_gold_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        SPRINT sm_gold_row ~~
+        FOR (sm_j = 1; sm_j < sm_gold_cols; ++sm_j) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_gold~ sm_i sm_j sm_gold_cell
+          SPRINT sm_gold_row ~%sm_gold_row% %sm_gold_cell%~
+        END
+      END
+    END
+  BUT_ONLY
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~avprefc.2da~ THEN BEGIN
+  COPY_EXISTING ~avprefc.2da~ ~override~
+    COUNT_2DA_COLS sm_avprefc_cols
+    READ_2DA_ENTRIES_NOW ~sm_avprefc~ sm_avprefc_cols
+    FOR (sm_i = 0; sm_i < sm_avprefc; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_avprefc~ sm_i 0 sm_avprefc_class
+      PATCH_IF (~%sm_avprefc_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        SPRINT sm_avatar ~~
+        FOR (sm_j = 1; sm_j < sm_avprefc_cols; ++sm_j) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_avprefc~ sm_i sm_j sm_avprefc_cell
+          SPRINT sm_avatar ~%sm_avatar% %sm_avprefc_cell%~
+        END
+      END
+    END
+  BUT_ONLY
+END
+
+// GemRB looks fists up by the Monk component level, not by the rounded average
+// multiclass level (Actor::SetupFist overrides the average with GetMonkLevel),
+// so the multiclass can and should use the Monk progression unchanged.
+COPY_EXISTING ~fistweap.2da~ ~override~
+  COUNT_2DA_COLS sm_fist_cols
+  READ_2DA_ENTRIES_NOW ~sm_fist~ sm_fist_cols
+  FOR (sm_i = 0; sm_i < sm_fist; ++sm_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_fist~ sm_i 0 sm_fist_class
+    PATCH_IF (~%sm_fist_class%~ STRING_EQUAL_CASE ~%sm_monk_id%~) BEGIN
+      SPRINT sm_fist_row ~~
+      FOR (sm_j = 1; sm_j < sm_fist_cols; ++sm_j) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_fist~ sm_i sm_j sm_fist_cell
+        SPRINT sm_fist_row ~%sm_fist_row% %sm_fist_cell%~
+      END
+    END
+  END
+BUT_ONLY
+
 ACTION_IF sm_split_class_tables = 1 THEN BEGIN
   // CLASSTEXT has three supported layouts: GemRB's normalized six-column form,
   // the older native EE nine-column form, and the newer native EE ten-column
@@ -245,7 +336,9 @@ ACTION_IF FILE_EXISTS_IN_GAME ~abclsmod.2da~ THEN BEGIN
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
-// All supported games expose the extended BG2-style proficiency table.
+// All supported games expose the extended BG2-style proficiency table. The
+// column is positional, so it has to hold exactly one value per proficiency
+// row; WeiDU aborts the component and rolls back if that ever stops matching.
 APPEND_COL ~weapprof.2da~ ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
@@ -257,8 +350,8 @@ APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
 APPEND ~xpcap.2da~ ~SORCERER_MONK %sm_xpcap%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-// Both component classes use the same starting-gold formula.
-APPEND ~strtgold.2da~ ~SORCERER_MONK 4 1 1 10~
+// Both component classes use the same starting-gold formula, copied above.
+APPEND ~strtgold.2da~ ~SORCERER_MONK%sm_gold_row%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // BGEE defaults to a quarterstaff for classes missing from STWEAPON. Keep the
@@ -289,10 +382,98 @@ END
 // Dual-classing would additionally require ABDC*, DUALCLASS.2DA and a
 // dedicated MC_WAS_ID value, so it remains intentionally unsupported.
 
-// Use the combined HLAs from both component classes where HLA tables exist.
+// Collects the rows of one component's HLA table into sm_hla_rows, renumbering
+// the row names and skipping entries already contributed by the other
+// component. Whole rows are copied because GemRB reads the level range, the
+// repeat count, the prerequisite, the exclusion and the alignment restriction
+// out of the same row, not just the ability reference.
+DEFINE_ACTION_MACRO sm_collect_hlas BEGIN
+  COPY_EXISTING ~lu%sm_hla_src%.2da~ ~override~
+    COUNT_2DA_COLS sm_src_cols
+    PATCH_IF sm_hla_cols = 0 BEGIN
+      SET sm_hla_cols = sm_src_cols
+    END
+    PATCH_IF sm_src_cols != sm_hla_cols BEGIN
+      SET sm_hla_mismatch = 1
+    END
+    READ_2DA_ENTRIES_NOW ~sm_src~ sm_src_cols
+    FOR (sm_i = 0; sm_i < sm_src; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_src~ sm_i 1 sm_ability
+      // Both string predicates return zero on a match, so this reads as "the
+      // ability is not the * sentinel GemRB stops reading at, and the other
+      // component has not contributed it already".
+      PATCH_IF (~%sm_ability%~ STRING_COMPARE_CASE ~*~)
+          AND (~%sm_hla_seen%~ STRING_CONTAINS_REGEXP ~ %sm_ability% ~) BEGIN
+        SPRINT sm_row ~%sm_hla_count%~
+        FOR (sm_j = 1; sm_j < sm_src_cols; ++sm_j) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_src~ sm_i sm_j sm_cell
+          SPRINT sm_row ~%sm_row% %sm_cell%~
+        END
+        PATCH_IF sm_hla_count = 0 BEGIN
+          SPRINT sm_hla_rows ~%sm_row%~
+        END ELSE BEGIN
+          SPRINT sm_hla_rows ~%sm_hla_rows%%LNL%%sm_row%~
+        END
+        SPRINT sm_hla_seen ~%sm_hla_seen% %sm_ability% ~
+        SET sm_hla_count += 1
+      END
+    END
+  BUT_ONLY
+END
+
+// Combined HLAs. GemRB's HLA screen looks an unkitted multiclass up through its
+// own LUABBR row rather than through the component rows (LUHLASelection.py
+// replaces the component name with the class row name), so both components end
+// up loading a single table. Build that table out of the game's own Sorcerer and
+// Monk HLA lists; a hardcoded copy would go stale and would not survive HLA
+// mods. Without both source tables there is nothing to merge, and the LUABBR row
+// is skipped rather than left pointing at a table that does not exist.
 ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
-  APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~
-    UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
+  OUTER_SPRINT sm_so_abbr ~~
+  OUTER_SPRINT sm_mo_abbr ~~
+  COPY_EXISTING ~luabbr.2da~ ~override~
+    COUNT_2DA_COLS sm_luabbr_cols
+    READ_2DA_ENTRIES_NOW ~sm_luabbr~ sm_luabbr_cols
+    FOR (sm_i = 0; sm_i < sm_luabbr; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_luabbr~ sm_i 0 sm_luabbr_class
+      PATCH_IF (~%sm_luabbr_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_luabbr~ sm_i 1 sm_so_abbr
+      END
+      PATCH_IF (~%sm_luabbr_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_luabbr~ sm_i 1 sm_mo_abbr
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF (~%sm_so_abbr%~ STRING_COMPARE_CASE ~~)
+      AND (~%sm_mo_abbr%~ STRING_COMPARE_CASE ~~)
+      AND (FILE_EXISTS_IN_GAME ~lu%sm_so_abbr%.2da~)
+      AND (FILE_EXISTS_IN_GAME ~lu%sm_mo_abbr%.2da~) THEN BEGIN
+    OUTER_SET sm_hla_count = 0
+    OUTER_SET sm_hla_cols = 0
+    OUTER_SET sm_hla_mismatch = 0
+    OUTER_SPRINT sm_hla_rows ~~
+    OUTER_SPRINT sm_hla_seen ~~
+
+    OUTER_SPRINT sm_hla_src ~%sm_so_abbr%~
+    LAUNCH_ACTION_MACRO sm_collect_hlas
+    OUTER_SPRINT sm_hla_src ~%sm_mo_abbr%~
+    LAUNCH_ACTION_MACRO sm_collect_hlas
+
+    ACTION_IF (sm_hla_count > 0) AND (sm_hla_mismatch = 0) THEN BEGIN
+      // Reuse the Sorcerer table's own header, then swap its rows for the merge.
+      COPY_EXISTING ~lu%sm_so_abbr%.2da~ ~override/lusm0.2da~
+        COUNT_2DA_ROWS sm_hla_cols sm_hla_old_rows
+        FOR (sm_i = sm_hla_old_rows - 1; sm_i >= 0; --sm_i) BEGIN
+          REMOVE_2DA_ROW sm_i sm_hla_cols
+        END
+      BUT_ONLY
+      APPEND ~lusm0.2da~ ~%sm_hla_rows%~
+
+      APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~
+        UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
+    END
+  END
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
@@ -304,8 +485,8 @@ ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
-// Avatar class value (partial animation ID).
-APPEND ~avprefc.2da~ ~SORCERER_MONK 0x500~
+// Avatar class value (partial animation ID), copied from the Monk row above.
+APPEND ~avprefc.2da~ ~SORCERER_MONK%sm_avatar%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Released and development GemRB tables differ only by the legacy NO_PROF
@@ -319,15 +500,17 @@ END ELSE BEGIN
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
-// GemRB selects FISTWEAP by the rounded average multiclass level rather than
-// the Monk component level. This conservative mapping follows the Monk table
-// without granting a fist tier before the Monk side reaches it, while moving
-// the final tier early enough to remain reachable under the campaign cap.
-APPEND ~fistweap.2da~ ~%sm_class_id% MFIST1 MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
-  UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]+MFIST1~
+// FISTWEAP rows are named after the class ID. The values were copied from the
+// Monk row above, which GemRB indexes by the Monk component level, so the
+// multiclass gets the same fists at the same Monk levels as a single-class Monk.
+APPEND ~fistweap.2da~ ~%sm_class_id%%sm_fist_row%~
+  UNLESS ~^[ %TAB%]*%sm_class_id%[ %TAB%]~
 
-// Custom merged action bar: spellcasting, thieving/monk abilities and items.
-APPEND ~qslots.2da~ ~SORCERER_MONK 0 3 4 2 8 9 11 12 13~
+// Merged action bar: one quick spell and the spellbook from Sorcerer, Search
+// and Stealth from Monk, then the shared use/quick-item/innate buttons. The
+// Monk's third quick-weapon button is deliberately left out because the
+// NUMWSLOT row above restricts the class to two weapon slots.
+APPEND ~qslots.2da~ ~SORCERER_MONK 3 2 22 0 8 9 11 12 13~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Newer GemRB builds split the old SKILLS.2DA data into THIEFSCL/THIEFSKL.

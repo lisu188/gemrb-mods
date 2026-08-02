@@ -16,6 +16,47 @@ def write_2da(path, headers, rows, default="*"):
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+HLA_HEADERS = [
+    "ABILITY", "TYPE", "ICON", "MIN_LEVEL", "MAX_LEVEL", "NUM_ALLOWED",
+    "PREREQUISITE", "EXCLUDED", "ALIGNMENT_RESTRICT",
+]
+
+
+def hla_row(index, ability):
+    """LU*.2DA rows are named by index; the ability reference is the first cell."""
+    return (str(index), [ability, 1, "ICON", 1, 99, 1, "*", "*", "*"])
+
+
+def write_qslots(override, class_names):
+    """One row per class ID: GemRB reads QSLOTS.2DA by row index, not row name."""
+    rows = []
+    for name in class_names:
+        if name == "UNUSED":
+            continue
+        if name == "MONK":
+            rows.append((name, [18, 14, 22, 0, 8, 9, 11, 12, 13]))
+        else:
+            rows.append((name, [3, 4, 5, 2, 8, 9, 11, 12, 13]))
+    write_2da(override / "qslots.2da", [f"SLOT{i}" for i in range(9)], rows)
+
+
+def write_hla_tables(override):
+    write_2da(
+        override / "luabbr.2da",
+        ["ABBREV"],
+        [("SORCERER", ["SO0"]), ("MONK", ["MO0"])],
+    )
+    # GA_SPCL900 is deliberately shared so the merge has to deduplicate it, and
+    # both tables end with the sentinel row GemRB stops reading at.
+    for name, abilities in [
+        ("luso0.2da", ["GA_SPCL900", "GA_SPCL920", "GA_SPCL921"]),
+        ("lumo0.2da", ["GA_SPCL900", "GA_SPCL930", "GA_SPCL931"]),
+    ]:
+        rows = [hla_row(i, ability) for i, ability in enumerate(abilities)]
+        rows.append((str(len(abilities)), ["*"] * 9))
+        write_2da(override / name, HLA_HEADERS, rows)
+
+
 def build_fixture(game):
     override = game / "override"
     override.mkdir(parents=True)
@@ -96,11 +137,8 @@ def build_fixture(game):
         "MFIST6", "MFIST7", "MFIST7", "MFIST7", "MFIST7", "MFIST7", "MFIST7", "MFIST7",
     ] + ["MFIST8"] * 17
     write_2da(override / "fistweap.2da", [str(i) for i in range(41)], [("20", stock_fists)], default="FIST")
-    write_2da(
-        override / "qslots.2da",
-        [f"SLOT{i}" for i in range(9)],
-        [("SORCERER", [3, 4, 5, 2, 8, 9, 11, 12, 13]), ("MONK", [18, 14, 22, 0, 8, 9, 11, 12, 13])],
-    )
+    write_qslots(override, names)
+    write_hla_tables(override)
 
     write_2da(
         override / "thiefscl.2da",
@@ -126,6 +164,47 @@ def count_token(path, token):
     return path.read_text(encoding="utf-8").split().count(token)
 
 
+def data_rows(path):
+    """The 2DA rows WeiDU and GemRB see: the three header lines are skipped."""
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.split()]
+    return [line.split() for line in lines[3:]]
+
+
+def find_row(path, name):
+    for cells in data_rows(path):
+        if cells[0] == name:
+            return cells
+    raise AssertionError(f"missing {name} in {path}")
+
+
+def verify_component_derived_rows(game, class_id, monk_id):
+    """Everything the installer copies out of the live component rows."""
+    override = game / "override"
+
+    # GemRB looks fists up by the Monk component level, so the multiclass row is
+    # the Monk row verbatim under the new class ID.
+    assert find_row(override / "fistweap.2da", class_id)[1:] == \
+        find_row(override / "fistweap.2da", monk_id)[1:]
+
+    # GemRB reads QSLOTS.2DA by row index: class ID N uses row N - 1.
+    qslots = data_rows(override / "qslots.2da")
+    assert qslots[int(class_id) - 1] == \
+        ["SORCERER_MONK", "3", "2", "22", "0", "8", "9", "11", "12", "13"], qslots[-1]
+
+    assert find_row(override / "strtgold.2da", "SORCERER_MONK")[1:] == \
+        find_row(override / "strtgold.2da", "MONK")[1:]
+    assert find_row(override / "avprefc.2da", "SORCERER_MONK")[1:] == \
+        find_row(override / "avprefc.2da", "MONK")[1:]
+
+    # The merged HLA table keeps both components' abilities, in order, once each.
+    assert find_row(override / "luabbr.2da", "SORCERER_MONK")[1] == "SM0"
+    merged = data_rows(override / "lusm0.2da")
+    assert [cells[0] for cells in merged] == ["0", "1", "2", "3", "4"], merged
+    assert [cells[1] for cells in merged] == \
+        ["GA_SPCL900", "GA_SPCL920", "GA_SPCL921", "GA_SPCL930", "GA_SPCL931"], merged
+    assert all(len(cells) == 10 for cells in merged), merged
+
+
 def verify_installed(game):
     override = game / "override"
     assert count_token(override / "classes.2da", "SORCERER_MONK") == 1
@@ -141,18 +220,7 @@ def verify_installed(game):
     assert count_token(override / "weapprof.2da", "SORCERER_MONK") == 1
     assert count_token(override / "thiefscl.2da", "SORCERER_MONK") == 1
 
-    fist_line = next(
-        line for line in (override / "fistweap.2da").read_text(encoding="utf-8").splitlines()
-        if line.split() and line.split()[0] == "21"
-    )
-    fists = fist_line.split()[1:]
-    assert len(fists) == 41
-    for start, end, value in [
-        (0, 2, "MFIST1"), (3, 5, "MFIST2"), (6, 9, "MFIST3"),
-        (10, 12, "MFIST4"), (13, 14, "MFIST5"), (15, 17, "MFIST6"),
-        (18, 22, "MFIST7"), (23, 40, "MFIST8"),
-    ]:
-        assert fists[start:end + 1] == [value] * (end - start + 1)
+    verify_component_derived_rows(game, class_id="21", monk_id="20")
 
     backup = game / "sorcerer-monk-cleric" / "backup" / "0"
     assert backup.is_dir()
@@ -193,7 +261,33 @@ def main():
         run_weidu(weidu, game, "--force-uninstall", "0")
         for name, original in originals.items():
             assert (game / "override" / name).read_bytes() == original, name
+        assert not (game / "override" / "lusm0.2da").exists(), "lusm0.2da left behind"
         print("real WeiDU uninstall restore: OK", flush=True)
+
+    verify_short_qslots_is_rejected(weidu)
+
+
+def verify_short_qslots_is_rejected(weidu):
+    """A QSLOTS.2DA that is out of step with CLSKILLS must stop the install.
+
+    GemRB addresses the action bar by row index, so an appended row would land
+    on another class instead of the new one.
+    """
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-qslots-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        qslots = game / "override" / "qslots.2da"
+        lines = qslots.read_text(encoding="utf-8").splitlines()
+        qslots.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")
+
+        result = subprocess.run(
+            [weidu, "sorcerer-monk/setup-sorcerer-monk.tp2", "--game", str(game),
+             "--language", "0", "--noautoupdate", "--force-install-list", "0"],
+            cwd=game, capture_output=True, text=True,
+        )
+        assert result.returncode != 0, "short QSLOTS.2DA was accepted"
+        assert "SORCERER_MONK" not in (game / "override" / "classes.2da").read_text(encoding="utf-8")
+        print("real WeiDU short-qslots rejection: OK", flush=True)
 
 
 if __name__ == "__main__":
