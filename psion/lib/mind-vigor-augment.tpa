@@ -9,7 +9,11 @@ INT_VAR
 STR_VAR
   ps_resref = ~~
 BEGIN
-  OUTER_SET ps_save_penalty = (0 - ((ps_cost - 1) / 2))
+  // Mind Thrust's own augment line improves the save DC by 1 for each extra
+  // 2d10, on top of the level-1 baseline every generated power carries. These
+  // children replace PS1MTHR.spl outright, so the baseline has to be added
+  // here explicitly rather than inherited from the level-1 builder.
+  OUTER_SET ps_save_penalty = (psion_level1_save_penalty - ((ps_cost - 1) / 2))
   OUTER_SPRINT ps_variant_name ~Mind Thrust (%ps_cost% PP)~
   OUTER_SPRINT ps_variant_description ~A direct mental attack deals %ps_cost%d10 magical damage. A save vs spell negates the damage; the save penalty improves by 1 for every 2 PP beyond the first.~
 

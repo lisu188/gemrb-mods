@@ -223,7 +223,10 @@ def validate_builders() -> None:
     # Mind Thrust augments damage by 1d10 per additional power point, and the
     # save DC by 1 for each extra 2d10, so the penalty is floor((cost - 1) / 2).
     assert "dicenumber = ps_cost" in mind_vigor
-    assert "ps_save_penalty = (0 - ((ps_cost - 1) / 2))" in mind_vigor
+    assert (
+        "ps_save_penalty = (psion_level1_save_penalty - ((ps_cost - 1) / 2))"
+        in mind_vigor
+    )
 
 
 def validate_augmentation() -> None:
@@ -268,16 +271,22 @@ def validate_save_dc_scheme() -> None:
         )
         assert f"OUTER_SET {constant} = {expected}" in text, (level, expected)
 
-        for number, line in enumerate(text.splitlines(), start=1):
+    # Walk every module, not just the level builders. The augment modules
+    # delete and rebuild some level-1 resources, so a check scoped to
+    # level*-powers.tpa would pass while the resources players actually
+    # manifest carry no penalty at all.
+    for path in sorted((ROOT / "lib").glob("*.tpa")):
+        body = path.read_text(encoding="utf-8")
+        rendered = body.splitlines()
+        for number, line in enumerate(rendered, start=1):
             if "savingthrow = BIT" not in line:
                 continue
             # The multi-line INT_VAR form puts savebonus on its own line.
-            following = text.splitlines()[number : number + 1]
-            if constant in line or (following and constant in following[0]):
+            following = rendered[number] if number < len(rendered) else ""
+            if "save_penalty" in line or "save_penalty" in following:
                 continue
             raise AssertionError(
-                f"level{level}-powers.tpa:{number} sets a saving throw without "
-                f"{constant}"
+                f"{path.name}:{number} sets a saving throw without a save penalty"
             )
 
 
