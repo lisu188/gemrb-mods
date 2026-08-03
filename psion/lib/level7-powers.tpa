@@ -57,7 +57,8 @@ COPY_EXISTING ~PS7FATE.spl~ ~override~
 BUT_ONLY
 
 // Mass Ectoplasmic Cocoon uses the existing fireball-style burst projectile and
-// the same held-state approximation as the level-3 single-target version.
+// the same held-state approximation as the level-3 single-target version. The
+// SRD explicitly gives this mass form Power Resistance: No, so MR is bypassed.
 LAF psion_create_level7_power
   INT_VAR
     ps_target = 4
@@ -67,11 +68,11 @@ LAF psion_create_level7_power
   STR_VAR
     ps_resref = ~PS7MCOC~
     ps_name = ~Ectoplasmic Cocoon, Mass~
-    ps_description = ~A burst of ectoplasm holds creatures in the area helpless for five rounds unless they succeed on a save vs breath. As with Ectoplasmic Cocoon, the portable form cannot create a destructible shell with its own hardness and hit points.~
+    ps_description = ~A burst of ectoplasm holds creatures in the area helpless for five rounds unless they succeed on a save vs breath. Power resistance does not apply. As with Ectoplasmic Cocoon, the portable form cannot create a destructible shell with its own hardness and hit points.~
     ps_icon = ~spwi708~
 END
 COPY_EXISTING ~PS7MCOC.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level7_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level7_save_penalty END
 BUT_ONLY
 
 // Reddopsi reflects targeted powers. Full psionics-only discrimination is not
