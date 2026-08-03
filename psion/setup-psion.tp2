@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~1.0.0~
+VERSION ~1.1.0-alpha~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -15,6 +15,8 @@ COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
 COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
+COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
+COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
 COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
@@ -24,8 +26,8 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed initial power selections. Each discipline learns 19 powers by level 9,
-// including its exclusive power whenever a new power level is unlocked.
+// Fixed initial power selections plus the reusable Center Mind action and the
+// class bonus-feat selector at levels 1, 5, 10, 15 and 20.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
