@@ -131,12 +131,12 @@ COPY_EXISTING ~PS7EJNT.spl~ ~override~
   END
 BUT_ONLY
 
-// Crisis of Life is a Fortitude save-or-die with power resistance in tabletop.
-// The portable form performs exactly one PR/MR check on the outer parent. On a
-// successful penetration it casts a no-PR resolution child: 5d6 is automatic,
-// then exactly one save vs death gates the other 5d6 and one-round helplessness.
-// This yields no effect on resisted manifestation, 5d6 on a successful save,
-// and 10d6 plus hold on a failed save without duplicate PR or saving throws.
+// Crisis of Life is a Fortitude partial save with power resistance in tabletop.
+// A successful SRD save takes 7d6; a failed save can kill an 11-HD-or-lower
+// creature. The portable form preserves the 7d6 successful branch and replaces
+// the instant-death branch with +3d6 and one round of helplessness. Exactly one
+// PR/MR check happens on the parent, then exactly one save in the resolution
+// child: resisted = no effect, save success = 7d6, save failure = 10d6 + hold.
 LAF psion_create_level7_power
   INT_VAR
     ps_target = 2
@@ -146,24 +146,24 @@ LAF psion_create_level7_power
   STR_VAR
     ps_resref = ~PS7CLIF~
     ps_name = ~Crisis of Life~
-    ps_description = ~The Telepath attacks the target's autonomic functions for 10d6 magical damage, with a save vs death for half. A failed save also holds the victim helpless for one round. Power resistance applies once before the save. Tabletop Crisis of Life stops the heart outright; the portable form avoids a single-save instant kill.~
+    ps_description = ~The Telepath attacks the target's autonomic functions. Power resistance applies once, then a save vs death determines the result: a successful save takes 7d6 magical damage; a failed save takes 10d6 and is held helpless for one round. Tabletop Crisis of Life instead kills a failed-save target of 11 Hit Dice or less; the portable form replaces that instant-death branch with severe damage and brief collapse.~
     ps_icon = ~spwi713~
 END
 
-// Failed-save package: no further PR or saving throw.
+// Failed-save package: +3d6 and hold, with no further PR or saving throw.
 COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIB.spl~
   SAY NAME1 ~Crisis of Life Failure~
   SAY UNIDENTIFIED_DESC ~Internal failed-save Crisis of Life effect package.~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 6 END
 BUT_ONLY
 
-// Resolution package after the outer PR check: 5d6 always, then one save gates
-// the failed-save package. All child effects bypass resistance deliberately.
+// Resolution package after the outer PR check: the SRD successful-save 7d6 is
+// automatic, then one save gates the failed-save package. Children bypass PR.
 COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIR.spl~
   SAY NAME1 ~Crisis of Life Resolution~
   SAY UNIDENTIFIED_DESC ~Internal post-resistance Crisis of Life resolution package.~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 7 dicesize = 6 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 savingthrow = BIT2 savebonus = psion_level7_save_penalty STR_VAR resource = ~PS7CLIB~ END
 BUT_ONLY
 
