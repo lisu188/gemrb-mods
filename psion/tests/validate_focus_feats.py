@@ -101,6 +101,11 @@ def main() -> None:
     for fragment in (
         "BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)",
         "BONUS_FEAT_SPENT_RESOURCE = \"PSFSPENT\"",
+        "\"PXFTALT\": \"PXTALST\"",
+        "\"PXFBODY\": \"PXBODST\"",
+        "\"PXFSPD\": \"PXSPDST\"",
+        "state_resource = FEAT_STATE_RESOURCES.get(key)",
+        "state_resource = FEAT_STATE_RESOURCES[key]",
         "def bonus_feat_spent(actor):",
         "def _write_bonus_feat_spent(actor, spent):",
         "def bonus_feat_slots(actor):",
@@ -113,13 +118,17 @@ def main() -> None:
     ):
         assert fragment in runtime, fragment
 
+    # The serialized feat carriers must never reuse live SPL resource names.
+    for live in ("PXFTALT", "PXFBODY", "PXFSPD"):
+        assert f'"{live}": "{live}"' not in runtime
+
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     assert "psionfeatpick.2da" in setup
     assert "psfsel.2da" in setup
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
-    print("Psion focus, bonus-feat credit, CLAB, and helper-resource validation passed.")
+    print("Psion focus, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
 
 
 if __name__ == "__main__":
