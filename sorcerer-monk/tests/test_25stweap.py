@@ -7,8 +7,9 @@ TP2 = (Path(__file__).resolve().parents[1] / "setup-sorcerer-monk.tp2").read_tex
 
 class StarterEquipmentLayoutTests(unittest.TestCase):
     def test_25stweap_schema_is_preflighted(self):
-        self.assertIn("COUNT_2DA_ROWS sm_25stweap_cols sm_25stweap_rows", TP2)
-        self.assertIn("READ_2DA_ENTRY sm_i 0 sm_25stweap_cols sm_25stweap_slot", TP2)
+        self.assertIn("READ_2DA_ENTRIES_NOW ~sm_25stweap~ sm_25stweap_cols", TP2)
+        self.assertIn("SET sm_25stweap_rows = sm_25stweap", TP2)
+        self.assertIn("READ_2DA_ENTRY_FORMER ~sm_25stweap~ sm_i 0 sm_25stweap_slot", TP2)
         self.assertIn("sm_25stweap_rows != 20", TP2)
         self.assertIn("FAIL @23", TP2)
 
