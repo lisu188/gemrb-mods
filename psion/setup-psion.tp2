@@ -26,8 +26,9 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed initial power selections plus the reusable Center Mind action and the
-// class bonus-feat selector at levels 1, 5, 10, 15 and 20.
+// Fixed power selections plus level-1 utility actions. Center Mind is reusable;
+// the single bonus-feat selector is re-enabled by runtime credits earned at
+// Psion levels 1, 5, 10, 15 and 20, so canceled choices are never lost.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
