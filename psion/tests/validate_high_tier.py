@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavioral source checks for coupled high-tier Psion save outcomes."""
+"""Behavioral source checks for coupled high-tier Psion save and PR outcomes."""
 
 from pathlib import Path
 import re
@@ -48,7 +48,11 @@ def validate_telekinetic_sphere() -> None:
         "COPY_EXISTING ~PS8TKSP.spl~ ~override~",
     )
 
+    # SRD: Reflex negates, PR Yes. The one parent opcode therefore owns both
+    # the one PR/MR check and the one save; the applied package bypasses both.
     assert_single_save_gate(parent, child, save="BIT1", resource="PS8TKSB")
+    assert parent.count("resist_dispel = BIT0") == 1, parent
+    assert "resist_dispel = BIT0" not in child, child
     assert "opcode = 175" in child
     assert "opcode = 0" in child and "parameter1 = (0 - 6)" in child
     assert "ps_resist_opcode = 86" in child
@@ -58,22 +62,42 @@ def validate_telekinetic_sphere() -> None:
 
 def validate_crisis_of_life() -> None:
     source = text("level7-powers.tpa")
-    child = copy_block(
+    failure = copy_block(
         source,
         "COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIB.spl~",
+    )
+    resolution = copy_block(
+        source,
+        "COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIR.spl~",
     )
     parent = copy_block(
         source,
         "COPY_EXISTING ~PS7CLIF.spl~ ~override~",
     )
 
-    assert_single_save_gate(parent, child, save="BIT2", resource="PS7CLIB")
-    assert dice(parent) == [5], dice(parent)
-    assert dice(child) == [5], dice(child)
-    assert sum(dice(parent) + dice(child)) == 10
-    assert "dicesize = 6" in parent and "dicesize = 6" in child
-    assert "opcode = 175" in child and "duration = 6" in child
-    assert "opcode = 175" not in parent
+    # SRD: Fortitude partial, PR Yes. Parent does exactly one PR/MR check and no
+    # save; the resolution child bypasses PR, deals the successful-save 5d6 and
+    # owns the only save; the failure child bypasses PR/save and adds 5d6+hold.
+    assert parent.count("opcode = 146") == 1, parent
+    assert "resource = ~PS7CLIR~" in parent, parent
+    assert "savingthrow = " not in parent, parent
+    assert parent.count("resist_dispel = BIT0") == 1, parent
+    assert dice(parent) == [], dice(parent)
+
+    assert_single_save_gate(
+        resolution,
+        failure,
+        save="BIT2",
+        resource="PS7CLIB",
+    )
+    assert "resist_dispel = BIT0" not in resolution, resolution
+    assert "resist_dispel = BIT0" not in failure, failure
+    assert dice(resolution) == [5], dice(resolution)
+    assert dice(failure) == [5], dice(failure)
+    assert sum(dice(resolution) + dice(failure)) == 10
+    assert "dicesize = 6" in resolution and "dicesize = 6" in failure
+    assert "opcode = 175" in failure and "duration = 6" in failure
+    assert "opcode = 175" not in resolution
 
 
 def validate_tornado_blast() -> None:
@@ -87,7 +111,13 @@ def validate_tornado_blast() -> None:
         "COPY_EXISTING ~PS9TORN.spl~ ~override~",
     )
 
+    # SRD: Reflex half, PR No. One save controls the extra damage/knockback and
+    # no effect in either resource may opt into magic/power resistance.
     assert_single_save_gate(parent, child, save="BIT1", resource="PSTORNB")
+    assert "resist_dispel = BIT0" not in parent, parent
+    assert "resist_dispel = BIT0" not in child, child
+    assert parent.count("resist_dispel = BIT1") >= 2, parent
+    assert child.count("resist_dispel = BIT1") >= 2, child
     assert dice(parent) == [8], dice(parent)
     assert dice(child) == [9], dice(child)
     assert sum(dice(parent) + dice(child)) == 17
@@ -101,7 +131,7 @@ def main() -> None:
     validate_telekinetic_sphere()
     validate_crisis_of_life()
     validate_tornado_blast()
-    print("Psion high-tier single-save package validation passed.")
+    print("Psion high-tier single-save and power-resistance validation passed.")
 
 
 if __name__ == "__main__":
