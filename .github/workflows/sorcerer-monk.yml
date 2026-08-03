@@ -33,6 +33,8 @@ jobs:
           sudo install "$weidu_bin" /usr/local/bin/weidu
       - name: Real WeiDU metadata guard smoke tests
         run: python sorcerer-monk/tests/weidu_metadata_guard_smoke.py weidu
+      - name: Real WeiDU HLA guard smoke tests
+        run: python sorcerer-monk/tests/weidu_hla_guard_smoke.py weidu
       - name: Parse TP2 files with WeiDU
         run: |
           for tp2 in sorcerer-monk/setup-sorcerer-monk.tp2 sorcerer-monk-cleric/setup-sorcerer-monk-cleric.tp2; do
