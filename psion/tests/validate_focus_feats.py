@@ -105,10 +105,7 @@ def main() -> None:
         "def available_feat_choices(actor):",
         "if key == FEAT_SELECTOR_RESOURCE:",
         "return bonus_feats_remaining(actor) > 0",
-        "quick",  # keep this file independent of GUI patch details but non-vacuous
     ):
-        if fragment == "quick":
-            continue
         assert fragment in runtime, fragment
 
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
