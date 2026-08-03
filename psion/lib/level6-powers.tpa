@@ -1,0 +1,151 @@
+// Purpose-built level-6 Psion discipline powers.
+//
+// These resources begin the post-1.0 high-level progression. Where a tabletop
+// mechanic has no portable Infinity Engine equivalent, the in-game description
+// states the approximation explicitly rather than silently changing behavior.
+
+DEFINE_ACTION_FUNCTION psion_create_level6_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 7
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi603~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 6
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level6_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+OUTER_SET psion_level6_save_penalty = (psion_key_ability_save_penalty - 5)
+
+// Greater Precognition normally grants a +4 insight bonus to one roll. The IE
+// has no one-roll callback, so the bonus becomes a one-round combat window.
+LAF psion_create_level6_power
+  STR_VAR
+    ps_resref = ~PS6GPRE~
+    ps_name = ~Greater Precognition~
+    ps_description = ~For one round the Seer gains +4 to attack rolls, Armor Class, and all saving throws. The tabletop power applies the insight to one roll; the engine has no portable one-roll callback, so this is a short broad insight window.~
+    ps_icon = ~sppr606~
+END
+COPY_EXISTING ~PS6GPRE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS6GPRE~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 6 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 6 END
+  END
+BUT_ONLY
+
+// Crystallize maps directly to the engine's petrification state. Fortitude is
+// represented by save vs death; magic resistance remains applicable.
+LAF psion_create_level6_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level6_hostile_flags
+  STR_VAR
+    ps_resref = ~PS6CRYS~
+    ps_name = ~Crystallize~
+    ps_description = ~The Shaper crystallizes one living target permanently unless it succeeds on a save vs death. Magic resistance applies. The engine represents crystallization with its petrification state.~
+    ps_icon = ~spwi611~
+END
+COPY_EXISTING ~PS6CRYS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 134 target = 2 resist_dispel = BIT0 timing = 1 savingthrow = BIT2 savebonus = psion_level6_save_penalty END
+BUT_ONLY
+
+// Dispelling Buffer gives +5 to dispel checks in tabletop. There is no per-
+// effect dispel-DC hook, so the portable form blocks opcode 58 for the duration.
+LAF psion_create_level6_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS6DBUF~
+    ps_name = ~Dispelling Buffer~
+    ps_description = ~For ten turns the target is protected from ordinary Dispel Magic effects. Tabletop Dispelling Buffer instead adds +5 to each effect's dispel resistance; the engine has no portable per-effect dispel-DC modifier, so this protection is broader.~
+    ps_icon = ~spwi603~
+END
+COPY_EXISTING ~PS6DBUF.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS6DBUF~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = 58 timing = 0 duration = 600 END
+BUT_ONLY
+
+// Psionic Restoration maps the level-drain portion directly. Portable IE
+// opcodes do not provide the full tabletop menu of ability-score drain cures.
+LAF psion_create_level6_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+  STR_VAR
+    ps_resref = ~PS6REST~
+    ps_name = ~Restoration (Psionic)~
+    ps_description = ~The Egoist removes level drain from the target. The tabletop power also restores ability-score drain; that broader drain repair has no single portable Infinity Engine opcode and is not simulated here.~
+    ps_icon = ~sppr604~
+END
+COPY_EXISTING ~PS6REST.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 224 target = 2 resist_dispel = BIT1 timing = 1 END
+BUT_ONLY
+
+// Banishment is restricted to extraplanar creatures in tabletop. Creature-type
+// layouts vary across supported campaigns, so the portable form uses temporary
+// Maze removal and states that the outsider restriction is not enforced.
+LAF psion_create_level6_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level6_hostile_flags
+  STR_VAR
+    ps_resref = ~PS6BANI~
+    ps_name = ~Banishment (Psionic)~
+    ps_description = ~The Nomad hurls one target outside local space for five rounds unless it succeeds on a save vs spell. The tabletop power banishes extraplanar creatures to their home plane; portable creature-type and planar-return handling are unavailable, so this version uses temporary Maze removal and does not enforce outsider-only targeting.~
+    ps_icon = ~spwi607~
+END
+COPY_EXISTING ~PS6BANI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level6_save_penalty END
+BUT_ONLY
+
+// A true body swap requires exchanging two CRE records and inventories. The
+// portable form captures temporary control of the target instead.
+LAF psion_create_level6_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level6_hostile_flags
+  STR_VAR
+    ps_resref = ~PS6MSWI~
+    ps_name = ~Mind Switch~
+    ps_description = ~The Telepath overwhelms one creature's mind and controls it for five rounds unless it succeeds on a save vs spell. Tabletop Mind Switch exchanges bodies; the engine cannot safely exchange CRE records, inventories, scripts, and protagonist identity, so this portable form represents mental possession as domination.~
+    ps_icon = ~spwi605~
+END
+COPY_EXISTING ~PS6MSWI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level6_save_penalty END
+BUT_ONLY
