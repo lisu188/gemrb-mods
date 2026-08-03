@@ -27,3 +27,4 @@ Dual-classing is not supported.~
 @22 = ~Another class already uses the SM0 high-level-ability abbreviation in LUABBR.2DA. Installing would replace its LUSM0.2DA list with the Sorcerer/Monk merge. Remove the conflicting custom-class mod before installing.~
 @23 = ~25STWEAP.2DA does not match GemRB's 20-slot ToB starter-equipment layout. GemRB maps these rows by position, so adding the Sorcerer/Monk column would assign items to the wrong slots. Restore the canonical row count and order before installing.~
 @24 = ~Could not derive Sorcerer/Monk ability requirements from ABCLASRQ.2DA. Expected six numeric ability columns and valid Sorcerer and Monk rows.~
+@25 = ~Could not build a complete Sorcerer/Monk high-level-ability table from LUABBR.2DA and the Sorcerer/Monk LU*.2DA sources. Fix or remove conflicting HLA mods before installing.~
