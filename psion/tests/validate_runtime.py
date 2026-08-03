@@ -43,7 +43,7 @@ def fake_table(name: str):
 def main() -> None:
     gemrb = types.ModuleType("GemRB")
     gui = types.ModuleType("GUICommon")
-    stats = {(1, 38): 18, (1, 39): 14, (1, 34): 3, (1, 239): 0}
+    stats = {(1, 38): 18, (1, 39): 14, (1, 34): 20, (1, 239): 0}
     effects = {1: []}
     tables = {
         name: fake_table(name + ".2da")
@@ -145,22 +145,20 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        # PP remains save-safe: stat 239 is only a cache, while one private
-        # actor effect is the serialized authority.
-        assert module.ensure_pool(1) == 17
-        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | 17
+        initial_cap = module.maximum_pool(1)
+        assert initial_cap == 383
+        assert module.ensure_pool(1) == initial_cap
+        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | initial_cap
         persistent = get_effects(1, module.STATE_EFFECT_OPCODE)
         pool = [effect for effect in persistent if effect["Param2"] == module.POOL_EFFECT_MARKER]
-        assert len(pool) == 1 and pool[0]["Param1"] == 17
+        assert len(pool) == 1 and pool[0]["Param1"] == initial_cap
         stats[(1, 239)] = 0
-        assert module.ensure_pool(1) == 17
+        assert module.ensure_pool(1) == initial_cap
         assert module._write_pool_state(1, 0) == 0
         stats[(1, 239)] = 0
         assert module.ensure_pool(1) == 0
-        assert module.ensure_pool(1, True) == 17
+        assert module.ensure_pool(1, True) == initial_cap
 
-        # Focus initializes as focused, persists separately from PP, can be
-        # expended, and Center Mind changes state only on confirmation.
         assert module.ensure_focus(1)
         focus = [
             effect for effect in get_effects(1, module.STATE_EFFECT_OPCODE)
@@ -175,8 +173,28 @@ def main() -> None:
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert module.is_focused(1)
 
-        # Feat prerequisites are runtime-filtered. Speed of Thought requires
-        # Wisdom 13; Body and Speed disappear after selection, Talent remains.
+        # Class bonus-feat credits unlock exactly at the SRD Psion thresholds.
+        for level, slots in ((1, 1), (4, 1), (5, 2), (9, 2), (10, 3), (15, 4), (20, 5)):
+            stats[(1, 34)] = level
+            assert module.bonus_feat_slots(1) == slots
+        stats[(1, 34)] = 20
+        assert module.bonus_feats_remaining(1) == 5
+        assert module.action_info(module.FEAT_SELECTOR_RESOURCE)["kind"] == "feat_selector"
+        assert module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
+
+        # Canceling/opening the selector cannot destroy an earned credit. While
+        # credit remains, charge refresh restores the selector just like Center.
+        assert module.refresh_innate_charges(1) == 3
+        states = {spell["SpellResRef"]: spell["Flags"] for spell in memorized_innates}
+        assert states["PS1ERAY"] == 1
+        assert states["PXCNTR"] == 1
+        assert states["PXFSEL"] == 1
+        for spell in memorized_innates:
+            if spell["SpellResRef"] == "PXFSEL":
+                spell["Flags"] = 0
+        assert module.refresh_innate_charges(1) == 1
+        assert next(spell for spell in memorized_innates if spell["SpellResRef"] == "PXFSEL")["Flags"] == 1
+
         assert module.can_select_feat(1, "PXFTALT")
         assert module.can_select_feat(1, "PXFBODY")
         assert module.can_select_feat(1, "PXFSPD")
@@ -185,34 +203,31 @@ def main() -> None:
         assert module.filter_spellinfo(1, ["SPWI112", "PXFTALT", "PXFSPD"]) == ["SPWI112", "PXFTALT"]
         stats[(1, 39)] = 14
 
-        # Psionic Talent follows the SRD repeat ladder: +2, then +3, then +4.
         module.ensure_pool(1, True)
         assert module.begin_manifest(1, "PXFTALT")
         assert module.feat_rank(1, "PXFTALT") == 0
         assert module.begin_manifest(1, "PXFTALT")
         assert module.feat_rank(1, "PXFTALT") == 1
-        assert module.maximum_pool(1) == 19
-        assert module.ensure_pool(1) == 19
+        assert module.maximum_pool(1) == initial_cap + 2
+        assert module.ensure_pool(1) == initial_cap + 2
+        assert module.bonus_feats_remaining(1) == 4
+
         assert module.begin_manifest(1, "PXFTALT")
         assert module.begin_manifest(1, "PXFTALT")
         assert module.feat_rank(1, "PXFTALT") == 2
         assert module.psionic_talent_bonus(1) == 5
-        assert module.maximum_pool(1) == 22
-        assert module.ensure_pool(1) == 22
+        assert module.maximum_pool(1) == initial_cap + 5
+        assert module.ensure_pool(1) == initial_cap + 5
+        assert module.bonus_feats_remaining(1) == 3
 
-        # Taking Psionic Body after two Talent selections counts all three feat
-        # selections and grants +6 max/current HP. Later psionic feats add +2.
         assert module.begin_manifest(1, "PXFBODY")
         assert module.begin_manifest(1, "PXFBODY")
         assert module.feat_rank(1, "PXFBODY") == 1
         assert module.psionic_feat_count(1) == 3
-        max_hp = get_effects(1, "MaximumHPModifier")
-        cur_hp = get_effects(1, "CurrentHPModifier")
-        assert [effect["Param1"] for effect in max_hp] == [6]
-        assert [effect["Param1"] for effect in cur_hp] == [6]
+        assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6]
+        assert [effect["Param1"] for effect in get_effects(1, "CurrentHPModifier")] == [6]
         assert not module.can_select_feat(1, "PXFBODY")
 
-        # Speed of Thought is focus-dependent and isolated through helper spells.
         assert module.begin_manifest(1, "PXFSPD")
         assert module.begin_manifest(1, "PXFSPD")
         assert module.feat_rank(1, "PXFSPD") == 1
@@ -225,8 +240,6 @@ def main() -> None:
         assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
         assert not module.can_select_feat(1, "PXFSPD")
 
-        # A third Talent selection remains legal, grants +4 PP, and Psionic Body
-        # adds another +2 HP because repeatable feat selections still count.
         before_pp = module.ensure_pool(1)
         before_cap = module.maximum_pool(1)
         assert module.begin_manifest(1, "PXFTALT")
@@ -235,8 +248,23 @@ def main() -> None:
         assert module.maximum_pool(1) == before_cap + 4
         assert module.ensure_pool(1) == before_pp + 4
         assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2, 2]
+        assert module.psionic_feat_count(1) == 5
+        assert module.bonus_feats_remaining(1) == 0
+        assert not module.can_select_feat(1, "PXFTALT")
+        assert not module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
+        assert module.available_feat_choices(1) == []
 
-        # Ordinary power/augmentation behavior remains unchanged.
+        # Once all five credits are spent, a depleted selector is no longer
+        # recharged and therefore disappears until a future implementation adds
+        # another legal feat source.
+        for spell in memorized_innates:
+            if spell["SpellResRef"] == "PXFSEL":
+                spell["Flags"] = 0
+        assert module.refresh_innate_charges(1) == 0
+        assert next(spell for spell in memorized_innates if spell["SpellResRef"] == "PXFSEL")["Flags"] == 0
+
+        # Retain the original low-level affordability regression at level 3.
+        stats[(1, 34)] = 3
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]
             assert module.can_manifest(1, parent)
@@ -268,8 +296,6 @@ def main() -> None:
         center = module.resolve_power_entry(collision, 1, 4001)
         assert center["SpellResRef"] == "PXCNTR"
 
-        # Changed affordability between selector display and confirmation still
-        # rejects the original raw child instead of granting a free cast.
         module.ensure_pool(1, True)
         selected = module.resolve_power_entry(collision, 1, 255000)
         assert module.begin_manifest(1, selected["SpellResRef"])
@@ -278,17 +304,18 @@ def main() -> None:
         assert not module.begin_manifest(1, confirmed["SpellResRef"])
         module.ensure_pool(1, True)
 
-        # Reusable charge refresh includes Center Mind but deliberately excludes
-        # the consumable bonus-feat selector and unrelated innate abilities.
-        assert module.refresh_innate_charges(1) == 2
-        states = {}
+        # Reusable ordinary powers and Center Mind remain charge-backed. The
+        # exhausted bonus-feat selector and unrelated innate are untouched.
         for spell in memorized_innates:
-            states.setdefault(spell["SpellResRef"], []).append(spell["Flags"])
-        assert states["PS1ERAY"] == [1]
-        assert states["PS1VIGR"] == [1]
-        assert states["PXCNTR"] == [1]
-        assert states["PXFSEL"] == [0]
-        assert states["SPCL900"] == [0]
+            if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR"):
+                spell["Flags"] = 0
+        assert module.refresh_innate_charges(1) == 2
+        states = {spell["SpellResRef"]: spell["Flags"] for spell in memorized_innates}
+        assert states["PS1ERAY"] == 1
+        assert states["PS1VIGR"] == 1
+        assert states["PXCNTR"] == 1
+        assert states["PXFSEL"] == 0
+        assert states["SPCL900"] == 0
         assert module.refresh_innate_charges(2) == 0
     finally:
         if old_gemrb is None:
@@ -300,7 +327,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB PP, focus, feat, selector, and persistence validation passed.")
+    print("Psion fake-GemRB PP, focus, feat-credit, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
