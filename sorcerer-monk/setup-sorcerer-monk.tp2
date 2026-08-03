@@ -52,6 +52,8 @@ OUTER_SET sm_clskills_rows = 0
 OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
 OUTER_SET sm_sm0_taken = 0
+OUTER_SET sm_hla_required = 0
+OUTER_SET sm_hla_sources_ready = 0
 OUTER_SET sm_qslots_cols = 0
 OUTER_SET sm_qslots_rows = 0
 OUTER_SET sm_found_sorcerer_xpcap = 0
@@ -506,13 +508,24 @@ DEFINE_ACTION_MACRO sm_collect_hlas BEGIN
   BUT_ONLY
 END
 
+// If LUNUMAB exists, GemRB can award HLA picks during level-up. In that case
+// the HLA selector must also have a valid LUABBR mapping and a generated table;
+// accepting only part of the HLA metadata would leave the character with HLA
+// points that LUHLASelection.py cannot resolve.
+ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
+  OUTER_SET sm_hla_required = 1
+  ACTION_IF NOT FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
+    FAIL @23
+  END
+END
+
 // Combined HLAs. GemRB's HLA screen looks an unkitted multiclass up through its
 // own LUABBR row rather than through the component rows (LUHLASelection.py
 // replaces the component name with the class row name), so both components end
 // up loading a single table. Build that table out of the game's own Sorcerer and
 // Monk HLA lists; a hardcoded copy would go stale and would not survive HLA
-// mods. Without both source tables there is nothing to merge, and the LUABBR row
-// is skipped rather than left pointing at a table that does not exist.
+// mods. Games without HLA progression may omit these resources entirely, but a
+// game with LUNUMAB must provide a complete source set or installation fails.
 ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
   OUTER_SPRINT sm_so_abbr ~~
   OUTER_SPRINT sm_mo_abbr ~~
@@ -546,6 +559,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
       AND (~%sm_mo_abbr%~ STRING_COMPARE_CASE ~~)
       AND (FILE_EXISTS_IN_GAME ~lu%sm_so_abbr%.2da~)
       AND (FILE_EXISTS_IN_GAME ~lu%sm_mo_abbr%.2da~) THEN BEGIN
+    OUTER_SET sm_hla_sources_ready = 1
     OUTER_SET sm_hla_count = 0
     OUTER_SET sm_hla_cols = 0
     OUTER_SET sm_hla_mismatch = 0
@@ -557,7 +571,11 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
     OUTER_SPRINT sm_hla_src ~%sm_mo_abbr%~
     LAUNCH_ACTION_MACRO sm_collect_hlas
 
-    ACTION_IF (sm_hla_count > 0) AND (sm_hla_mismatch = 0) THEN BEGIN
+    ACTION_IF (sm_hla_count < 1) OR (sm_hla_mismatch != 0) THEN BEGIN
+      ACTION_IF sm_hla_required = 1 THEN BEGIN
+        FAIL @23
+      END
+    END ELSE BEGIN
       // Reuse the Sorcerer table's own header, then swap its rows for the merge.
       COPY_EXISTING ~lu%sm_so_abbr%.2da~ ~override/lusm0.2da~
         COUNT_2DA_ROWS sm_hla_cols sm_hla_old_rows
@@ -570,6 +588,10 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
       APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~
         UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
     END
+  END
+
+  ACTION_IF (sm_hla_required = 1) AND (sm_hla_sources_ready != 1) THEN BEGIN
+    FAIL @23
   END
 END
 
