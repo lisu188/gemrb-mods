@@ -37,6 +37,20 @@ def assert_single_save_gate(
     assert "savingthrow = " not in child, child
 
 
+def validate_mass_cocoon_and_time_hop() -> None:
+    level7 = text("level7-powers.tpa")
+    cocoon = copy_block(level7, "COPY_EXISTING ~PS7MCOC.spl~ ~override~")
+    assert cocoon.count("savingthrow = BIT1") == 1, cocoon
+    assert "resist_dispel = BIT0" not in cocoon, cocoon
+    assert "resist_dispel = BIT1" in cocoon, cocoon
+
+    level8 = text("level8-powers.tpa")
+    time_hop = copy_block(level8, "COPY_EXISTING ~PS8MTHP.spl~ ~override~")
+    assert time_hop.count("savingthrow = BIT0") == 1, time_hop
+    assert "resist_dispel = BIT0" not in time_hop, time_hop
+    assert "resist_dispel = BIT1" in time_hop, time_hop
+
+
 def validate_telekinetic_sphere() -> None:
     source = text("level8-powers.tpa")
     child = copy_block(
@@ -127,10 +141,36 @@ def validate_tornado_blast() -> None:
     assert "opcode = 238" not in parent
 
 
+def validate_psychic_chirurgery() -> None:
+    source = text("level9-powers.tpa")
+    child = copy_block(
+        source,
+        "COPY_EXISTING ~PS9PCHI.spl~ ~override/PS9PCHB.spl~",
+    )
+    parent = copy_block(
+        source,
+        "COPY_EXISTING ~PS9PCHI.spl~ ~override~",
+    )
+
+    # SRD: Will negates, PR Yes. One parent gate owns both defenses; the child
+    # carries the complete restorative approximation and cannot trigger either
+    # defense a second time.
+    assert_single_save_gate(parent, child, save="BIT0", resource="PS9PCHB")
+    assert parent.count("resist_dispel = BIT0") == 1, parent
+    assert "resist_dispel = BIT0" not in child, child
+    assert "opcode = 224" in child
+    assert "opcode = 321" in child
+    assert "parameter2 = 5" in child
+    assert "parameter2 = 128" in child
+    assert "opcode = 224" not in parent
+
+
 def main() -> None:
+    validate_mass_cocoon_and_time_hop()
     validate_telekinetic_sphere()
     validate_crisis_of_life()
     validate_tornado_blast()
+    validate_psychic_chirurgery()
     print("Psion high-tier single-save and power-resistance validation passed.")
 
 
