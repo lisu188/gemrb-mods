@@ -2,7 +2,7 @@
 @1 = ~Run GemRB against this game before installing; gemrb_path.txt is missing.~
 @2 = ~This component supports Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE and EET.~
 @3 = ~Could not determine the active GemRB class identifier range.~
-@4 = ~Unsupported CLASSTEXT.2DA layout.~
+@4 = ~Unsupported CLASTEXT.2DA layout.~
 @5 = ~Unsupported CLSKILLS.2DA layout.~
 @6 = ~Six consecutive free class identifiers are not available.~
 @100 = ~seer~

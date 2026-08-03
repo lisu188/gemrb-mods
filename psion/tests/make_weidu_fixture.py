@@ -4,8 +4,8 @@
 The fixture starts from GemRB's official demo, overlays pinned GemRB rule data,
 and then selects one of the class-table layouts supported by the installer:
 
-- ``normalized``: released GemRB's six-field split CLASSTEXT layout;
-- ``native``: Enhanced Edition's ten-field split CLASSTEXT layout;
+- ``normalized``: released GemRB's six-field split CLASTEXT layout;
+- ``native``: Enhanced Edition's ten-field split CLASTEXT layout;
 - ``legacy``: older GemRB's nineteen-field combined CLASSES layout.
 
 The result is an installer fixture, not a playable campaign. It exercises real
@@ -269,7 +269,7 @@ def configure_class_layout(override: Path, layout: str) -> None:
                 continue
             native_rows.append(tuple(row[:6] + ["-1", "0", row[5], "-1"]))
         if not native_rows:
-            raise RuntimeError("unable to derive native CLASSTEXT fixture rows")
+            raise RuntimeError("unable to derive native CLASTEXT fixture rows")
         write_2da(
             override / "clastext.2da",
             (
