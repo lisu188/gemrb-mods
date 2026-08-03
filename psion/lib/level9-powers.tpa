@@ -74,10 +74,10 @@ COPY_EXISTING ~PS9TCRE.spl~ ~override~
 BUT_ONLY
 
 // Tornado Blast uses one Reflex-equivalent save for both damage and forced
-// movement. Eight dice are unconditional; one save-gated direct-target child
-// adds the remaining nine dice and the wing buffet. This avoids separate save
-// rolls for damage and knockback and gives an explicit 17d6/8d6 fail/success
-// split, the closest whole-die representation of half damage.
+// movement, and the SRD explicitly gives it Power Resistance: No. Eight dice
+// are unconditional; one save-gated direct-target child adds the remaining nine
+// dice and wing buffet. Every parent and child effect bypasses MR, producing an
+// explicit 17d6/8d6 fail/success split without extra PR or saving-throw rolls.
 LAF psion_create_level9_power
   INT_VAR
     ps_target = 4
@@ -87,7 +87,7 @@ LAF psion_create_level9_power
   STR_VAR
     ps_resref = ~PS9TORN~
     ps_name = ~Tornado Blast~
-    ps_description = ~A violent vortex deals 17d6 crushing damage in a large area and hurls creatures away from the center on a failed save vs breath. A successful save takes 8d6 damage and avoids the knockback. The tabletop direct-hit packet and random final displacement distance are not separately modeled.~
+    ps_description = ~A violent vortex deals 17d6 crushing damage in a large area and hurls creatures away from the center on a failed save vs breath. A successful save takes 8d6 damage and avoids the knockback. Power resistance does not apply. The tabletop direct-hit packet and random final displacement distance are not separately modeled.~
     ps_icon = ~spwi912~
 END
 
@@ -111,8 +111,8 @@ COPY_EXISTING ~PSTORNB.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT1 parameter1 = 8 END
 BUT_ONLY
 COPY_EXISTING ~PS9TORN.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~CRUSHING~) dicenumber = 8 dicesize = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT1 savebonus = psion_level9_save_penalty STR_VAR resource = ~PSTORNB~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~CRUSHING~) dicenumber = 8 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 savingthrow = BIT1 savebonus = psion_level9_save_penalty STR_VAR resource = ~PSTORNB~ END
 BUT_ONLY
 
 // Greater Metamorphosis permits almost arbitrary forms. The portable release
