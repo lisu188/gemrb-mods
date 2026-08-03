@@ -1,0 +1,159 @@
+// Purpose-built level-8 Psion discipline powers.
+
+DEFINE_ACTION_FUNCTION psion_create_level8_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 9
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi803~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 8
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level8_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+OUTER_SET psion_level8_save_penalty = (psion_key_ability_save_penalty - 7)
+
+// Hypercognition is primarily narrative knowledge. The portable combat-facing
+// expression uses the same perception stats already supported by Danger Sense.
+LAF psion_create_level8_power
+  STR_VAR
+    ps_resref = ~PS8HYPC~
+    ps_name = ~Hypercognition~
+    ps_description = ~For one turn the Seer gains +100 to trap detection, +5 Armor Class, and +5 to all saving throws while making accelerated deductions. Tabletop Hypercognition can answer questions from sparse clues; campaign-specific knowledge and dialogue conclusions require dedicated scripting and are not fabricated here.~
+    ps_icon = ~sppr808~
+END
+COPY_EXISTING ~PS8HYPC.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS8HYPC~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 91 target = 1 resist_dispel = BIT1 parameter1 = 100 timing = 0 duration = 60 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 5) timing = 0 duration = 60 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 5) timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// Astral Seed's real death/rebirth lifecycle spans saves and ten in-game days.
+// Until a dedicated resurrection callback exists, the seed is represented by a
+// long defensive preparation rather than pretending to resurrect the player.
+LAF psion_create_level8_power
+  STR_VAR
+    ps_resref = ~PS8ASED~
+    ps_name = ~Astral Seed~
+    ps_description = ~For ten turns the Shaper surrounds the self with a prepared astral-seed ward, gaining +4 Armor Class, +4 to all saving throws, and 25 percent physical resistance. Tabletop Astral Seed stores the manifester's mind and regrows a body after death; that persistent resurrection lifecycle requires engine callbacks not available to a portable SPL.~
+    ps_icon = ~spwi809~
+END
+COPY_EXISTING ~PS8ASED.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS8ASED~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 600 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 600 END
+  END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 1 resist_dispel = BIT1 parameter1 = 25 timing = 0 duration = 600 END
+  END
+BUT_ONLY
+
+// The tabletop sphere is mobile and can be moved telekinetically. The portable
+// effect immobilizes the target inside a strongly protective force shell.
+LAF psion_create_level8_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level8_hostile_flags
+  STR_VAR
+    ps_resref = ~PS8TKSP~
+    ps_name = ~Telekinetic Sphere (Psionic)~
+    ps_description = ~A failed save vs breath encloses the target in a telekinetic sphere for five rounds, holding it in place while granting +6 Armor Class and 50 percent physical resistance. The portable sphere cannot be dragged across the map after manifestation.~
+    ps_icon = ~spwi810~
+END
+COPY_EXISTING ~PS8TKSP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = (0 - 6) timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 2 resist_dispel = BIT0 parameter1 = 50 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
+  END
+BUT_ONLY
+
+// Fusion normally combines two willing creatures' statistics and abilities.
+// Selecting and merging arbitrary ally CRE data is not portable, so the Egoist
+// receives a bounded composite-body combat form instead.
+LAF psion_create_level8_power
+  STR_VAR
+    ps_resref = ~PS8FUSN~
+    ps_name = ~Fusion~
+    ps_description = ~For five rounds the Egoist gains +6 Strength, Dexterity, and Constitution, two extra attacks per round, +4 Armor Class, and +4 to all saving throws. Tabletop Fusion combines the manifester with a willing creature; portable CRE merging is unavailable, so this represents a bounded composite form.~
+    ps_icon = ~spwi816~
+END
+COPY_EXISTING ~PS8FUSN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS8FUSN~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 44 target = 1 resist_dispel = BIT1 parameter1 = 6 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 15 target = 1 resist_dispel = BIT1 parameter1 = 6 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 10 target = 1 resist_dispel = BIT1 parameter1 = 6 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 2 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 30 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+// Mass Time Hop reuses the portable Maze representation from Time Hop, applied
+// through an area projectile. Tabletop targets are willing; hostile targeting
+// plus a Will-equivalent save keeps the IE interaction predictable.
+LAF psion_create_level8_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 40
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level8_hostile_flags
+  STR_VAR
+    ps_resref = ~PS8MTHP~
+    ps_name = ~Time Hop, Mass~
+    ps_description = ~Creatures in the area hop outside normal time for five rounds unless they succeed on a save vs spell. The engine represents the absence with Maze and cannot provide the tabletop per-round Wisdom check for early return.~
+    ps_icon = ~spwi805~
+END
+COPY_EXISTING ~PS8MTHP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level8_save_penalty END
+BUT_ONLY
+
+// Mind Seed changes a victim over a week. A delayed permanent identity rewrite
+// is unsafe for campaign actors, so the portable form is a long domination.
+LAF psion_create_level8_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level8_hostile_flags
+  STR_VAR
+    ps_resref = ~PS8MSED~
+    ps_name = ~Mind Seed~
+    ps_description = ~The Telepath implants a dominating psychic pattern for ten turns unless the target succeeds on a save vs spell. Tabletop Mind Seed rewrites the subject over one week into a lower-level copy of the manifester; changing permanent CRE identity and progression is intentionally not attempted.~
+    ps_icon = ~spwi805~
+END
+COPY_EXISTING ~PS8MSED.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 timing = 0 duration = 600 savingthrow = BIT0 savebonus = psion_level8_save_penalty END
+BUT_ONLY
