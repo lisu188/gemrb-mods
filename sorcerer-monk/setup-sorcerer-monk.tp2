@@ -61,10 +61,14 @@ OUTER_SET sm_fistweap_id_conflict = 0
 OUTER_SET sm_weapprof_cols = 0
 OUTER_SET sm_weapprof_monk_col = (0 - 1)
 OUTER_SET sm_weapprof_rows = 0
+OUTER_SET sm_25stweap_cols = 0
+OUTER_SET sm_25stweap_rows = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
+OUTER_SPRINT sm_25stweap_actual ~~
+OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -309,6 +313,30 @@ BUT_ONLY
 
 ACTION_IF sm_qslots_rows != (sm_class_id - 1) THEN BEGIN
   FAIL @21
+END
+
+// ToB character generation maps the 25STWEAP rows positionally through a fixed
+// 20-entry RealSlots array. Validate both row count and row order before adding
+// the custom column; otherwise a modified table can put starter items in the
+// wrong inventory slots or overrun GemRB's positional map.
+ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
+  COPY_EXISTING ~25stweap.2da~ ~override~
+    COUNT_2DA_COLS sm_25stweap_cols
+    COUNT_2DA_ROWS sm_25stweap_cols sm_25stweap_rows
+    SPRINT sm_25stweap_actual ~~
+    FOR (sm_i = 0; sm_i < sm_25stweap_rows; ++sm_i) BEGIN
+      READ_2DA_ENTRY sm_i 0 sm_25stweap_cols sm_25stweap_slot
+      PATCH_IF sm_i = 0 BEGIN
+        SPRINT sm_25stweap_actual ~%sm_25stweap_slot%~
+      END ELSE BEGIN
+        SPRINT sm_25stweap_actual ~%sm_25stweap_actual% %sm_25stweap_slot%~
+      END
+    END
+  BUT_ONLY
+  ACTION_IF (sm_25stweap_rows != 20)
+      OR (~%sm_25stweap_actual%~ STRING_COMPARE_CASE ~%sm_25stweap_expected%~) THEN BEGIN
+    FAIL @23
+  END
 END
 
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
