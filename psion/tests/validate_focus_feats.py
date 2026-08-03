@@ -100,8 +100,13 @@ def main() -> None:
     runtime = (ROOT / "guiscripts" / "Psionics.py").read_text(encoding="utf-8")
     for fragment in (
         "BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)",
+        "BONUS_FEAT_SPENT_RESOURCE = \"PSFSPENT\"",
+        "def bonus_feat_spent(actor):",
+        "def _write_bonus_feat_spent(actor, spent):",
         "def bonus_feat_slots(actor):",
         "def bonus_feats_remaining(actor):",
+        "bonus_feat_slots(actor) - bonus_feat_spent(actor)",
+        "_write_bonus_feat_spent(actor, spent + 1)",
         "def available_feat_choices(actor):",
         "if key == FEAT_SELECTOR_RESOURCE:",
         "return bonus_feats_remaining(actor) > 0",
