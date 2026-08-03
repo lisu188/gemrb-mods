@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Runtime support for the GemRB Psion mod.
 
-Power points, psionic focus, and implemented feat ownership use private,
-non-dispellable actor effects that GemRB serializes with normal CRE effect
-blocks. GemRB user stat 239 remains only a fast PP cache.
+Power points, psionic focus, implemented feat ownership, and consumed class
+bonus-feat credits use private, non-dispellable actor effects that GemRB
+serializes with normal CRE effect blocks. GemRB user stat 239 remains only a
+fast PP cache.
 
 Manifestation uses the existing two-phase SpellPressed transaction: the first
 callback reserves an action while target/selector UI is active, and the matching
@@ -29,6 +30,9 @@ FEAT_SELECTOR_RESOURCE = "PXFSEL"
 SPEED_ON_RESOURCE = "PXFSPED"
 SPEED_OFF_RESOURCE = "PXFSPOF"
 
+BONUS_FEAT_SPENT_MARKER = 0x50534653
+BONUS_FEAT_SPENT_RESOURCE = "PSFSPENT"
+BONUS_FEAT_SPENT_SOURCE = "PSFMOD"
 FEAT_EFFECT_SOURCE = "PSFEAT"
 FEAT_MARKERS = {
     "PXFTALT": 0x50534601,
@@ -139,8 +143,39 @@ def _write_feat_rank(actor, resref, rank):
 
 
 def psionic_feat_count(actor):
-    """Count feat selections; repeated Psionic Talent counts each selection."""
+    """Count owned psionic feat selections for Psionic Body scaling."""
     return sum(feat_rank(actor, resref) for resref in FEAT_MARKERS)
+
+
+def bonus_feat_spent(actor):
+    """Return how many Psion class bonus-feat credits were consumed."""
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != BONUS_FEAT_SPENT_MARKER:
+                continue
+            if str(effect.get("Resource1", "")).upper() != BONUS_FEAT_SPENT_RESOURCE:
+                continue
+            return max(0, int(effect.get("Param1", 0)))
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "bonus feat credit read failed: %s" % error)
+    return 0
+
+
+def _write_bonus_feat_spent(actor, spent):
+    spent = max(0, int(spent))
+    GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, BONUS_FEAT_SPENT_MARKER)
+    if spent:
+        GemRB.ApplyEffect(
+            actor,
+            STATE_EFFECT_OPCODE,
+            spent,
+            BONUS_FEAT_SPENT_MARKER,
+            BONUS_FEAT_SPENT_RESOURCE,
+            "",
+            "",
+            BONUS_FEAT_SPENT_SOURCE,
+        )
+    return spent
 
 
 def bonus_feat_slots(actor):
@@ -149,7 +184,7 @@ def bonus_feat_slots(actor):
 
 
 def bonus_feats_remaining(actor):
-    return max(0, bonus_feat_slots(actor) - psionic_feat_count(actor))
+    return max(0, bonus_feat_slots(actor) - bonus_feat_spent(actor))
 
 
 def psionic_talent_bonus(actor):
@@ -333,7 +368,9 @@ def _grant_feat(actor, resref):
     old_cap = maximum_pool(actor)
     had_body = feat_rank(actor, PSIONIC_BODY) > 0
     old_rank = feat_rank(actor, info["resref"])
+    spent = bonus_feat_spent(actor)
     _write_feat_rank(actor, info["resref"], old_rank + 1)
+    _write_bonus_feat_spent(actor, spent + 1)
 
     new_cap = maximum_pool(actor)
     if new_cap > old_cap:
