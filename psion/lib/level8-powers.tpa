@@ -133,8 +133,9 @@ COPY_EXISTING ~PS8FUSN.spl~ ~override~
 BUT_ONLY
 
 // Mass Time Hop reuses the portable Maze representation from Time Hop, applied
-// through an area projectile. Tabletop targets are willing; hostile targeting
-// plus a Will-equivalent save keeps the IE interaction predictable.
+// through an area projectile. The SRD affects willing subjects and has no PR
+// entry; the hostile portable adaptation keeps one Will-equivalent save but does
+// not invent a magic/power-resistance check.
 LAF psion_create_level8_power
   INT_VAR
     ps_target = 4
@@ -144,11 +145,11 @@ LAF psion_create_level8_power
   STR_VAR
     ps_resref = ~PS8MTHP~
     ps_name = ~Time Hop, Mass~
-    ps_description = ~Creatures in the area hop outside normal time for five rounds unless they succeed on a save vs spell. The engine represents the absence with Maze and cannot provide the tabletop per-round Wisdom check for early return.~
+    ps_description = ~Creatures in the area hop outside normal time for five rounds unless they succeed on a save vs spell. Power resistance does not apply. The engine represents the absence with Maze and cannot provide the tabletop willing-only targeting or per-round Wisdom check for early return.~
     ps_icon = ~spwi805~
 END
 COPY_EXISTING ~PS8MTHP.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level8_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 213 target = 2 resist_dispel = BIT1 timing = 0 duration = 30 savingthrow = BIT0 savebonus = psion_level8_save_penalty END
 BUT_ONLY
 
 // Mind Seed changes a victim over a week. A delayed permanent identity rewrite
