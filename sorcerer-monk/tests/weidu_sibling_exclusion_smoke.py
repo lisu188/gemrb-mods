@@ -32,7 +32,7 @@ def prepare_both(game):
         ["MAGE"],
         [(f"SLOT{i}", ["*"]) for i in range(20)],
     )
-    write_2da(override / "luabbr.2da", ["ABBREV"], [("SORCERER", ["SOR"]), ("MONK", ["MON"])])
+    write_2da(override / "luabbr.2da", ["ABBREV"], [("SORCERER", ["SO0"]), ("MONK", ["MO0"])])
     write_2da(
         override / "lunumab.2da",
         ["FIRST_LEVEL", "RATE", "MAX_LEVEL", "NUM_ALLOWED"],
