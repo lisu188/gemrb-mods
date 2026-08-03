@@ -75,7 +75,16 @@ def main() -> None:
     }, created
 
     center = section(builder, "PXCNTR")
-    assert "ps_speed = 9" in center
+    for fragment in (
+        "ps_speed = 9",
+        "psion_focus_state_marker = 0x50534643",
+        "opcode = 206",
+        "parameter1 = 1",
+        "parameter2 = psion_focus_state_marker",
+        "timing = 9",
+        "resource = ~PSFOCUS~",
+    ):
+        assert fragment in center or fragment in builder, fragment
 
     selector = section(builder, "PXFSEL")
     assert "opcode = 214" in selector
@@ -115,8 +124,16 @@ def main() -> None:
         "def available_feat_choices(actor):",
         "if key == FEAT_SELECTOR_RESOURCE:",
         "return bonus_feats_remaining(actor) > 0",
+        "focused = focused or bool(int(effect.get(\"Param1\", 0)))",
+        "PXCNTR.spl itself writes the focus marker",
+        "lambda: True",
     ):
         assert fragment in runtime, fragment
+
+    # Center Mind confirmation must not restore focus before the spell resolves.
+    center_runtime = runtime[runtime.index('if info["kind"] == "center":') :]
+    center_runtime = center_runtime[: center_runtime.index('if info["kind"] == "feat_selector":')]
+    assert "_write_focus_state(actor, True)" not in center_runtime
 
     # The serialized feat carriers must never reuse live SPL resource names.
     for live in ("PXFTALT", "PXFBODY", "PXFSPD"):
@@ -128,7 +145,7 @@ def main() -> None:
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
-    print("Psion focus, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
+    print("Psion resolution-safe focus, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
 
 
 if __name__ == "__main__":
