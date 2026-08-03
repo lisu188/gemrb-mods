@@ -24,19 +24,19 @@ POOL_EFFECT_SOURCE = "PSPPMOD"
 FOCUS_EFFECT_MARKER = 0x50534643
 FOCUS_EFFECT_RESOURCE = "PSFOCUS"
 FOCUS_EFFECT_SOURCE = "PSFMOD"
-CENTER_RESOURCE = "PSCNTR"
-SPEED_ON_RESOURCE = "PSFSPED"
-SPEED_OFF_RESOURCE = "PSFSPOF"
+CENTER_RESOURCE = "PXCNTR"
+SPEED_ON_RESOURCE = "PXFSPED"
+SPEED_OFF_RESOURCE = "PXFSPOF"
 
 FEAT_EFFECT_SOURCE = "PSFEAT"
 FEAT_MARKERS = {
-    "PSFTALT": 0x50534601,
-    "PSFBODY": 0x50534602,
-    "PSFSPD": 0x50534603,
+    "PXFTALT": 0x50534601,
+    "PXFBODY": 0x50534602,
+    "PXFSPD": 0x50534603,
 }
-PSIONIC_TALENT = "PSFTALT"
-PSIONIC_BODY = "PSFBODY"
-SPEED_OF_THOUGHT = "PSFSPD"
+PSIONIC_TALENT = "PXFTALT"
+PSIONIC_BODY = "PXFBODY"
+SPEED_OF_THOUGHT = "PXFSPD"
 
 INT_STAT = 38
 WIS_STAT = 39
@@ -87,7 +87,6 @@ def _feat_table():
 
 
 def feat_choice_info(resref):
-    """Return metadata for one implemented bonus-feat selector child."""
     key = (resref or "").upper()
     if key not in FEAT_MARKERS:
         return None
@@ -109,7 +108,6 @@ def feat_choice_info(resref):
 
 
 def feat_rank(actor, resref):
-    """Return how many times an implemented psionic feat has been selected."""
     key = (resref or "").upper()
     marker = FEAT_MARKERS.get(key)
     if marker is None:
@@ -146,12 +144,10 @@ def _write_feat_rank(actor, resref, rank):
 
 
 def psionic_feat_count(actor):
-    """Count feat selections; repeated Psionic Talent counts each selection."""
     return sum(feat_rank(actor, resref) for resref in FEAT_MARKERS)
 
 
 def psionic_talent_bonus(actor):
-    """Return cumulative PP from Psionic Talent: 2, then +3, +4, ..."""
     rank = feat_rank(actor, PSIONIC_TALENT)
     return rank * (rank + 3) // 2
 
@@ -191,11 +187,7 @@ def _decode_pool_state(actor):
 
 def _write_pool_cache(actor, current):
     current = max(0, min(int(current), POOL_VALUE_MASK))
-    GemRB.SetPlayerStat(
-        actor,
-        CURRENT_POOL_STAT,
-        POOL_STATE_SIGNATURE | current,
-    )
+    GemRB.SetPlayerStat(actor, CURRENT_POOL_STAT, POOL_STATE_SIGNATURE | current)
     return current
 
 
@@ -241,7 +233,6 @@ def ensure_pool(actor, refill=False):
         return clamped
     if refill:
         return _write_pool_state(actor, cap)
-
     persisted, current = _read_persistent_pool_state(actor)
     if persisted:
         clamped = max(0, min(current, cap))
@@ -298,7 +289,6 @@ def _write_focus_state(actor, focused):
 
 
 def ensure_focus(actor, refill=False):
-    """Return focus state; new Psions and rested Psions start focused."""
     if not is_psion(actor):
         return False
     if refill:
@@ -321,16 +311,14 @@ def expend_focus(actor):
 
 
 def _apply_body_hp(actor, amount):
-    """Apply a permanent HP increment created by Psionic Body."""
     amount = max(0, int(amount))
     if not amount:
         return
-    GemRB.ApplyEffect(actor, "MaximumHPModifier", amount, 0, "", "", "", "PSFBODY", 9)
-    GemRB.ApplyEffect(actor, "CurrentHPModifier", amount, 0, "", "", "", "PSFBODY", 9)
+    GemRB.ApplyEffect(actor, "MaximumHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
+    GemRB.ApplyEffect(actor, "CurrentHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
 
 
 def _grant_feat(actor, resref):
-    """Persist one feat selection and apply all derived changes exactly once."""
     info = feat_choice_info(resref)
     if not info or not can_select_feat(actor, resref):
         return False
@@ -443,7 +431,6 @@ def power_info(resref):
 
 
 def action_info(resref):
-    """Return runtime metadata for a PP power, Center Mind, or feat child."""
     key = (resref or "").upper()
     if key == CENTER_RESOURCE:
         return {
@@ -460,10 +447,8 @@ def action_info(resref):
 
 
 def resolve_power_entry(spellbook, actor, raw_spell):
-    """Resolve a GemRB spell token to any registered Psion runtime action."""
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
-
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
         try:
             spell_resrefs = GemRB.GetSpelldata(actor)
@@ -499,10 +484,7 @@ def _meets_base_requirements(actor, info):
 
 
 def _variant_is_affordable(actor, info):
-    return (
-        info["cost"] <= manifester_level(actor)
-        and ensure_pool(actor) >= info["cost"]
-    )
+    return info["cost"] <= manifester_level(actor) and ensure_pool(actor) >= info["cost"]
 
 
 def can_manifest(actor, resref):
@@ -521,7 +503,6 @@ def available_variants(actor, parent, check_parent=True):
         return []
     if check_parent and not parent_info.get("selector", False):
         return []
-
     available = []
     try:
         for index in range(table.GetRowCount()):
@@ -537,7 +518,6 @@ def available_variants(actor, parent, check_parent=True):
 
 
 def filter_spellinfo(actor, resrefs):
-    """Filter only registered Psion augmentation/feat selector children."""
     filtered = []
     for resref in resrefs:
         feat = feat_choice_info(resref)
@@ -559,7 +539,6 @@ def _is_reusable_innate(resref):
 
 
 def refresh_innate_charges(actor):
-    """Recharge depleted PP powers and Center Mind, but not bonus-feat uses."""
     if not is_psion(actor):
         return 0
     try:
@@ -573,9 +552,7 @@ def refresh_innate_charges(actor):
 
         charged = set()
         depleted = []
-        memorized_count = GemRB.GetMemorizedSpellsCount(
-            actor, INNATE_TYPE, INNATE_LEVEL, False
-        )
+        memorized_count = GemRB.GetMemorizedSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL, False)
         for index in range(memorized_count):
             spell = GemRB.GetMemorizedSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
             resref = str(spell.get("SpellResRef", "")).upper()
@@ -594,9 +571,7 @@ def refresh_innate_charges(actor):
 
         restored = 0
         for resref in reversed(needed):
-            if GemRB.MemorizeSpell(
-                actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1
-            ):
+            if GemRB.MemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1):
                 restored += 1
         return restored
     except Exception as error:
@@ -619,7 +594,6 @@ def _begin_simple_action(actor, transaction, legal, commit):
 
 
 def begin_manifest(actor, resref):
-    """Reserve/commit a power, Center Mind action, or bonus-feat choice."""
     info = action_info(resref)
     if not info:
         return True
