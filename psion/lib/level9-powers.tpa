@@ -73,8 +73,11 @@ COPY_EXISTING ~PS9TCRE.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 1 timing = 1 duration = 600 STR_VAR resource = ~PSACON01~ END
 BUT_ONLY
 
-// Tornado Blast maps cleanly to area damage plus the wing-buffet opcode already
-// used by lower-tier forced movement.
+// Tornado Blast uses one Reflex-equivalent save for both damage and forced
+// movement. Eight dice are unconditional; one save-gated direct-target child
+// adds the remaining nine dice and the wing buffet. This avoids separate save
+// rolls for damage and knockback and gives an explicit 17d6/8d6 fail/success
+// split, the closest whole-die representation of half damage.
 LAF psion_create_level9_power
   INT_VAR
     ps_target = 4
@@ -84,12 +87,32 @@ LAF psion_create_level9_power
   STR_VAR
     ps_resref = ~PS9TORN~
     ps_name = ~Tornado Blast~
-    ps_description = ~A violent vortex deals 17d6 crushing damage in a large area, with a save vs breath for half, and hurls creatures that fail the save away from the center. The tabletop direct-hit 8d6 packet and random final displacement distance are not separately modeled.~
+    ps_description = ~A violent vortex deals 17d6 crushing damage in a large area and hurls creatures away from the center on a failed save vs breath. A successful save takes 8d6 damage and avoids the knockback. The tabletop direct-hit packet and random final displacement distance are not separately modeled.~
     ps_icon = ~spwi912~
 END
+
+// Internal failed-save package. It is direct-target and never granted through a
+// CLAB, so the area parent cannot recursively create another blast when opcode
+// 146 applies this resource to an individual creature.
+LAF psion_create_level9_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 0
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level9_hostile_flags
+  STR_VAR
+    ps_resref = ~PSTORNB~
+    ps_name = ~Tornado Blast Failure~
+    ps_description = ~Internal failed-save Tornado Blast effect package.~
+    ps_icon = ~spwi912~
+END
+COPY_EXISTING ~PSTORNB.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~CRUSHING~) dicenumber = 9 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT1 parameter1 = 8 END
+BUT_ONLY
 COPY_EXISTING ~PS9TORN.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~CRUSHING~) dicenumber = 17 dicesize = 6 savingthrow = BIT1 savebonus = psion_level9_save_penalty special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 8 savingthrow = BIT1 savebonus = psion_level9_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~CRUSHING~) dicenumber = 8 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT1 savebonus = psion_level9_save_penalty STR_VAR resource = ~PSTORNB~ END
 BUT_ONLY
 
 // Greater Metamorphosis permits almost arbitrary forms. The portable release
