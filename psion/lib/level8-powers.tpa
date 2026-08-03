@@ -78,7 +78,9 @@ COPY_EXISTING ~PS8ASED.spl~ ~override~
 BUT_ONLY
 
 // The tabletop sphere is mobile and can be moved telekinetically. The portable
-// effect immobilizes the target inside a strongly protective force shell.
+// effect immobilizes the target inside a strongly protective force shell. One
+// save on the parent gates the entire child package so a successful save can
+// never leave the target active while accidentally granting its protections.
 LAF psion_create_level8_power
   INT_VAR
     ps_target = 2
@@ -91,12 +93,21 @@ LAF psion_create_level8_power
     ps_description = ~A failed save vs breath encloses the target in a telekinetic sphere for five rounds, holding it in place while granting +6 Armor Class and 50 percent physical resistance. The portable sphere cannot be dragged across the map after manifestation.~
     ps_icon = ~spwi810~
 END
-COPY_EXISTING ~PS8TKSP.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = (0 - 6) timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
+
+// Build a non-learnable child from the parent's already-created empty resource.
+// The parent performs the only saving throw, then casts this package instantly
+// on the same creature if that save fails.
+COPY_EXISTING ~PS8TKSP.spl~ ~override/PS8TKSB.spl~
+  SAY NAME1 ~Telekinetic Sphere Effect~
+  SAY UNIDENTIFIED_DESC ~Internal Telekinetic Sphere effect package.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT1 parameter1 = (0 - 6) timing = 0 duration = 30 END
   FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 2 resist_dispel = BIT0 parameter1 = 50 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level8_save_penalty END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 2 resist_dispel = BIT1 parameter1 = 50 timing = 0 duration = 30 END
   END
+BUT_ONLY
+COPY_EXISTING ~PS8TKSP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT1 savebonus = psion_level8_save_penalty STR_VAR resource = ~PS8TKSB~ END
 BUT_ONLY
 
 // Fusion normally combines two willing creatures' statistics and abilities.
