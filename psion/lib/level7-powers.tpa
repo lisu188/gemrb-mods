@@ -130,11 +130,12 @@ COPY_EXISTING ~PS7EJNT.spl~ ~override~
   END
 BUT_ONLY
 
-// Crisis of Life is a Fortitude save-or-die in tabletop. At BG levels that is
-// disproportionately binary, so the portable form deals severe damage and a
-// brief collapse on a failed save rather than killing outright. Five dice are
-// unconditional; one save gates the other five dice and the hold, producing a
-// true 10d6/5d6 failure/success split without rolling two independent saves.
+// Crisis of Life is a Fortitude save-or-die with power resistance in tabletop.
+// The portable form performs exactly one PR/MR check on the outer parent. On a
+// successful penetration it casts a no-PR resolution child: 5d6 is automatic,
+// then exactly one save vs death gates the other 5d6 and one-round helplessness.
+// This yields no effect on resisted manifestation, 5d6 on a successful save,
+// and 10d6 plus hold on a failed save without duplicate PR or saving throws.
 LAF psion_create_level7_power
   INT_VAR
     ps_target = 2
@@ -144,16 +145,28 @@ LAF psion_create_level7_power
   STR_VAR
     ps_resref = ~PS7CLIF~
     ps_name = ~Crisis of Life~
-    ps_description = ~The Telepath attacks the target's autonomic functions for 10d6 magical damage, with a save vs death for half. A failed save also holds the victim helpless for one round. Tabletop Crisis of Life stops the heart outright; the portable form avoids a single-save instant kill.~
+    ps_description = ~The Telepath attacks the target's autonomic functions for 10d6 magical damage, with a save vs death for half. A failed save also holds the victim helpless for one round. Power resistance applies once before the save. Tabletop Crisis of Life stops the heart outright; the portable form avoids a single-save instant kill.~
     ps_icon = ~spwi713~
 END
+
+// Failed-save package: no further PR or saving throw.
 COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIB.spl~
   SAY NAME1 ~Crisis of Life Failure~
   SAY UNIDENTIFIED_DESC ~Internal failed-save Crisis of Life effect package.~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 6 END
 BUT_ONLY
+
+// Resolution package after the outer PR check: 5d6 always, then one save gates
+// the failed-save package. All child effects bypass resistance deliberately.
+COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIR.spl~
+  SAY NAME1 ~Crisis of Life Resolution~
+  SAY UNIDENTIFIED_DESC ~Internal post-resistance Crisis of Life resolution package.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 savingthrow = BIT2 savebonus = psion_level7_save_penalty STR_VAR resource = ~PS7CLIB~ END
+BUT_ONLY
+
+// The learnable parent does only the one tabletop PR/MR check.
 COPY_EXISTING ~PS7CLIF.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT2 savebonus = psion_level7_save_penalty STR_VAR resource = ~PS7CLIB~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 STR_VAR resource = ~PS7CLIR~ END
 BUT_ONLY
