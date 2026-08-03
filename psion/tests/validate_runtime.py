@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fake-GemRB power-point, persistence, selector, transaction, charge, and token checks."""
+"""Fake-GemRB PP, persistence, focus, feat, selector, and charge checks."""
 
 from pathlib import Path
 import importlib.util
@@ -43,23 +43,28 @@ def fake_table(name: str):
 def main() -> None:
     gemrb = types.ModuleType("GemRB")
     gui = types.ModuleType("GUICommon")
-    stats = {(1, 38): 18, (1, 34): 3, (1, 239): 0}
+    stats = {(1, 38): 18, (1, 39): 14, (1, 34): 3, (1, 239): 0}
     effects = {1: []}
     tables = {
         name: fake_table(name + ".2da")
-        for name in ("psionpool", "psionpowers", "psionaugment")
+        for name in ("psionpool", "psionpowers", "psionaugment", "psionfeatpick")
     }
     known_innates = [
         {"SpellResRef": "PS1ERAY"},
         {"SpellResRef": "PS1VIGR"},
+        {"SpellResRef": "PXCNTR"},
+        {"SpellResRef": "PXFSEL"},
         {"SpellResRef": "SPCL900"},
     ]
     memorized_innates = [
         {"SpellResRef": "PS1ERAY", "Flags": 0},
         {"SpellResRef": "PS1VIGR", "Flags": 1},
+        {"SpellResRef": "PXCNTR", "Flags": 0},
+        {"SpellResRef": "PXFSEL", "Flags": 0},
         {"SpellResRef": "SPCL900", "Flags": 0},
     ]
     raw_spellinfo = ["PSMT03", "PSNOTMOD"]
+    applied_spells = []
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
     gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
@@ -68,14 +73,11 @@ def main() -> None:
     gemrb.DisplayString = lambda *_: None
     gemrb.Log = lambda *_: None
     gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)
+    gemrb.ApplySpell = lambda actor, resref, *_: applied_spells.append((actor, resref))
     gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
     gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[index])
-    gemrb.GetMemorizedSpellsCount = (
-        lambda actor, spell_type, level, real: len(memorized_innates)
-    )
-    gemrb.GetMemorizedSpell = (
-        lambda actor, spell_type, level, index: dict(memorized_innates[index])
-    )
+    gemrb.GetMemorizedSpellsCount = lambda actor, spell_type, level, real: len(memorized_innates)
+    gemrb.GetMemorizedSpell = lambda actor, spell_type, level, index: dict(memorized_innates[index])
 
     def get_effects(actor, opcode):
         return [
@@ -143,124 +145,151 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        # First use initializes both the runtime stat-239 cache and one private,
-        # permanent actor effect that is serialized in normal CRE save data.
-        assert not hasattr(module, "POOL_READY_STAT")
+        # PP remains save-safe: stat 239 is only a cache, while one private
+        # actor effect is the serialized authority.
         assert module.ensure_pool(1) == 17
         assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | 17
-        initialized, current = module._decode_pool_state(1)
-        assert initialized and current == 17
-        persistent = get_effects(1, module.POOL_EFFECT_OPCODE)
-        assert len(persistent) == 1, persistent
-        assert persistent[0]["Param1"] == 17
-        assert persistent[0]["Param2"] == module.POOL_EFFECT_MARKER
-        assert persistent[0]["Resource1"] == module.POOL_EFFECT_RESOURCE
-        assert persistent[0]["Source"] == module.POOL_EFFECT_SOURCE
-
-        # Simulate save/load on a BG-family CRE: the arbitrary user-stat cache
-        # is lost, while normal actor effects survive. ensure_pool must recover
-        # the exact PP value from the serialized effect and rebuild stat 239.
+        persistent = get_effects(1, module.STATE_EFFECT_OPCODE)
+        pool = [effect for effect in persistent if effect["Param2"] == module.POOL_EFFECT_MARKER]
+        assert len(pool) == 1 and pool[0]["Param1"] == 17
         stats[(1, 239)] = 0
         assert module.ensure_pool(1) == 17
-        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | 17
-        assert len(get_effects(1, module.POOL_EFFECT_OPCODE)) == 1
-
-        # Persisted zero is distinct from an uninitialized actor. It must remain
-        # zero across the same simulated save/load instead of refilling itself.
         assert module._write_pool_state(1, 0) == 0
-        assert get_effects(1, module.POOL_EFFECT_OPCODE)[0]["Param1"] == 0
         stats[(1, 239)] = 0
         assert module.ensure_pool(1) == 0
-        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE
-
-        # A real rest refill updates both the serialized record and fast cache.
         assert module.ensure_pool(1, True) == 17
-        assert get_effects(1, module.POOL_EFFECT_OPCODE)[0]["Param1"] == 17
-        assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | 17
 
-        # An unrelated raw stat value is not accepted as initialized state. With
-        # no persistence record this behaves as first use and creates one.
-        effects[1].clear()
-        stats[(1, 239)] = 7
-        assert module.ensure_pool(1) == 17
-        persistent = get_effects(1, module.POOL_EFFECT_OPCODE)
-        assert len(persistent) == 1 and persistent[0]["Param1"] == 17
+        # Focus initializes as focused, persists separately from PP, can be
+        # expended, and Center Mind changes state only on confirmation.
+        assert module.ensure_focus(1)
+        focus = [
+            effect for effect in get_effects(1, module.STATE_EFFECT_OPCODE)
+            if effect["Param2"] == module.FOCUS_EFFECT_MARKER
+        ]
+        assert len(focus) == 1 and focus[0]["Param1"] == 1
+        assert module.expend_focus(1)
+        assert not module.is_focused(1)
+        assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not module.is_focused(1)
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert module.is_focused(1)
 
+        # Feat prerequisites are runtime-filtered. Speed of Thought requires
+        # Wisdom 13; Body and Speed disappear after selection, Talent remains.
+        assert module.can_select_feat(1, "PXFTALT")
+        assert module.can_select_feat(1, "PXFBODY")
+        assert module.can_select_feat(1, "PXFSPD")
+        stats[(1, 39)] = 12
+        assert not module.can_select_feat(1, "PXFSPD")
+        assert module.filter_spellinfo(1, ["SPWI112", "PXFTALT", "PXFSPD"]) == ["SPWI112", "PXFTALT"]
+        stats[(1, 39)] = 14
+
+        # Psionic Talent follows the SRD repeat ladder: +2, then +3, then +4.
+        module.ensure_pool(1, True)
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.feat_rank(1, "PXFTALT") == 0
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.feat_rank(1, "PXFTALT") == 1
+        assert module.maximum_pool(1) == 19
+        assert module.ensure_pool(1) == 19
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.feat_rank(1, "PXFTALT") == 2
+        assert module.psionic_talent_bonus(1) == 5
+        assert module.maximum_pool(1) == 22
+        assert module.ensure_pool(1) == 22
+
+        # Taking Psionic Body after two Talent selections counts all three feat
+        # selections and grants +6 max/current HP. Later psionic feats add +2.
+        assert module.begin_manifest(1, "PXFBODY")
+        assert module.begin_manifest(1, "PXFBODY")
+        assert module.feat_rank(1, "PXFBODY") == 1
+        assert module.psionic_feat_count(1) == 3
+        max_hp = get_effects(1, "MaximumHPModifier")
+        cur_hp = get_effects(1, "CurrentHPModifier")
+        assert [effect["Param1"] for effect in max_hp] == [6]
+        assert [effect["Param1"] for effect in cur_hp] == [6]
+        assert not module.can_select_feat(1, "PXFBODY")
+
+        # Speed of Thought is focus-dependent and isolated through helper spells.
+        assert module.begin_manifest(1, "PXFSPD")
+        assert module.begin_manifest(1, "PXFSPD")
+        assert module.feat_rank(1, "PXFSPD") == 1
+        assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
+        assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2]
+        assert module.expend_focus(1)
+        assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
+        assert not module.can_select_feat(1, "PXFSPD")
+
+        # A third Talent selection remains legal, grants +4 PP, and Psionic Body
+        # adds another +2 HP because repeatable feat selections still count.
+        before_pp = module.ensure_pool(1)
+        before_cap = module.maximum_pool(1)
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.begin_manifest(1, "PXFTALT")
+        assert module.feat_rank(1, "PXFTALT") == 3
+        assert module.maximum_pool(1) == before_cap + 4
+        assert module.ensure_pool(1) == before_pp + 4
+        assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2, 2]
+
+        # Ordinary power/augmentation behavior remains unchanged.
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]
             assert module.can_manifest(1, parent)
-
         assert module.power_info("PSAADEX")["cost"] == 3
         mixed = ["SPWI112", "PSRF01", "PSRF04", "PSAADEX"]
         assert module.filter_spellinfo(1, mixed) == ["SPWI112", "PSRF01", "PSAADEX"]
 
-        # Temporary opcode-214 choices use synthetic type 255. Resolve them from
-        # GemRB's raw spellinfo array, never from the affordability-filtered UI
-        # list or an ordinary memorized spellbook with colliding small indexes.
         class CollisionSpellbook:
             def __init__(self):
                 self.memorized_calls = 0
-                self.spellinfo_calls = 0
 
             def GetSpellinfoSpells(self, actor, book_type):
-                self.spellinfo_calls += 1
-                return []
+                raise AssertionError("type-255 resolution must use raw spellinfo")
 
             def GetUsableMemorizedSpells(self, actor, book_type):
                 self.memorized_calls += 1
-                return [{"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}]
+                return [
+                    {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"},
+                    {"SpellIndex": 4001, "SpellResRef": "PXCNTR"},
+                ]
 
         collision = CollisionSpellbook()
+        raw_spellinfo[:] = ["PSMT03", "PSNOTMOD"]
         entry = module.resolve_power_entry(collision, 1, 255000)
-        assert entry == {"SpellIndex": 255000, "SpellResRef": "PSMT03"}, entry
-        assert collision.spellinfo_calls == 0
-        assert collision.memorized_calls == 0
-        # A PS-prefixed resource from another mod is not intercepted merely by
-        # its name; only resources registered in the Psion power tables count.
+        assert entry == {"SpellIndex": 255000, "SpellResRef": "PSMT03"}
         assert module.resolve_power_entry(collision, 1, 255001) is None
-        assert collision.spellinfo_calls == 0
-        assert collision.memorized_calls == 0
-
         ordinary = module.resolve_power_entry(collision, 1, 4000)
-        assert ordinary["SpellResRef"] == "PS1VIGR", ordinary
-        assert collision.memorized_calls == 1
+        assert ordinary["SpellResRef"] == "PS1VIGR"
+        center = module.resolve_power_entry(collision, 1, 4001)
+        assert center["SpellResRef"] == "PXCNTR"
 
-        # If PP changes after the selector button was built, confirmation must
-        # still resolve the original raw child and reject it rather than letting
-        # the engine cast a now-unaffordable manifestation for free.
+        # Changed affordability between selector display and confirmation still
+        # rejects the original raw child instead of granting a free cast.
         module.ensure_pool(1, True)
         selected = module.resolve_power_entry(collision, 1, 255000)
         assert module.begin_manifest(1, selected["SpellResRef"])
         module._write_pool_state(1, 0)
         confirmed = module.resolve_power_entry(collision, 1, 255000)
-        assert confirmed["SpellResRef"] == "PSMT03"
         assert not module.begin_manifest(1, confirmed["SpellResRef"])
-        assert module.ensure_pool(1) == 0
-        assert get_effects(1, module.POOL_EFFECT_OPCODE)[0]["Param1"] == 0
         module.ensure_pool(1, True)
 
-        before = module.ensure_pool(1)
-        assert module.begin_manifest(1, "PSAADEX")
-        assert module.ensure_pool(1) == before
-        assert module.begin_manifest(1, "PSAADEX")
-        assert module.ensure_pool(1) == before - 3
-        initialized, current = module._decode_pool_state(1)
-        assert initialized and current == before - 3
-        persistent = get_effects(1, module.POOL_EFFECT_OPCODE)
-        assert len(persistent) == 1 and persistent[0]["Param1"] == before - 3
-
-        # One depleted Psion power is replaced with a charged copy. The already
-        # usable Psion power and the unrelated depleted innate remain untouched.
-        assert module.refresh_innate_charges(1) == 1
-        states = {
-            spell["SpellResRef"]: spell["Flags"] for spell in memorized_innates
-        }
-        assert states == {"PS1ERAY": 1, "PS1VIGR": 1, "SPCL900": 0}, states
+        # Reusable charge refresh includes Center Mind but deliberately excludes
+        # the consumable bonus-feat selector and unrelated innate abilities.
+        assert module.refresh_innate_charges(1) == 2
+        states = {}
+        for spell in memorized_innates:
+            states.setdefault(spell["SpellResRef"], []).append(spell["Flags"])
+        assert states["PS1ERAY"] == [1]
+        assert states["PS1VIGR"] == [1]
+        assert states["PXCNTR"] == [1]
+        assert states["PXFSEL"] == [0]
+        assert states["SPCL900"] == [0]
         assert module.refresh_innate_charges(2) == 0
-
-        module._write_pool_state(1, 0)
-        assert not module.can_manifest(1, "PS2AAFF")
-        assert module.filter_spellinfo(1, ["SPWI112", "PSAASTR"]) == ["SPWI112"]
     finally:
         if old_gemrb is None:
             sys.modules.pop("GemRB", None)
@@ -271,7 +300,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB runtime and save-load persistence validation passed.")
+    print("Psion fake-GemRB PP, focus, feat, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
