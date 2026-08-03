@@ -8,7 +8,9 @@ fast PP cache.
 
 Manifestation uses the existing two-phase SpellPressed transaction: the first
 callback reserves an action while target/selector UI is active, and the matching
-confirmation callback performs the irreversible PP, focus, or feat state change.
+confirmation callback performs irreversible PP or feat changes. Center Mind is
+special: confirmation only authorizes its cast; PXCNTR writes focus when the
+speed-9 spell actually resolves, so interruption cannot grant focus early.
 """
 import GemRB
 
@@ -307,16 +309,23 @@ def ensure_pool(actor, refill=False):
 
 
 def _read_focus_state(actor):
+    """Read focus, accepting a resolved PXCNTR marker alongside old state."""
+    found = False
+    focused = False
     try:
         for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
             if int(effect.get("Param2", -1)) != FOCUS_EFFECT_MARKER:
                 continue
             if str(effect.get("Resource1", "")).upper() != FOCUS_EFFECT_RESOURCE:
                 continue
-            return True, bool(int(effect.get("Param1", 0)))
+            found = True
+            # Runtime may have written an unfocused 0 record before PXCNTR later
+            # resolves with a focused 1 record. Any resolved focused marker wins;
+            # the next explicit state write compacts them back to one effect.
+            focused = focused or bool(int(effect.get("Param1", 0)))
     except Exception as error:
         GemRB.Log(2, "Psionics", "focus state read failed: %s" % error)
-    return False, False
+    return found, focused
 
 
 def _sync_focus_passives(actor, focused=None):
@@ -601,6 +610,10 @@ def _is_reusable_innate(actor, resref):
 def refresh_innate_charges(actor):
     if not is_psion(actor):
         return 0
+    # A successfully resolved PXCNTR may have added a focused marker after the
+    # pre-cast GUI callback. Reconcile focus-dependent passives whenever the
+    # Psion bar is reopened, without converting an unresolved reservation.
+    _sync_focus_passives(actor)
     try:
         known = {}
         known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
@@ -663,7 +676,9 @@ def begin_manifest(actor, resref):
             actor,
             ("CENTER", CENTER_RESOURCE),
             lambda: not is_focused(actor),
-            lambda: _write_focus_state(actor, True),
+            # PXCNTR.spl itself writes the focus marker after successful spell
+            # resolution. Confirmation must not grant focus before that point.
+            lambda: True,
         )
 
     if info["kind"] == "feat_selector":
