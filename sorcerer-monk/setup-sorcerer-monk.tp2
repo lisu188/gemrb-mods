@@ -63,12 +63,22 @@ OUTER_SET sm_weapprof_monk_col = (0 - 1)
 OUTER_SET sm_weapprof_rows = 0
 OUTER_SET sm_25stweap_cols = 0
 OUTER_SET sm_25stweap_rows = 0
+OUTER_SET sm_abclasrq_cols = 0
+OUTER_SET sm_found_sorcerer_abclasrq = 0
+OUTER_SET sm_found_monk_abclasrq = 0
+OUTER_SET sm_abclasrq_str = 0
+OUTER_SET sm_abclasrq_dex = 0
+OUTER_SET sm_abclasrq_con = 0
+OUTER_SET sm_abclasrq_int = 0
+OUTER_SET sm_abclasrq_wis = 0
+OUTER_SET sm_abclasrq_cha = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
 OUTER_SPRINT sm_25stweap_actual ~~
 OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
+OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -340,6 +350,55 @@ ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   END
 END
 
+// ABCLASRQ minimums compose naturally for a true multiclass: every component
+// requirement must be satisfied, so each combined minimum is the maximum of
+// the live Sorcerer and Monk values. This also preserves stat-overhaul mods.
+ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
+  COPY_EXISTING ~abclasrq.2da~ ~override~
+    COUNT_2DA_COLS sm_abclasrq_cols
+    PATCH_IF sm_abclasrq_cols = 7 BEGIN
+      READ_2DA_ENTRIES_NOW ~sm_abclasrq~ sm_abclasrq_cols
+      FOR (sm_i = 0; sm_i < sm_abclasrq; ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 0 sm_req_class
+        PATCH_IF (~%sm_req_class%~ STRING_EQUAL_CASE ~SORCERER~)
+            OR (~%sm_req_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 1 sm_req_str
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 2 sm_req_dex
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 3 sm_req_con
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 4 sm_req_int
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 5 sm_req_wis
+          READ_2DA_ENTRY_FORMER ~sm_abclasrq~ sm_i 6 sm_req_cha
+          PATCH_IF (IS_AN_INT ~%sm_req_str%~)
+              AND (IS_AN_INT ~%sm_req_dex%~)
+              AND (IS_AN_INT ~%sm_req_con%~)
+              AND (IS_AN_INT ~%sm_req_int%~)
+              AND (IS_AN_INT ~%sm_req_wis%~)
+              AND (IS_AN_INT ~%sm_req_cha%~) BEGIN
+            PATCH_IF (~%sm_req_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+              SET sm_found_sorcerer_abclasrq = 1
+            END ELSE BEGIN
+              SET sm_found_monk_abclasrq = 1
+            END
+            PATCH_IF sm_req_str > sm_abclasrq_str BEGIN SET sm_abclasrq_str = sm_req_str END
+            PATCH_IF sm_req_dex > sm_abclasrq_dex BEGIN SET sm_abclasrq_dex = sm_req_dex END
+            PATCH_IF sm_req_con > sm_abclasrq_con BEGIN SET sm_abclasrq_con = sm_req_con END
+            PATCH_IF sm_req_int > sm_abclasrq_int BEGIN SET sm_abclasrq_int = sm_req_int END
+            PATCH_IF sm_req_wis > sm_abclasrq_wis BEGIN SET sm_abclasrq_wis = sm_req_wis END
+            PATCH_IF sm_req_cha > sm_abclasrq_cha BEGIN SET sm_abclasrq_cha = sm_req_cha END
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF (sm_abclasrq_cols != 7)
+      OR (sm_found_sorcerer_abclasrq != 1)
+      OR (sm_found_monk_abclasrq != 1) THEN BEGIN
+    FAIL @24
+  END
+  OUTER_SPRINT sm_abclasrq_row ~%sm_abclasrq_str% %sm_abclasrq_dex% %sm_abclasrq_con% %sm_abclasrq_int% %sm_abclasrq_wis% %sm_abclasrq_cha%~
+END
+
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
 // fixed column order: both are read by column name at runtime, so a game whose
 // table is ordered differently would otherwise get the values transposed.
@@ -440,15 +499,17 @@ APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
 APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-// Standard multiclass rows combine the component minimum ability scores.
-// Sorcerer requires INT/CHA 9; Monk requires DEX/CON/WIS 9.
+// Standard multiclass rows combine the component minimum ability scores. The
+// live per-stat maxima were derived above, so stat-overhaul mods are retained.
 ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
-  APPEND ~abclasrq.2da~ ~SORCERER_MONK 0 9 9 9 9 9~
+  APPEND ~abclasrq.2da~ ~SORCERER_MONK %sm_abclasrq_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
-// Both component classes have zero class-based ability modifiers. Keep a
-// matching row so GUICG4's shared numeric row index stays aligned.
+// Stock true multiclasses use zero class-based ability modifiers. Keep a
+// matching zero row so GUICG4's shared numeric row index stays aligned; unlike
+// ABCLASRQ these values are class/kit-specific maximum adjustments, not
+// component minimums with a defined multiclass composition rule.
 ACTION_IF FILE_EXISTS_IN_GAME ~abclsmod.2da~ THEN BEGIN
   APPEND ~abclsmod.2da~ ~SORCERER_MONK 0 0 0 0 0 0~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
