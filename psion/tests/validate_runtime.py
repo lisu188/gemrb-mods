@@ -145,6 +145,20 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        def resolve_center_mind():
+            """Model PXCNTR.spl successfully applying its native state effect."""
+            apply_effect(
+                1,
+                module.STATE_EFFECT_OPCODE,
+                1,
+                module.FOCUS_EFFECT_MARKER,
+                module.FOCUS_EFFECT_RESOURCE,
+                "",
+                "",
+                module.CENTER_RESOURCE,
+                9,
+            )
+
         initial_cap = module.maximum_pool(1)
         assert initial_cap == 383
         assert module.ensure_pool(1) == initial_cap
@@ -171,6 +185,9 @@ def main() -> None:
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert not module.is_focused(1)
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        # Confirmation authorizes the speed-9 spell but must not restore focus.
+        assert not module.is_focused(1)
+        resolve_center_mind()
         assert module.is_focused(1)
 
         # Class bonus-feat credits unlock exactly at the SRD Psion thresholds.
@@ -237,6 +254,12 @@ def main() -> None:
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not module.is_focused(1)
+        assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
+        resolve_center_mind()
+        assert module.is_focused(1)
+        # Reopening the Psion bar reconciles focus-dependent passive effects.
+        module.refresh_innate_charges(1)
         assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
         assert not module.can_select_feat(1, "PXFSPD")
 
@@ -249,6 +272,7 @@ def main() -> None:
         assert module.ensure_pool(1) == before_pp + 4
         assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2, 2]
         assert module.psionic_feat_count(1) == 5
+        assert module.bonus_feat_spent(1) == 5
         assert module.bonus_feats_remaining(1) == 0
         assert not module.can_select_feat(1, "PXFTALT")
         assert not module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
@@ -327,7 +351,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB PP, focus, feat-credit, selector, and persistence validation passed.")
+    print("Psion fake-GemRB PP, resolution-safe focus, feat-credit, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
