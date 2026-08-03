@@ -75,20 +75,23 @@ COPY_EXISTING ~PS7MCOC.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level7_save_penalty END
 BUT_ONLY
 
-// Reddopsi reflects targeted powers. Full psionics-only discrimination is not
-// available after transparency, so this is represented by broad spell turning
-// across power levels 1-9 for one turn.
+// Reddopsi reflects targeted powers. GemRB opcode 199 is the non-decrementing
+// Bounce:SpellLevel form; one timed effect is installed for each power level
+// 1-9. The shared SPL helper mirrors every generated power's spell level into
+// its effect Power byte, so these bounce levels can match Psion effects as well
+// as ordinary transparent spell effects. Full psionics-only discrimination is
+// unavailable, so magic is reflected too under transparency.
 LAF psion_create_level7_power
   STR_VAR
     ps_resref = ~PS7RDOP~
     ps_name = ~Reddopsi~
-    ps_description = ~For one turn targeted magical and psionic effects of power levels 1 through 9 can rebound on their source. Tabletop Reddopsi reflects powers targeting the manifester; under psionics-magic transparency the engine cannot distinguish them reliably, so the reflection is broader.~
+    ps_description = ~For one turn targeted magical and psionic effects of power levels 1 through 9 rebound on their source without consuming a finite reflection pool. Tabletop Reddopsi reflects powers targeting the manifester; under psionics-magic transparency the engine cannot distinguish them reliably, so the reflection is broader.~
     ps_icon = ~spwi707~
 END
 COPY_EXISTING ~PS7RDOP.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS7RDOP~ END
   FOR (ps_bounce_level = 1; ps_bounce_level <= 9; ++ps_bounce_level) BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 200 target = 1 resist_dispel = BIT1 parameter1 = 7 parameter2 = ps_bounce_level timing = 0 duration = 60 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 199 target = 1 resist_dispel = BIT1 parameter1 = ps_bounce_level timing = 0 duration = 60 END
   END
 BUT_ONLY
 
