@@ -132,7 +132,9 @@ BUT_ONLY
 
 // Crisis of Life is a Fortitude save-or-die in tabletop. At BG levels that is
 // disproportionately binary, so the portable form deals severe damage and a
-// brief collapse on a failed save rather than killing outright.
+// brief collapse on a failed save rather than killing outright. Five dice are
+// unconditional; one save gates the other five dice and the hold, producing a
+// true 10d6/5d6 failure/success split without rolling two independent saves.
 LAF psion_create_level7_power
   INT_VAR
     ps_target = 2
@@ -145,7 +147,13 @@ LAF psion_create_level7_power
     ps_description = ~The Telepath attacks the target's autonomic functions for 10d6 magical damage, with a save vs death for half. A failed save also holds the victim helpless for one round. Tabletop Crisis of Life stops the heart outright; the portable form avoids a single-save instant kill.~
     ps_icon = ~spwi713~
 END
+COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIB.spl~
+  SAY NAME1 ~Crisis of Life Failure~
+  SAY UNIDENTIFIED_DESC ~Internal failed-save Crisis of Life effect package.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 6 END
+BUT_ONLY
 COPY_EXISTING ~PS7CLIF.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 10 dicesize = 6 savingthrow = BIT2 savebonus = psion_level7_save_penalty special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 6 savingthrow = BIT2 savebonus = psion_level7_save_penalty END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 5 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT2 savebonus = psion_level7_save_penalty STR_VAR resource = ~PS7CLIB~ END
 BUT_ONLY
