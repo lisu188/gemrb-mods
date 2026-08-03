@@ -90,8 +90,9 @@ def validate_crisis_of_life() -> None:
     )
 
     # SRD: Fortitude partial, PR Yes. Parent does exactly one PR/MR check and no
-    # save; the resolution child bypasses PR, deals the successful-save 5d6 and
-    # owns the only save; the failure child bypasses PR/save and adds 5d6+hold.
+    # save. The resolution child bypasses PR, deals the SRD successful-save 7d6
+    # and owns the only save; the failure child bypasses PR/save and adds 3d6
+    # plus hold as the portable substitute for the tabletop instant-death branch.
     assert parent.count("opcode = 146") == 1, parent
     assert "resource = ~PS7CLIR~" in parent, parent
     assert "savingthrow = " not in parent, parent
@@ -106,8 +107,8 @@ def validate_crisis_of_life() -> None:
     )
     assert "resist_dispel = BIT0" not in resolution, resolution
     assert "resist_dispel = BIT0" not in failure, failure
-    assert dice(resolution) == [5], dice(resolution)
-    assert dice(failure) == [5], dice(failure)
+    assert dice(resolution) == [7], dice(resolution)
+    assert dice(failure) == [3], dice(failure)
     assert sum(dice(resolution) + dice(failure)) == 10
     assert "dicesize = 6" in resolution and "dicesize = 6" in failure
     assert "opcode = 175" in failure and "duration = 6" in failure
