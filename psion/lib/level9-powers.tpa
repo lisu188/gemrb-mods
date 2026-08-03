@@ -155,9 +155,9 @@ COPY_EXISTING ~PS9TCIR.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 124 target = 1 resist_dispel = BIT1 parameter2 = 1 timing = 1 END
 BUT_ONLY
 
-// Psychic Chirurgery can heal psychic damage or teach powers. Runtime mutation
-// of another actor's powers-known list is not yet implemented, so this version
-// performs the restorative half and grants temporary mental protection.
+// Psychic Chirurgery has Will negates and Power Resistance: Yes in the SRD.
+// The parent owns that one combined defense check; the child contains the
+// portable restorative package and deliberately bypasses further saves and MR.
 LAF psion_create_level9_power
   INT_VAR
     ps_target = 2
@@ -166,10 +166,13 @@ LAF psion_create_level9_power
   STR_VAR
     ps_resref = ~PS9PCHI~
     ps_name = ~Psychic Chirurgery~
-    ps_description = ~The Telepath repairs severe psychic injury: removes level drain and grants +6 to all saving throws plus immunity to new charm and confusion effects for five rounds. Tabletop Psychic Chirurgery can also impart a known power; modifying another actor's permanent powers-known progression requires dedicated runtime support and is not simulated.~
+    ps_description = ~The Telepath repairs severe psychic injury: removes level drain and grants +6 to all saving throws plus immunity to new charm and confusion effects for five rounds. A save vs spell negates the effect and power resistance applies. Tabletop Psychic Chirurgery can also impart a known power; modifying another actor's permanent powers-known progression requires dedicated runtime support and is not simulated.~
     ps_icon = ~sppr909~
 END
-COPY_EXISTING ~PS9PCHI.spl~ ~override~
+
+COPY_EXISTING ~PS9PCHI.spl~ ~override/PS9PCHB.spl~
+  SAY NAME1 ~Psychic Chirurgery Effect~
+  SAY UNIDENTIFIED_DESC ~Internal successful Psychic Chirurgery effect package.~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 224 target = 2 resist_dispel = BIT1 timing = 1 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 2 resist_dispel = BIT1 STR_VAR resource = ~PS9PCHI~ END
   FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
@@ -177,4 +180,7 @@ COPY_EXISTING ~PS9PCHI.spl~ ~override~
   END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = 5 timing = 0 duration = 30 END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = 128 timing = 0 duration = 30 END
+BUT_ONLY
+COPY_EXISTING ~PS9PCHI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 savingthrow = BIT0 savebonus = psion_level9_save_penalty STR_VAR resource = ~PS9PCHB~ END
 BUT_ONLY
