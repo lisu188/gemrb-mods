@@ -1,0 +1,110 @@
+// Psionic focus and the first runtime-backed bonus feats.
+//
+// The actual focused/unfocused flag and feat ownership live in save-serialized
+// GemRB actor effects. These SPLs provide action-bar/selector resources only;
+// Psionics.py performs the state transition on SpellPressed confirmation.
+
+DEFINE_ACTION_FUNCTION psion_create_focus_action
+INT_VAR
+  ps_speed = 0
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~sppr101~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 (BIT14 BOR BIT25)
+    WRITE_LONG 0x34 1
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR target = 5 range = 0x7fff speed = ps_speed projectile = 1
+      STR_VAR icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+// Center Mind is reusable. The long casting speed represents the full-round
+// action used to regain psionic focus until Concentration skill checks are added.
+LAF psion_create_focus_action
+  INT_VAR ps_speed = 9
+  STR_VAR
+    ps_resref = ~PSCNTR~
+    ps_name = ~Center Mind~
+    ps_description = ~Spend a full-round action centering your thoughts to regain psionic focus. The Concentration DC 20 check will become active when player-allocated psionic skills are implemented.~
+    ps_icon = ~sppr101~
+END
+
+// This parent is granted at Psion levels 1, 5, 10, 15 and 20. Each GA_ grant
+// contributes one ordinary innate use. The runtime deliberately does not
+// recharge it, so every class bonus feat can be selected exactly once.
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFSEL~
+    ps_name = ~Bonus Psionic Feat~
+    ps_description = ~Choose one available Psion bonus feat. Psionic Talent may be selected more than once; other choices disappear once learned. This use is consumed permanently after a selection.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PSFSEL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSFSEL~ END
+BUT_ONLY
+
+// Selector children carry no native effect. Psionics.py validates the choice a
+// second time at cast confirmation, then persists the feat and applies any
+// derived PP/HP/focus-dependent benefits.
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFTALT~
+    ps_name = ~Psionic Talent~
+    ps_description = ~Increase your power-point reserve. The first selection grants 2 power points; each later selection grants 1 more point than the previous selection. This feat may be selected repeatedly.~
+    ps_icon = ~sppr412~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFBODY~
+    ps_name = ~Psionic Body~
+    ps_description = ~Gain 2 hit points for every psionic feat you have, including this one. Each psionic feat selected later grants 2 additional hit points.~
+    ps_icon = ~sppr309~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFSPD~
+    ps_name = ~Speed of Thought~
+    ps_description = ~Requires Wisdom 13. While psionically focused, your movement rate increases by approximately one third, representing the tabletop +10-foot insight bonus to a 30-foot base speed.~
+    ps_icon = ~spwi305~
+END
+
+// Dedicated helper resources keep Speed of Thought isolated from haste, slow,
+// Burst, and third-party movement effects. PSFSPED first removes only an older
+// PSFSPED application, then applies the focused movement bonus permanently;
+// PSFSPOF removes only effects sourced from PSFSPED.
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFSPED~
+    ps_name = ~Speed of Thought: Focused~
+    ps_description = ~Internal Psion focus helper.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PSFSPED.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSFSPED~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 133 parameter2 = 2 timing = 9 END
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PSFSPOF~
+    ps_name = ~Speed of Thought: Unfocused~
+    ps_description = ~Internal Psion focus helper.~
+    ps_icon = ~spwi305~
+END
+COPY_EXISTING ~PSFSPOF.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSFSPED~ END
+BUT_ONLY
