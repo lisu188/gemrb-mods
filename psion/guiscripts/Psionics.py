@@ -25,6 +25,7 @@ FOCUS_EFFECT_MARKER = 0x50534643
 FOCUS_EFFECT_RESOURCE = "PSFOCUS"
 FOCUS_EFFECT_SOURCE = "PSFMOD"
 CENTER_RESOURCE = "PXCNTR"
+FEAT_SELECTOR_RESOURCE = "PXFSEL"
 SPEED_ON_RESOURCE = "PXFSPED"
 SPEED_OFF_RESOURCE = "PXFSPOF"
 
@@ -37,6 +38,7 @@ FEAT_MARKERS = {
 PSIONIC_TALENT = "PXFTALT"
 PSIONIC_BODY = "PXFBODY"
 SPEED_OF_THOUGHT = "PXFSPD"
+BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)
 
 INT_STAT = 38
 WIS_STAT = 39
@@ -131,20 +133,23 @@ def _write_feat_rank(actor, resref, rank):
     GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, marker)
     if rank:
         GemRB.ApplyEffect(
-            actor,
-            STATE_EFFECT_OPCODE,
-            rank,
-            marker,
-            key,
-            "",
-            "",
-            FEAT_EFFECT_SOURCE,
+            actor, STATE_EFFECT_OPCODE, rank, marker, key, "", "", FEAT_EFFECT_SOURCE
         )
     return rank
 
 
 def psionic_feat_count(actor):
+    """Count feat selections; repeated Psionic Talent counts each selection."""
     return sum(feat_rank(actor, resref) for resref in FEAT_MARKERS)
+
+
+def bonus_feat_slots(actor):
+    level = manifester_level(actor)
+    return sum(1 for threshold in BONUS_FEAT_LEVELS if level >= threshold)
+
+
+def bonus_feats_remaining(actor):
+    return max(0, bonus_feat_slots(actor) - psionic_feat_count(actor))
 
 
 def psionic_talent_bonus(actor):
@@ -154,7 +159,7 @@ def psionic_talent_bonus(actor):
 
 def can_select_feat(actor, resref):
     info = feat_choice_info(resref)
-    if not info or not is_psion(actor):
+    if not info or not is_psion(actor) or bonus_feats_remaining(actor) <= 0:
         return False
     if manifester_level(actor) < info["min_level"]:
         return False
@@ -163,6 +168,21 @@ def can_select_feat(actor, resref):
     if not info["repeatable"] and feat_rank(actor, info["resref"]):
         return False
     return True
+
+
+def available_feat_choices(actor):
+    table = _feat_table()
+    if not table or bonus_feats_remaining(actor) <= 0:
+        return []
+    available = []
+    try:
+        for index in range(table.GetRowCount()):
+            resref = table.GetRowName(index)
+            if can_select_feat(actor, resref):
+                available.append(resref.upper())
+    except Exception:
+        return []
+    return available
 
 
 def maximum_pool(actor):
@@ -179,9 +199,7 @@ def maximum_pool(actor):
 
 def _decode_pool_state(actor):
     raw = int(GemRB.GetPlayerStat(actor, CURRENT_POOL_STAT))
-    initialized = (
-        raw & POOL_STATE_SIGNATURE_MASK
-    ) == POOL_STATE_SIGNATURE
+    initialized = (raw & POOL_STATE_SIGNATURE_MASK) == POOL_STATE_SIGNATURE
     return initialized, raw & POOL_VALUE_MASK
 
 
@@ -209,14 +227,8 @@ def _write_pool_state(actor, current):
     current = max(0, min(int(current), POOL_VALUE_MASK))
     GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, POOL_EFFECT_MARKER)
     GemRB.ApplyEffect(
-        actor,
-        STATE_EFFECT_OPCODE,
-        current,
-        POOL_EFFECT_MARKER,
-        POOL_EFFECT_RESOURCE,
-        "",
-        "",
-        POOL_EFFECT_SOURCE,
+        actor, STATE_EFFECT_OPCODE, current, POOL_EFFECT_MARKER,
+        POOL_EFFECT_RESOURCE, "", "", POOL_EFFECT_SOURCE,
     )
     return _write_pool_cache(actor, current)
 
@@ -275,14 +287,8 @@ def _write_focus_state(actor, focused):
     focused = bool(focused)
     GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, FOCUS_EFFECT_MARKER)
     GemRB.ApplyEffect(
-        actor,
-        STATE_EFFECT_OPCODE,
-        1 if focused else 0,
-        FOCUS_EFFECT_MARKER,
-        FOCUS_EFFECT_RESOURCE,
-        "",
-        "",
-        FOCUS_EFFECT_SOURCE,
+        actor, STATE_EFFECT_OPCODE, 1 if focused else 0, FOCUS_EFFECT_MARKER,
+        FOCUS_EFFECT_RESOURCE, "", "", FOCUS_EFFECT_SOURCE,
     )
     _sync_focus_passives(actor, focused)
     return focused
@@ -433,13 +439,9 @@ def power_info(resref):
 def action_info(resref):
     key = (resref or "").upper()
     if key == CENTER_RESOURCE:
-        return {
-            "kind": "center",
-            "resref": key,
-            "parent": key,
-            "cost": 0,
-            "selector": False,
-        }
+        return {"kind": "center", "resref": key, "parent": key, "cost": 0, "selector": False}
+    if key == FEAT_SELECTOR_RESOURCE:
+        return {"kind": "feat_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
     feat = feat_choice_info(key)
     if feat:
         return feat
@@ -533,9 +535,13 @@ def filter_spellinfo(actor, resrefs):
     return filtered
 
 
-def _is_reusable_innate(resref):
+def _is_reusable_innate(actor, resref):
     key = (resref or "").upper()
-    return bool(power_info(key) or key == CENTER_RESOURCE)
+    if power_info(key) or key == CENTER_RESOURCE:
+        return True
+    if key == FEAT_SELECTOR_RESOURCE:
+        return bonus_feats_remaining(actor) > 0
+    return False
 
 
 def refresh_innate_charges(actor):
@@ -547,7 +553,7 @@ def refresh_innate_charges(actor):
         for index in range(known_count):
             spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
             resref = str(spell.get("SpellResRef", "")).upper()
-            if _is_reusable_innate(resref):
+            if _is_reusable_innate(actor, resref):
                 known[resref] = index
 
         charged = set()
@@ -605,6 +611,10 @@ def begin_manifest(actor, resref):
             lambda: not is_focused(actor),
             lambda: _write_focus_state(actor, True),
         )
+
+    if info["kind"] == "feat_selector":
+        cancel_pending(actor)
+        return bool(available_feat_choices(actor))
 
     if info["kind"] == "feat_choice":
         key = info["resref"]
