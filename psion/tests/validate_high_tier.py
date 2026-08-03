@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavioral source checks for coupled high-tier Psion save and PR outcomes."""
+"""Behavioral source checks for coupled high-tier Psion save, PR, and bounce outcomes."""
 
 from pathlib import Path
 import re
@@ -35,6 +35,24 @@ def assert_single_save_gate(
     assert f"resource = ~{resource}~" in parent, parent
     assert "parameter2 = 1" in parent, parent
     assert "savingthrow = " not in child, child
+
+
+def validate_effect_power_and_reddopsi() -> None:
+    helper = text("spell-functions.tpa")
+    assert "power = 255" in helper
+    assert "READ_LONG 0x34 ps_effect_power" in helper
+    assert "WRITE_BYTE (ps_new_effect + 0x03) ps_effect_power" in helper
+    assert "WRITE_BYTE (ps_new_effect + 0x03) power" not in helper
+
+    source = text("level7-powers.tpa")
+    reddopsi = copy_block(source, "COPY_EXISTING ~PS7RDOP.spl~ ~override~")
+    assert reddopsi.count("opcode = 199") == 1, reddopsi  # one loop source line
+    assert "opcode = 200" not in reddopsi, reddopsi
+    assert "ps_bounce_level = 1" in reddopsi
+    assert "ps_bounce_level <= 9" in reddopsi
+    assert "parameter1 = ps_bounce_level" in reddopsi
+    assert "parameter2 = ps_bounce_level" not in reddopsi
+    assert "duration = 60" in reddopsi
 
 
 def validate_mass_cocoon_and_time_hop() -> None:
@@ -167,12 +185,13 @@ def validate_psychic_chirurgery() -> None:
 
 
 def main() -> None:
+    validate_effect_power_and_reddopsi()
     validate_mass_cocoon_and_time_hop()
     validate_telekinetic_sphere()
     validate_crisis_of_life()
     validate_tornado_blast()
     validate_psychic_chirurgery()
-    print("Psion high-tier single-save and power-resistance validation passed.")
+    print("Psion high-tier bounce, single-save and power-resistance validation passed.")
 
 
 if __name__ == "__main__":
