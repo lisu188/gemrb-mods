@@ -246,7 +246,7 @@ def validate_builders() -> None:
         "PS6BANI": (6, ("opcode = 213", "duration = 30")),
         "PS6MSWI": (6, ("opcode = 5", "duration = 30")),
         "PS7MCOC": (7, ("opcode = 175", "Fireball_Just_Projectile")),
-        "PS7RDOP": (7, ("opcode = 200", "ps_bounce_level <= 9")),
+        "PS7RDOP": (7, ("opcode = 199", "ps_bounce_level <= 9")),
         "PS7FISS": (7, ("opcode = 1", "parameter1 = 1")),
         "PS7EJNT": (7, ("opcode = 126", "parameter1 = 150", "parameter2 = 2")),
         "PS7CLIF": (7, ("opcode = 146", "resource = ~PS7CLIB~", "dicenumber = 7", "savingthrow = BIT2")),
