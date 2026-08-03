@@ -37,6 +37,7 @@
 - Copied the starting-gold formula and the avatar prefix out of the live Monk rows instead of hardcoding them, since both are read by column name at runtime.
 - Added a two-slot `NUMWSLOT.2DA` row instead of falling through to the table default.
 - Built the combined `LUSM0.2DA` high-level-ability table out of the game's own Sorcerer and Monk HLA tables. GemRB resolves an unkitted multiclass through its own `LUABBR.2DA` row, so the previous row pointed both components at a table that did not exist.
+- Made HLA metadata atomic when `LUNUMAB.2DA` is present: installation now requires `LUABBR.2DA`, both component LU source tables, compatible table widths and at least one usable merged HLA row before adding HLA progression metadata.
 - Gave the merged action bar the Monk's Search and Stealth buttons alongside the Sorcerer's spellbook and quick spell, and left out the Monk's third quick-weapon button because `NUMWSLOT.2DA` restricts the class to two weapon slots.
 - Rejected a `QSLOTS.2DA` that is out of step with `CLSKILLS.2DA` before making any changes. GemRB addresses the action bar by row index, so an appended row would otherwise be applied to a different class.
 - Rejected class tables that do not provide both a Sorcerer and a Monk row rather than silently installing a class with no starting experience.
