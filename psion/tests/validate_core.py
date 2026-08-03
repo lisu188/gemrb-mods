@@ -258,7 +258,7 @@ def validate_builders() -> None:
         "PS8MSED": (8, ("opcode = 5", "duration = 600")),
         "PS9META": (9, ("opcode = 193", "opcode = 91", "parameter1 = 100")),
         "PS9TCRE": (9, ("opcode = 67", "resource = ~PSACON01~")),
-        "PS9TORN": (9, ("opcode = 146", "resource = ~PSTORNB~", "dicenumber = 8", "CRUSHING")),
+        "PS9TORN": (9, ("Fireball_Just_Projectile", "ps_description = ~A violent vortex deals 17d6")),
         "PS9GMET": (9, ("opcode = 44", "parameter1 = 8", "parameter1 = 40")),
         "PS9TCIR": (9, ("opcode = 124", "parameter2 = 1")),
         "PS9PCHI": (9, ("opcode = 224", "parameter2 = 5", "parameter2 = 128")),
