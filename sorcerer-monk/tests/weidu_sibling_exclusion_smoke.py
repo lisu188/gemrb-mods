@@ -34,8 +34,8 @@ def prepare_both(game):
     add_cleric_identity(override)
     write_2da(
         override / "25stweap.2da",
-        ["MAGE"],
-        [(slot, ["*"]) for slot in STARTER_SLOTS],
+        ["ID", "NAME_REF", "DESC_REF", "MAGE"],
+        [(slot, [i, 1000 + i, 2000 + i, "*"]) for i, slot in enumerate(STARTER_SLOTS)],
     )
     write_2da(override / "luabbr.2da", ["ABBREV"], [("SORCERER", ["SOR"]), ("MONK", ["MON"])])
     write_2da(
