@@ -249,7 +249,7 @@ def validate_builders() -> None:
         "PS7RDOP": (7, ("opcode = 200", "ps_bounce_level <= 9")),
         "PS7FISS": (7, ("opcode = 1", "parameter1 = 1")),
         "PS7EJNT": (7, ("opcode = 126", "parameter1 = 150", "parameter2 = 2")),
-        "PS7CLIF": (7, ("opcode = 146", "resource = ~PS7CLIB~", "dicenumber = 5", "savingthrow = BIT2")),
+        "PS7CLIF": (7, ("opcode = 146", "resource = ~PS7CLIB~", "dicenumber = 7", "savingthrow = BIT2")),
         "PS8HYPC": (8, ("opcode = 91", "parameter1 = 100")),
         "PS8ASED": (8, ("ps_resist_opcode = 86", "parameter1 = 25")),
         "PS8TKSP": (8, ("opcode = 146", "resource = ~PS8TKSB~", "opcode = 175", "parameter1 = 50")),
