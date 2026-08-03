@@ -41,14 +41,15 @@ LAF psion_create_focus_action
     ps_icon = ~sppr101~
 END
 
-// One ordinary innate use is granted at Psion levels 1, 5, 10, 15 and 20.
-// Runtime recharge deliberately excludes this selector, so each grant is one
-// permanent class bonus-feat choice rather than a daily resource.
+// The selector itself is learned once at level 1. Psionics.py derives earned
+// bonus-feat credits from class level (1, 5, 10, 15 and 20) and recharges this
+// same selector only while an unspent credit remains. Opening or canceling a
+// choice therefore cannot destroy a class entitlement.
 LAF psion_create_focus_action
   STR_VAR
     ps_resref = ~PXFSEL~
     ps_name = ~Bonus Psionic Feat~
-    ps_description = ~Choose one available Psion bonus feat. Psionic Talent may be selected more than once; other choices disappear once learned. This use is consumed permanently after a selection.~
+    ps_description = ~Spend one earned Psion bonus-feat choice. New choices become available at Psion levels 1, 5, 10, 15, and 20. Psionic Talent may be selected more than once; nonrepeatable feats disappear once learned. Canceling the selector does not consume the choice.~
     ps_icon = ~sppr107~
 END
 COPY_EXISTING ~PXFSEL.spl~ ~override~
