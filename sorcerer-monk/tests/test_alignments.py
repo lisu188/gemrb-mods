@@ -8,9 +8,11 @@ TP2 = (Path(__file__).resolve().parents[1] / "setup-sorcerer-monk.tp2").read_tex
 class AlignmentTests(unittest.TestCase):
     def test_component_alignment_rows_are_preflighted(self):
         self.assertIn("READ_2DA_ENTRIES_NOW ~sm_alignmnt~ sm_alignmnt_cols", TP2)
-        self.assertIn("SET sm_found_sorcerer_alignmnt = 1", TP2)
-        self.assertIn("SET sm_found_monk_alignmnt = 1", TP2)
+        self.assertIn("SET sm_found_sorcerer_alignmnt += 1", TP2)
+        self.assertIn("SET sm_found_monk_alignmnt += 1", TP2)
         self.assertIn("sm_alignmnt_cols != 10", TP2)
+        self.assertIn("sm_found_sorcerer_alignmnt != 1", TP2)
+        self.assertIn("sm_found_monk_alignmnt != 1", TP2)
         self.assertIn("FAIL @26", TP2)
 
     def test_combined_alignment_is_component_intersection(self):
