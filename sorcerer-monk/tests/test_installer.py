@@ -80,8 +80,10 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("$ $ SORCERER_MONK 0 0 1 1 1 0 0", payloads("APPEND_COL", "thiefscl.2da"))
 
     def test_combined_ability_prerequisites(self):
-        self.assertIn("SORCERER_MONK 0 9 9 9 9 9", payloads("APPEND", "abclasrq.2da"))
+        self.assertIn("SORCERER_MONK %sm_abclasrq_row%", payloads("APPEND", "abclasrq.2da"))
         self.assertIn("SORCERER_MONK 0 0 0 0 0 0", payloads("APPEND", "abclsmod.2da"))
+        self.assertIn("sm_found_sorcerer_abclasrq != 1", TP2)
+        self.assertIn("sm_found_monk_abclasrq != 1", TP2)
 
     def test_modern_monk_skill_progression(self):
         self.assertIn("SORCERER_MONK 0 10", payloads("APPEND", "thiefskl.2da"))
