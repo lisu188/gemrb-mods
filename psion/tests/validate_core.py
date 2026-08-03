@@ -17,11 +17,11 @@ DISCIPLINE_CLABS = {
 }
 
 LEVEL_REFS = {
-    1: {"PS1ERAY", "PS1MTHR", "PS1IARM", "PS1VIGR", "PS1FSCR", "PS1EMND", "PS1PREC", "PS1ACON", "PS1EPUS", "PS1TSKN", "PS1BRST", "PS1CHAR"},
-    2: {"PS2AMOR", "PS2CBLS", "PS2DHIN", "PS2TSHD", "PS2BIOF", "PS2SWCR", "PS2CLAI", "PS2RPRD", "PS2EMIS", "PS2AAFF", "PS2DSWP", "PS2BRLK"},
-    3: {"PS3DPSI", "PS3BADJ", "PS3EBLT", "PS3MBAR", "PS3TSGT", "PS3THOP", "PS3DANG", "PS3COCO", "PS3ECON", "PS3HUST", "PS3SSTP", "PS3MSTL"},
+    1: {"PS1ERAY", "PS1MTHR", "PS1IARM", "PS1VIGR", "PS1FSCR", "PS1EMND", "PS1PREC", "PS1ACON", "PS1MAGI", "PS1TSKN", "PS1BRST", "PS1CHAR"},
+    2: {"PS2AMOR", "PS2CBLS", "PS2DHIN", "PS2TSHD", "PS2BIOF", "PS2SWCR", "PS2CLAI", "PS2RPRD", "PS2EMIS", "PS2AAFF", "PS2DSWP", "PS2BRLK", "PS2EPUS"},
+    3: {"PS3DPSI", "PS3BADJ", "PS3EBLT", "PS3MBAR", "PS3TSGT", "PS3THOP", "PS3DANG", "PS3COCO", "PS3ECON", "PS3HUST", "PS3SSTP", "PS3CBRE"},
     4: {"PS4EADP", "PS4FOMV", "PS4DDOR", "PS4IFOR", "PS4TKMN", "PS4PLEE", "PS4RVIE", "PS4WECT", "PS4EBAL", "PS4META", "PS4PFLY", "PS4COMP"},
-    5: {"PS5ADBD", "PS5CATP", "PS5PRES", "PS5COGL", "PS5TRUE", "PS5TELE", "PS5SCHN", "PS5HOCR", "PS5ECUR", "PS5PFDB", "PS5BALT", "PS5MPRB"},
+    5: {"PS5ADBD", "PS5CATP", "PS5PRES", "PS5PCRU", "PS5TRUE", "PS5TELE", "PS5SCHN", "PS5HOCR", "PS5ECUR", "PS5PFDB", "PS5BALT", "PS5MPRB"},
 }
 
 
@@ -67,7 +67,10 @@ def validate_tables() -> None:
         assert all(len(row) == len(columns) + 1 for row in rows(filename)), filename
 
     powers = rows("psionpowers.2da")
-    assert len(powers) == len({row[0] for row in powers}) == 60
+    # 61 rather than 60: Energy Push moved to its correct 2nd level and the
+    # Kineticist's vacated level-1 exclusive was filled by Matter Agitation,
+    # so the catalogue gained one power.
+    assert len(powers) == len({row[0] for row in powers}) == 61
     for level, expected_refs in LEVEL_REFS.items():
         actual = {row[0] for row in powers if int(row[2]) == level}
         assert actual == expected_refs, (level, actual ^ expected_refs)
@@ -95,6 +98,44 @@ def validate_progressions() -> None:
                     exclusive = [ref for ref in gained if powers[ref]["discipline"] == discipline]
                     assert len(exclusive) == 1
                     assert powers[exclusive[0]]["level"] == maximum
+
+
+# Powers with no GA_ entry in any CLAB table. They are built and installed to
+# override/ but no character can learn them, because CLAB rows 10-20 are still
+# all **** while psionknown.2da expects the catalogue to keep growing to level
+# 20. Workstream 4 fills those rows and drains this set.
+#
+# The set is pinned rather than merely counted so that stranding a further
+# power fails here instead of shipping unnoticed. Moving Energy Push to its
+# correct 2nd level stranded it in exactly this way and only review caught it.
+UNGRANTED_POWERS = {
+    "PS1EMND", "PS2CBLS", "PS2TSHD", "PS2BIOF", "PS2SWCR", "PS3MBAR",
+    "PS3TSGT", "PS3THOP", "PS4DDOR", "PS4TKMN", "PS4PLEE", "PS5ADBD",
+    "PS5CATP", "PS5PCRU", "PS5TRUE", "PS5TELE",
+}
+
+
+def validate_learnable_powers() -> None:
+    """Pin which powers no discipline can learn.
+
+    Powers reach a character only through GA_ entries in the six CLAB tables,
+    so a power absent from all six is unreachable however complete its builder
+    is.
+    """
+    granted = set()
+    for filename in DISCIPLINE_CLABS.values():
+        for row in rows(filename):
+            granted.update(token[3:] for token in row[1:] if token.startswith("GA_PS"))
+
+    catalogue = {row[0] for row in rows("psionpowers.2da")}
+    assert granted <= catalogue, ("CLAB grants an unknown power", sorted(granted - catalogue))
+
+    stranded = catalogue - granted
+    assert stranded == UNGRANTED_POWERS, (
+        "learnability changed",
+        {"newly stranded": sorted(stranded - UNGRANTED_POWERS),
+         "newly reachable": sorted(UNGRANTED_POWERS - stranded)},
+    )
 
 
 def validate_weidu_integer_syntax() -> None:
@@ -356,6 +397,52 @@ def validate_save_dc_scheme() -> None:
             )
 
 
+def normalise_power_name(name: str) -> str:
+    """Fold a display name into the psionpowers.2da NAME convention.
+
+    Punctuation is dropped rather than special-cased, so "Fly (Psionic)" folds
+    to FLY_PSIONIC without this rule having to name that power.
+    """
+    return "_".join(re.findall(r"[A-Za-z0-9]+", name)).upper()
+
+
+def validate_power_names() -> None:
+    """psionpowers.2da's NAME column must agree with the builders' ps_name.
+
+    Nothing reads NAME at runtime -- Psionics.py takes only LEVEL, DISCIPLINE
+    and BASE_COST, keyed by resref -- so the column can drift indefinitely
+    without any symptom. PS2RPRD carried three different names before this
+    check existed. The builders' ps_name is written to the SPL via SAY NAME1
+    and is the only name a player ever sees, so it is the authority here.
+
+    The walk covers every module under lib/, not just level*-powers.tpa. The
+    augment modules delete and rebuild their parent resources, so a check
+    scoped to the level builders would skip exactly the resources players
+    manifest -- that scoping error is how the Workstream 1 save-DC gap reached
+    review.
+    """
+    table = {row[0]: row[1] for row in rows("psionpowers.2da")}
+    # ps_resref precedes ps_name inside a builder block; refusing to cross a
+    # second ps_resref keeps a block from borrowing its neighbour's name.
+    pattern = re.compile(
+        r"ps_resref\s*=\s*~([A-Z0-9]+)~(?:(?!ps_resref).)*?ps_name\s*=\s*~([^~]+)~",
+        re.DOTALL,
+    )
+
+    inspected = set()
+    for path in sorted((ROOT / "lib").glob("*.tpa")):
+        for resref, display in pattern.findall(path.read_text(encoding="utf-8")):
+            if resref not in table:
+                continue  # augment child, not a catalogue power
+            expected = normalise_power_name(display)
+            assert table[resref] == expected, (path.name, resref, table[resref], expected)
+            inspected.add(resref)
+
+    # Without this the check would pass vacuously if the regex stopped matching.
+    missing = sorted(set(table) - inspected)
+    assert not missing, ("no builder ps_name found for", missing)
+
+
 def validate_installer() -> None:
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     assert "VERSION ~1.0.0~" in setup
@@ -373,11 +460,13 @@ def validate_installer() -> None:
 def main() -> None:
     validate_tables()
     validate_progressions()
+    validate_learnable_powers()
     validate_weidu_integer_syntax()
     validate_release_infrastructure()
     validate_builders()
     validate_augmentation()
     validate_save_dc_scheme()
+    validate_power_names()
     validate_installer()
     py_compile.compile(str(ROOT / "guiscripts" / "Psionics.py"), doraise=True)
     py_compile.compile(str(ROOT / "tools" / "install_guiscripts.py"), doraise=True)

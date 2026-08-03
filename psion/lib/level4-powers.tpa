@@ -227,12 +227,12 @@ COPY_EXISTING ~PS4META.spl~ ~override~
   END
 BUT_ONLY
 
-// Psionic Flight: BG maps remain two-dimensional. Flight is represented by
+// Fly (Psionic): BG maps remain two-dimensional. Flight is represented by
 // speed, melee defense, backstab protection and immunity to ground restraints.
 LAF psion_create_level4_power
   STR_VAR
     ps_resref = ~PS4PFLY~
-    ps_name = ~Psionic Flight~
+    ps_name = ~Fly (Psionic)~
     ps_description = ~For one turn the Nomad moves 50 percent faster, gains +2 Armor Class, cannot be backstabbed or pushed, and ignores common entangle, web, and grease effects. The engine cannot cross arbitrary unwalkable terrain.~
     ps_icon = ~spwi305~
 END
@@ -246,7 +246,7 @@ COPY_EXISTING ~PS4PFLY.spl~ ~override~
   END
 BUT_ONLY
 
-// Compulsion: direct domination for five rounds, save vs spell negates.
+// Dominate (Psionic): direct domination for five rounds, save vs spell negates.
 LAF psion_create_level4_power
   INT_VAR
     ps_target = 2
@@ -255,7 +255,7 @@ LAF psion_create_level4_power
     ps_flags = psion_level4_hostile_flags
   STR_VAR
     ps_resref = ~PS4COMP~
-    ps_name = ~Compulsion~
+    ps_name = ~Dominate (Psionic)~
     ps_description = ~The Telepath controls one living target for five rounds unless it succeeds on a save vs spell. Plot-critical creatures may be immune.~
     ps_icon = ~spwi405~
 END

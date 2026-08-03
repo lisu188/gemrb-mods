@@ -237,3 +237,31 @@ END
 COPY_EXISTING ~PS2BRLK.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level2_save_penalty END
 BUT_ONLY
+
+// Energy Push: electricity damage plus a save-negated wing-buffet push.
+//
+// Moved here from level 1. SRD (Psionics, Psion/wilder 2, 3 PP): a blast of a
+// chosen energy type dealing 2d6, "Saving Throw: Reflex half or Fortitude half",
+// with the knockback gated on a Strength check rather than a save.
+//
+// Two departures the engine forces. The Strength check has no equivalent, so
+// the push stays gated on the same save vs breath as the damage. And the
+// tabletop power lets the manifester choose cold, electricity, fire or sonic;
+// this build hardcodes electricity. Energy Ray already carries a four-type
+// opcode-214 selector, so that pattern could be reused here later.
+LAF psion_create_level2_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level2_hostile_flags
+  STR_VAR
+    ps_resref = ~PS2EPUS~
+    ps_name = ~Energy Push~
+    ps_description = ~A blast of electrical energy deals 2d6 damage and pushes the target away. A save vs breath halves the damage and prevents the push.~
+    ps_icon = ~spwi113~
+END
+COPY_EXISTING ~PS2EPUS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~ELECTRICITY~) dicenumber = 2 dicesize = 6 savingthrow = BIT1 savebonus = psion_level2_save_penalty special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 238 target = 2 resist_dispel = BIT0 parameter1 = 4 savingthrow = BIT1 savebonus = psion_level2_save_penalty END
+BUT_ONLY

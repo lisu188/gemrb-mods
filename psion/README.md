@@ -16,9 +16,9 @@ The six selectable discipline classes are:
 
 Version 1.0.0 is the first installable release. It includes class registration,
 level progression, persistent power points, filtered augmentation selectors and
-all sixty level 1–5 powers. Every power is built from an empty SPL resource; the
-installer has no wizard/priest template-spell dependency and no undeclared WeiDU
-helper-library dependency.
+all sixty-one level 1–5 powers. Every power is built from an empty SPL resource;
+the installer has no wizard/priest template-spell dependency and no undeclared
+WeiDU helper-library dependency.
 
 The release is validated with official WeiDU 251 through complete install,
 uninstall and reinstall lifecycles against generated fixtures for all supported
@@ -98,7 +98,7 @@ for a manual full-campaign playthrough on every supported game configuration.
   with the standard twenty-slot table shape validated before mutation.
 - ToB `LUNUMAB` rows keep HLA arithmetic valid while postponing HLA eligibility;
   version 1.0 intentionally does not implement epic Psion powers.
-- Purpose-built resources for all sixty powers at levels 1–5.
+- Purpose-built resources for all sixty-one powers at levels 1–5.
 - 142 registered augmentation or choice child resources, generated from the
   `psion_max_augment_cost` ceiling rather than hand-written.
 - Backup-safe GemRB GUI-script installation and removal.
@@ -161,32 +161,48 @@ they agree.
 ### Level 1
 
 Energy Ray, Mind Thrust, Inertial Armor, Vigor, Force Screen, Empty Mind,
-Precognition, Astral Construct, Energy Push, Thicken Skin, Burst and Psionic
-Charm.
+Precognition, Astral Construct, Matter Agitation, Thicken Skin, Burst and
+Psionic Charm.
 
 ### Level 2
 
 Concealing Amorpha, Concussion Blast, Detect Hostile Intent, Thought Shield,
 Biofeedback, Swarm of Crystals, Clairvoyant Sense, Psionic Repair Damage,
-Energy Missile, Animal Affinity, Dimension Swap and Brain Lock.
+Energy Missile, Animal Affinity, Dimension Swap, Brain Lock and Energy Push.
 
 ### Level 3
 
 Dispel Psionics, Body Adjustment, Energy Bolt, Mental Barrier, Touchsight, Time
-Hop, Danger Sense, Ectoplasmic Cocoon, Energy Cone, Hustle, Spatial Step and
-Mental Stasis.
+Hop, Danger Sense, Ectoplasmic Cocoon, Energy Cone, Hustle, Dimension Slide and
+Crisis of Breath.
 
 ### Level 4
 
 Energy Adaptation, Freedom of Movement, Dimension Door, Intellect Fortress,
 Telekinetic Maneuver, Power Leech, Remote Viewing, Wall of Ectoplasm, Energy
-Ball, Metamorphosis, Psionic Flight and Compulsion.
+Ball, Metamorphosis, Fly (Psionic) and Dominate (Psionic).
 
 ### Level 5
 
-Adapt Body, Catapsi, Power Resistance, Cognitive Overload, True Seeing,
-Teleport, Second Chance, Hail of Crystals, Energy Current, Psychofeedback,
-Spatial Disruption and Mind Probe.
+Adapt Body, Catapsi, Power Resistance, Psychic Crush, True Seeing, Teleport,
+Second Chance, Hail of Crystals, Energy Current, Psychofeedback, Baleful
+Teleport and Mind Probe.
+
+### Not yet learnable
+
+The lists above are the authored catalogue, not the reachable one. Powers reach
+a character only through `GA_` entries in the six discipline CLAB tables, and
+CLAB rows 10–20 are still entirely empty, so sixteen powers are built and
+installed but cannot yet be learned by anyone:
+
+Empty Mind, Concussion Blast, Thought Shield, Biofeedback, Swarm of Crystals,
+Mental Barrier, Touchsight, Time Hop, Dimension Door, Telekinetic Maneuver,
+Power Leech, Adapt Body, Catapsi, Psychic Crush, True Seeing and Teleport.
+
+Cumulative grants at levels 1–9 are pinned to `psionknown.2da` and every row is
+full, so there is no room for these until rows 10–20 are filled. That is the
+level 6–9 workstream's job. `validate_core.py` pins this exact list, so a change
+that strands a further power fails CI rather than shipping unnoticed.
 
 ## Deliberate engine approximations
 
@@ -199,8 +215,9 @@ comments and in-game descriptions:
   Intelligence. GemRB exposes no way to vary an installed SPL's `savebonus` by
   the caster's runtime stats: `ModifyEffect` only moves an effect's target
   coordinates, and `PrepareSpontaneousCast`, the one substitution hook, would
-  need a separate resource per Intelligence bracket for all sixty powers. The
-  guaranteed `+2` from the Intelligence 15 chargen minimum is baked in instead.
+  need a separate resource per Intelligence bracket for all sixty-one powers.
+  The guaranteed `+2` from the Intelligence 15 chargen minimum is baked in
+  instead.
 - Vigor uses timed HP effects instead of native temporary HP.
 - Concealment uses Blur, AC and saving-throw bonuses.
 - Biofeedback uses percentage rather than flat damage reduction.
@@ -216,7 +233,22 @@ comments and in-game descriptions:
 - Power Leech applies casting failure but does not transfer PP.
 - Wall of Ectoplasm creates one construct node instead of a segmented wall.
 - Metamorphosis provides one bear-like form.
-- Psionic Flight cannot cross arbitrary unwalkable map geometry.
+- Fly (Psionic) cannot cross arbitrary unwalkable map geometry.
+- Psychic Crush deals its tabletop 3d6 plus a hold, rather than dropping the
+  target to -1 hit points, which would be a save-or-die at the level it becomes
+  reachable. The +4 bonus the target gets on its save, and the augment line of
+  +1d6 per 2 additional power points, are not implemented.
+- Crisis of Breath approximates suffocation with damage, silence and slow; the
+  engine has no suffocation track and no per-round Fortitude escalation. The
+  save negates outright, as the tabletop power does. Its restriction to
+  breathing humanoids is not enforced.
+- Matter Agitation ramps 1 point, then 1d4, then 1d6 over three rounds and
+  allows no save, as the tabletop power does, but stops there instead of
+  running on concentration, and does not heat objects.
+- Energy Push hardcodes electrical damage; the tabletop power lets the
+  manifester choose cold, electricity, fire or sonic. Its knockback is gated on
+  the same save as the damage, standing in for a Strength check the engine
+  cannot express.
 - Adapt Body does not provide portable fatigue immunity.
 - Catapsi is stationary rather than following the manifester.
 - Teleport relocates within the current area only.

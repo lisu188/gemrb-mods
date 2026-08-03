@@ -102,7 +102,25 @@ COPY_EXISTING ~PS5PRES.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 166 target = 2 resist_dispel = BIT1 parameter1 = 21 timing = 0 duration = 540 END
 BUT_ONLY
 
-// Cognitive Overload: psychic damage plus disruption of deliberate action.
+// Psychic Crush: crush the target's mental essence. Replaces Cognitive
+// Overload, which was not an Expanded Psionics Handbook power and which no
+// CLAB table granted, so no character could ever learn it.
+//
+// SRD (Psionics, Psion/wilder 5, 9 PP, Telepathy [Mind-Affecting]): "The target
+// must make a Will save with a +4 bonus or collapse unconscious and dying at -1
+// hit points. If the target succeeds on the save, it takes 3d6 points of
+// damage."
+//
+// DELIBERATE DEVIATION, unchanged in intent but now grounded in the real entry:
+// collapsing to -1 hit points is a save-or-die in Infinity Engine terms, and
+// this power is reachable around character level 9 where that swing is harsher
+// than the surrounding BG2 spell tier. So both tabletop branches are mapped
+// instead: 3d6 always -- the SRD's own save-succeeded figure -- plus a hold on
+// a failed save vs spell standing in for unconscious and dying.
+//
+// The earlier 8d6 here was invented while the SRD was unreachable and had no
+// source; 3d6 replaces it. Two parts remain unimplemented: the +4 bonus the
+// target gets on its save, and the augment line of +1d6 per 2 additional PP.
 LAF psion_create_level5_power
   INT_VAR
     ps_target = 2
@@ -110,17 +128,14 @@ LAF psion_create_level5_power
     ps_projectile = psion_none_projectile
     ps_flags = psion_level5_hostile_flags
   STR_VAR
-    ps_resref = ~PS5COGL~
-    ps_name = ~Cognitive Overload~
-    ps_description = ~The target suffers 6d6 magical damage, halved by a save vs spell. On a failed save it is also slowed and suffers 50 percent failure when casting or manifesting for three rounds.~
+    ps_resref = ~PS5PCRU~
+    ps_name = ~Psychic Crush~
+    ps_description = ~The target's mental essence is crushed for 3d6 magical damage. A save vs spell avoids nothing further; on a failed save the target also collapses helpless for two rounds.~
     ps_icon = ~spwi505~
 END
-COPY_EXISTING ~PS5COGL.spl~ ~override~
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 6 dicesize = 6 savingthrow = BIT0 savebonus = psion_level5_save_penalty special = BIT8 END
-  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
-  PATCH_FOR_EACH ps_failure_type IN 0 1 2 BEGIN
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 60 target = 2 resist_dispel = BIT0 parameter1 = 50 parameter2 = ps_failure_type timing = 0 duration = 18 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
-  END
+COPY_EXISTING ~PS5PCRU.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 12 savingthrow = BIT0 savebonus = psion_level5_save_penalty END
 BUT_ONLY
 
 // True Seeing: actor-local detection and protection. Removing every possible
@@ -233,7 +248,7 @@ COPY_EXISTING ~PS5PFDB.spl~ ~override~
   END
 BUT_ONLY
 
-// Spatial Disruption: damaging partial teleport plus a short spatial drag.
+// Baleful Teleport: damaging partial teleport plus a short spatial drag.
 LAF psion_create_level5_power
   INT_VAR
     ps_target = 2
@@ -242,7 +257,7 @@ LAF psion_create_level5_power
     ps_flags = psion_level5_hostile_flags
   STR_VAR
     ps_resref = ~PS5BALT~
-    ps_name = ~Spatial Disruption~
+    ps_name = ~Baleful Teleport~
     ps_description = ~The target is partially displaced through hostile space, suffering 9d6 magical damage with a save vs death for half. A failed save also slows it for three rounds.~
     ps_icon = ~spwi505~
 END
