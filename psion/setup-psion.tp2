@@ -24,8 +24,9 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed initial power selections. Each discipline learns 19 powers by level 9,
-// including its exclusive power whenever a new power level is unlocked.
+// Fixed power selections through class level 20. Every discipline follows the
+// 3-to-36 powers-known progression and gains its own discipline power whenever
+// a new power tier unlocks, including tiers 6-9 at levels 11, 13, 15 and 17.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
