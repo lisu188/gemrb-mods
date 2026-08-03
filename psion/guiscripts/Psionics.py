@@ -39,6 +39,14 @@ FEAT_MARKERS = {
     "PXFBODY": 0x50534602,
     "PXFSPD": 0x50534603,
 }
+# Protection:Spell is used only as a serialized private-effect carrier. Keep its
+# Resource1 values away from real selector child SPLs so state cannot grant
+# accidental immunity to the live feat resources themselves.
+FEAT_STATE_RESOURCES = {
+    "PXFTALT": "PXTALST",
+    "PXFBODY": "PXBODST",
+    "PXFSPD": "PXSPDST",
+}
 PSIONIC_TALENT = "PXFTALT"
 PSIONIC_BODY = "PXFBODY"
 SPEED_OF_THOUGHT = "PXFSPD"
@@ -116,13 +124,14 @@ def feat_choice_info(resref):
 def feat_rank(actor, resref):
     key = (resref or "").upper()
     marker = FEAT_MARKERS.get(key)
-    if marker is None:
+    state_resource = FEAT_STATE_RESOURCES.get(key)
+    if marker is None or state_resource is None:
         return 0
     try:
         for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
             if int(effect.get("Param2", -1)) != marker:
                 continue
-            if str(effect.get("Resource1", "")).upper() != key:
+            if str(effect.get("Resource1", "")).upper() != state_resource:
                 continue
             return max(0, int(effect.get("Param1", 0)))
     except Exception as error:
@@ -133,11 +142,19 @@ def feat_rank(actor, resref):
 def _write_feat_rank(actor, resref, rank):
     key = resref.upper()
     marker = FEAT_MARKERS[key]
+    state_resource = FEAT_STATE_RESOURCES[key]
     rank = max(0, int(rank))
     GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, marker)
     if rank:
         GemRB.ApplyEffect(
-            actor, STATE_EFFECT_OPCODE, rank, marker, key, "", "", FEAT_EFFECT_SOURCE
+            actor,
+            STATE_EFFECT_OPCODE,
+            rank,
+            marker,
+            state_resource,
+            "",
+            "",
+            FEAT_EFFECT_SOURCE,
         )
     return rank
 
