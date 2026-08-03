@@ -322,10 +322,11 @@ END
 ACTION_IF FILE_EXISTS_IN_GAME ~25stweap.2da~ THEN BEGIN
   COPY_EXISTING ~25stweap.2da~ ~override~
     COUNT_2DA_COLS sm_25stweap_cols
-    COUNT_2DA_ROWS sm_25stweap_cols sm_25stweap_rows
+    READ_2DA_ENTRIES_NOW ~sm_25stweap~ sm_25stweap_cols
+    SET sm_25stweap_rows = sm_25stweap
     SPRINT sm_25stweap_actual ~~
     FOR (sm_i = 0; sm_i < sm_25stweap_rows; ++sm_i) BEGIN
-      READ_2DA_ENTRY sm_i 0 sm_25stweap_cols sm_25stweap_slot
+      READ_2DA_ENTRY_FORMER ~sm_25stweap~ sm_i 0 sm_25stweap_slot
       PATCH_IF sm_i = 0 BEGIN
         SPRINT sm_25stweap_actual ~%sm_25stweap_slot%~
       END ELSE BEGIN
