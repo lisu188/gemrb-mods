@@ -4,11 +4,13 @@ A Pillars of Eternity-inspired single class for BG-family games running under Ge
 
 ## Combat loop
 
-Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
+Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, critical hits add another 5 Focus for 10 total, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
 
 Soul Whip adds +1 weapon damage at level 1, +2 at level 10, and +3 at level 20. This is the portable BG-family approximation of PoE's percentage weapon-damage scaling: GemRB's common weapon damage bonus is applied only during weapon damage calculation, while percentage damage opcodes are damage-type based rather than weapon-source based.
 
-Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities carry an `ApplyEffectsList` hit effect that evaluates the struck creature against the weapon user through SPLPROT's caster↔target EA relation (`0x108`). Only hostile targets pass that gate. `CIFGAIN` is then applied with the weapon user preserved as caster; its self-targeted class gate and descending state dispatch advance Focus on the Cipher by exactly one unit without cascading multiple increments in the same hit. Rest and power spending use the same state-transition spells.
+Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities carry an `ApplyEffectsList` hit effect that evaluates the struck creature against the weapon user through SPLPROT's caster↔target EA relation (`0x108`). Only hostile targets pass that gate. `CIFGAIN` is then applied with the weapon user preserved as caster; its self-targeted class gate and descending state dispatch advance Focus on the Cipher by exactly one unit without cascading multiple increments in the same hit.
+
+Critical hits use GemRB's `CastSpellOnCriticalHit` actor hook. The installer exposes that hook through opcode `0x155` for both EE and classic GemRB profiles, and all three Soul Whip tiers attach `CIFCRIT`. `CIFCRIT` runs the same hostile-target gate before adding the second +5 Focus. Normal hit and critical bonus transitions are independently capped by the same Focus state machine. Rest and power spending use the same state-transition spells.
 
 ## Power progression
 
@@ -51,7 +53,6 @@ If the Psion GUI patch is also used, install the Psion GUI patch first and the C
 ## Deliberate approximations in 0.1
 
 - Soul Whip uses +1/+2/+3 weapon damage rather than PoE-style percentage weapon scaling because the supported BG-family effect model does not expose a portable weapon-source-only percentage modifier.
-- Critical hits currently generate the same +5 Focus as other successful hits; the proposed +10 critical-hit rule needs a reliable effect-level critical discriminator.
 - Reaping Knives grants its ally attack/damage enhancement but does not yet transfer Focus from that ally's attacks.
 - Amplified Wave represents knockdown with a one-round hold.
 - Detonate implements the direct psychic damage but not the on-death secondary explosion.
@@ -73,4 +74,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only weapon Focus injection, and WeiDU rollback of patched items.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, and WeiDU rollback of patched items and IDS resources.
