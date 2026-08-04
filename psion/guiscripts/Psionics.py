@@ -29,6 +29,7 @@ FOCUS_EFFECT_SOURCE = "PSFMOD"
 CENTER_RESOURCE = "PXCNTR"
 FEAT_SELECTOR_RESOURCE = "PXFSEL"
 SKILL_SELECTOR_RESOURCE = "PXSKILL"
+LEARN_AND_MEMORIZE = 8  # ie_spells.LS_MEMO
 SPEED_ON_RESOURCE = "PXFSPED"
 SPEED_OFF_RESOURCE = "PXFSPOF"
 SPEED_BLOCK_MARKER = 0x50534642
@@ -302,12 +303,19 @@ def _ability_modifier(actor, ability):
     return (int(GemRB.GetPlayerStat(actor, stat)) - 10) // 2
 
 
+def _base_ability_modifier(actor, ability):
+    stat = SKILL_ABILITY_STATS.get((ability or "").upper())
+    if stat is None:
+        return 0
+    return (int(GemRB.GetPlayerStat(actor, stat, 1)) - 10) // 2
+
+
 def skill_rank_cap(actor):
     return manifester_level(actor) + 3 if is_psion(actor) else 0
 
 
 def _skill_points_per_level(actor):
-    return max(1, 2 + _ability_modifier(actor, "INT"))
+    return max(1, 2 + _base_ability_modifier(actor, "INT"))
 
 
 def _spent_skill_points(actor):
@@ -322,10 +330,12 @@ def _spent_skill_points(actor):
 def sync_skill_points(actor):
     """Initialize/mature the persistent Psion skill-point ledger.
 
-    A migrated character with no ledger receives the normal level-1 x4 allotment
-    plus one ordinary allotment for every existing later Psion level, minus any
-    already serialized ranks. Once a level is accounted, later Intelligence
-    changes do not retroactively rewrite points from that level.
+    Progression uses base Intelligence, so temporary buffs/debuffs cannot
+    permanently alter newly credited levels. A migrated character with no
+    ledger receives the normal level-1 x4 allotment plus one ordinary allotment
+    for every existing later Psion level, minus any already serialized ranks.
+    Once a level is accounted, later base-Intelligence changes affect only new
+    levels and never rewrite already credited levels.
     """
     if not is_psion(actor):
         return 0
@@ -400,6 +410,23 @@ def available_skill_choices(actor):
     except Exception:
         return []
     return available
+
+
+def _ensure_skill_selector_known(actor):
+    """Grant PXSKILL to pre-v1.2 Psions once legal training exists."""
+    if not is_psion(actor) or not available_skill_choices(actor):
+        return False
+    try:
+        known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(known_count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            if str(spell.get("SpellResRef", "")).upper() == SKILL_SELECTOR_RESOURCE:
+                return True
+        result = GemRB.LearnSpell(actor, SKILL_SELECTOR_RESOURCE, LEARN_AND_MEMORIZE)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "skill selector migration failed: %s" % error)
+        return False
 
 
 def _train_skill(actor, resref):
@@ -670,6 +697,7 @@ def restore_party():
             ensure_pool(actor, True)
             ensure_focus(actor, True)
             sync_skill_points(actor)
+            _ensure_skill_selector_known(actor)
         except Exception:
             pass
 
@@ -876,6 +904,7 @@ def refresh_innate_charges(actor):
         return 0
     _sync_focus_passives(actor)
     sync_skill_points(actor)
+    _ensure_skill_selector_known(actor)
     try:
         known = {}
         known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
