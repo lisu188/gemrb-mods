@@ -48,6 +48,8 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(fist_rows[0], "%sm_class_id%%sm_fist_row%")
 
     def test_class_id_is_never_hardcoded(self):
+        # The allocated ID itself is checked end-to-end by the WeiDU smoke tests;
+        # this only guards against a literal creeping back into the tables.
         self.assertNotIn("sm_candidate_id", TP2)
         self.assertIn("sm_expected_class_id > 31", TP2)
         for table in ("class.ids", "fistweap.2da"):
@@ -138,6 +140,9 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn("SORCERER_MONK 1 3 2", combat_rows)
 
     def test_fist_progression_falls_back_to_the_stock_monk_table(self):
+        # GemRB indexes FISTWEAP by the Monk component level (Actor::SetupFist),
+        # so no average-level compensation is applied. The installed row is
+        # copied from the game's Monk row; this is only the fallback literal.
         fallback = re.search(r"OUTER_SPRINT sm_fist_row ~([^~]*)~", TP2).group(1).split()
         self.assertEqual(len(fallback), 41)
         expected_ranges = [
@@ -154,6 +159,9 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(fallback[start : end + 1], [fist] * (end - start + 1))
 
     def test_merged_action_bar_carries_both_components(self):
+        # QSPELL1 and CAST from Sorcerer, SEARCH and STEALTH from Monk, then the
+        # shared use/quick-item/innate buttons. The Monk's third quick-weapon
+        # button is excluded because NUMWSLOT restricts the class to two slots.
         self.assertIn("SORCERER_MONK 3 2 22 0 8 9 11 12 13", payloads("APPEND", "qslots.2da"))
 
     def test_index_addressed_tables_are_preflighted(self):
@@ -161,6 +169,8 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("ACTION_IF sm_qslots_rows != (sm_class_id - 1)", TP2)
 
     def test_fist_row_is_copied_from_the_monk_class_id(self):
+        # A missing Monk row is already rejected by the Sorcerer 19 / Monk 20
+        # identity guard, so the copy only has to key off that row index.
         self.assertIn("STRING_EQUAL_CASE ~%sm_monk_clskills_id%~", TP2)
 
     def test_hla_abbreviation_collision_is_rejected(self):
@@ -170,6 +180,7 @@ class InstallerTests(unittest.TestCase):
                         TP2.index("APPEND ~lusm0.2da~"))
 
     def test_hla_table_is_generated_rather_than_referenced(self):
+        # The LUABBR row may only be added together with the table it names.
         abbrev = TP2.index("APPEND ~luabbr.2da~ ~SORCERER_MONK SM0~")
         merge = TP2.index("APPEND ~lusm0.2da~")
         self.assertLess(merge, abbrev)
