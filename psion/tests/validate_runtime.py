@@ -86,7 +86,7 @@ def main() -> None:
     roll_value = {"value": 20}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
-    gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
+    gemrb.GetPlayerStat = lambda actor, stat, base=0: stats.get((actor, stat), 0)
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
     gemrb.LoadTable = lambda name, *_: tables[name.lower()]
     gemrb.DisplayString = lambda *_: None
