@@ -7,6 +7,8 @@ import sys
 import types
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMON = ROOT.parent / "common" / "guiscripts"
+sys.path.insert(0, str(COMMON))
 
 
 def lines(name: str) -> list[str]:
@@ -53,6 +55,7 @@ def main() -> None:
         (1, 34): 20,
         (1, 239): 0,
     }
+    base_stats = dict(stats)
     effects = {1: []}
     tables = {
         name: fake_table(name + ".2da")
@@ -86,7 +89,11 @@ def main() -> None:
     roll_value = {"value": 20}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
-    gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
+    def get_player_stat(actor, stat, base=0):
+        source = base_stats if base else stats
+        return source.get((actor, stat), 0)
+
+    gemrb.GetPlayerStat = get_player_stat
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
     gemrb.LoadTable = lambda name, *_: tables[name.lower()]
     gemrb.DisplayString = lambda *_: None

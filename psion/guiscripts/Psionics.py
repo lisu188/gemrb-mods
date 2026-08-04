@@ -12,6 +12,10 @@ confirmation performs the Concentration check, while its SPL writes focus only
 when the action resolves, so interruption cannot grant focus.
 """
 import GemRB
+import Transactions
+import InnateCharges
+import PersistentState
+import Selectors
 from ie_spells import LS_MEMO
 
 CURRENT_POOL_STAT = 239
@@ -117,7 +121,7 @@ PSION_CLASSES = {
     "PSION_TELEPATH": "TELEPATH",
 }
 
-_pending = {}
+TRANSACTION_NAMESPACE = "Psionics"
 
 
 def _class_row(actor):
@@ -267,26 +271,13 @@ def _write_feat_rank(actor, resref, rank):
 
 
 def _read_private_value(actor, marker, resource):
-    try:
-        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
-            if int(effect.get("Param2", -1)) != marker:
-                continue
-            if str(effect.get("Resource1", "")).upper() != resource.upper():
-                continue
-            return True, max(0, int(effect.get("Param1", 0)))
-    except Exception as error:
-        GemRB.Log(2, "Psionics", "private state read failed: %s" % error)
-    return False, 0
+    return PersistentState.read(actor, STATE_EFFECT_OPCODE, marker, resource)
 
 
 def _write_private_value(actor, marker, resource, value, source=SKILL_EFFECT_SOURCE):
-    value = max(0, int(value))
-    GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, marker)
-    GemRB.ApplyEffect(
-        actor, STATE_EFFECT_OPCODE, value, marker, resource,
-        "", "", source,
+    return PersistentState.write(
+        actor, STATE_EFFECT_OPCODE, marker, resource, value, source,
     )
-    return value
 
 
 def skill_rank(actor, skill):
@@ -850,16 +841,10 @@ def resolve_power_entry(spellbook, actor, raw_spell):
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
-        try:
-            spell_resrefs = GemRB.GetSpelldata(actor)
-            if spell_index < 0 or spell_index >= len(spell_resrefs):
-                return None
-            resref = spell_resrefs[spell_index]
-        except Exception:
-            return None
-        if action_info(resref):
-            return {"SpellIndex": raw_spell, "SpellResRef": resref}
-        return None
+        return Selectors.resolve_temporary(
+            actor, raw_spell, lambda resref: bool(action_info(resref)),
+            TEMPORARY_SPELLINFO_TYPE,
+        )
     book_types = [i for i in range(16) if encoded_type & (1 << i)]
     if not book_types:
         book_types = range(16)
@@ -958,52 +943,21 @@ def refresh_innate_charges(actor):
     _ensure_skill_selector_known(actor)
     _sync_center_action(actor)
     try:
-        known = {}
-        known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
-        for index in range(known_count):
-            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
-            resref = str(spell.get("SpellResRef", "")).upper()
-            if _is_reusable_innate(actor, resref):
-                known[resref] = index
-        charged = set()
-        depleted = []
-        memorized_count = GemRB.GetMemorizedSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL, False)
-        for index in range(memorized_count):
-            spell = GemRB.GetMemorizedSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
-            resref = str(spell.get("SpellResRef", "")).upper()
-            if resref not in known:
-                continue
-            if spell.get("Flags", 0):
-                charged.add(resref)
-            else:
-                depleted.append((index, resref))
-        needed = []
-        for index, resref in reversed(depleted):
-            if GemRB.UnmemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, index):
-                if resref not in charged and resref not in needed:
-                    needed.append(resref)
-        restored = 0
-        for resref in reversed(needed):
-            if GemRB.MemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1):
-                restored += 1
-        return restored
+        return InnateCharges.refresh(
+            actor,
+            lambda resref: _is_reusable_innate(actor, resref),
+            INNATE_TYPE,
+            INNATE_LEVEL,
+        )
     except Exception as error:
         GemRB.Log(2, "Psionics", "charge refresh failed: %s" % error)
         return 0
 
 
 def _begin_simple_action(actor, transaction, legal, commit):
-    pending = _pending.get(actor)
-    if pending == transaction:
-        if not legal():
-            _pending.pop(actor, None)
-            return False
-        _pending.pop(actor, None)
-        return bool(commit())
-    if not legal():
-        return False
-    _pending[actor] = transaction
-    return True
+    return Transactions.begin(
+        TRANSACTION_NAMESPACE, actor, transaction, legal, commit,
+    )
 
 
 def begin_manifest(actor, resref):
@@ -1055,29 +1009,26 @@ def begin_manifest(actor, resref):
         cancel_pending(actor)
         return can_manifest(actor, info["resref"])
 
-    pending = _pending.get(actor)
     transaction = (info["resref"], info["cost"])
-    if pending == transaction:
-        if not can_manifest(actor, info["resref"]):
-            _pending.pop(actor, None)
+
+    def legal():
+        allowed = can_manifest(actor, info["resref"])
+        if not allowed:
             GemRB.DisplayString(10417, 0xFFFFFF, actor)
-            return False
+        return allowed
+
+    def commit():
         current = ensure_pool(actor)
         _write_pool_state(actor, current - info["cost"])
-        _pending.pop(actor, None)
         return True
-    if not can_manifest(actor, info["resref"]):
-        GemRB.DisplayString(10417, 0xFFFFFF, actor)
-        return False
-    _pending[actor] = transaction
-    return True
+
+    return Transactions.begin(
+        TRANSACTION_NAMESPACE, actor, transaction, legal, commit,
+    )
 
 
 def cancel_pending(actor=None):
-    if actor is None:
-        _pending.clear()
-    else:
-        _pending.pop(actor, None)
+    Transactions.cancel(TRANSACTION_NAMESPACE, actor)
 
 
 def pool_text(actor):
