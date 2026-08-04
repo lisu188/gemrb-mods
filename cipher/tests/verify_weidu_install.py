@@ -86,6 +86,15 @@ core = spell_effects(override / "CIFCORE.SPL")
 assert any(effect[0] == 146 and effect[3] == 1 and effect[4] == 1 and effect[5] == "CIFS4" for effect in core), (layout, core)
 assert not any(effect[0] == 282 and effect[3] == 9 for effect in core), (layout, core)
 
+soul_whip = {
+    "CIFCORE": 1,
+    "CIFSW15": 2,
+    "CIFSW20": 3,
+}
+for resref, bonus in soul_whip.items():
+    effects = [effect for effect in spell_effects(override / f"{resref}.SPL") if effect[0] == 332 and effect[3] == 0]
+    assert any(effect[2] == bonus for effect in effects), (layout, resref, effects)
+
 setter = spell_effects(override / "CIFS4.SPL")
 removals = [effect for effect in setter if effect[0] == 321]
 state = [effect for effect in setter if effect[0] == 282]
@@ -99,6 +108,9 @@ assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFD for effect in borrowed), (
 
 time_parasite = [effect for effect in spell_effects(override / "CI7TPAR.SPL") if effect[0] == 54]
 assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFC for effect in time_parasite), (layout, time_parasite)
+
+reaping = [effect for effect in spell_effects(override / "CI8RKNI.SPL") if effect[0] == 54]
+assert any(effect[1] == 2 and effect[2] == 0xFFFFFFFE for effect in reaping), (layout, reaping)
 
 
 def header_effects(path):
