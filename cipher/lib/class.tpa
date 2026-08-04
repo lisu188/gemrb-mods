@@ -1,0 +1,224 @@
+OUTER_SET ci_lower = RESOLVE_STR_REF(@100)
+OUTER_SET ci_title = RESOLVE_STR_REF(@101)
+OUTER_SET ci_desc = RESOLVE_STR_REF(@102)
+
+OUTER_SET ci_max_id = (0 - 1)
+OUTER_SET ci_split = 0
+OUTER_SET ci_text_cols = 0
+
+ACTION_IF FILE_EXISTS_IN_GAME ~hpclass.2da~ THEN BEGIN
+  OUTER_SET ci_split = 1
+  COPY_EXISTING ~clastext.2da~ ~override~
+    SET ci_detect_cols = 6
+    PATCH_IF INDEX_BUFFER(~BIOGRAPHY~) >= 0 BEGIN
+      SET ci_detect_cols = 10
+    END
+    INNER_ACTION BEGIN
+      OUTER_SET ci_text_cols = ci_detect_cols
+    END
+    COUNT_2DA_ROWS ci_detect_cols ci_rows
+    FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+      READ_2DA_ENTRY ci_i 1 ci_detect_cols ci_id
+      PATCH_IF IS_AN_INT ~%ci_id%~ AND ci_id > ci_max_id BEGIN
+        SET ci_max_id = ci_id
+        INNER_ACTION BEGIN OUTER_SET ci_max_id = ci_id END
+      END
+    END
+  BUT_ONLY
+END ELSE BEGIN
+  COPY_EXISTING ~classes.2da~ ~override~
+    SET ci_detect_cols = 19
+    COUNT_2DA_ROWS ci_detect_cols ci_rows
+    FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+      READ_2DA_ENTRY ci_i 6 ci_detect_cols ci_id
+      PATCH_IF IS_AN_INT ~%ci_id%~ AND ci_id > ci_max_id BEGIN
+        SET ci_max_id = ci_id
+        INNER_ACTION BEGIN OUTER_SET ci_max_id = ci_id END
+      END
+    END
+  BUT_ONLY
+END
+
+ACTION_IF ci_max_id < 0 THEN BEGIN FAIL @3 END
+ACTION_IF ci_max_id >= 255 THEN BEGIN FAIL @6 END
+OUTER_SET ci_class_id = ci_max_id + 1
+
+COPY_EXISTING ~savewiz.2da~ ~override/saveciph.2da~
+BUT_ONLY
+
+ACTION_IF ci_split = 1 THEN BEGIN
+  ACTION_IF (ci_text_cols != 6) AND (ci_text_cols != 10) THEN BEGIN FAIL @4 END
+  OUTER_SPRINT ci_row ~CIPHER %ci_class_id% * %ci_lower% %ci_desc% %ci_title%~
+  ACTION_IF ci_text_cols = 10 THEN BEGIN
+    OUTER_SPRINT ci_row ~%ci_row% -1 0 %ci_title% -1~
+  END
+  APPEND ~clastext.2da~ ~%ci_row%~ UNLESS ~CIPHER~
+  APPEND ~classes.2da~ ~CIPHER SAVECIPH 0 0 -1 0 10~ UNLESS ~CIPHER~
+  APPEND ~clsrcreq.2da~ ~CIPHER 1 1 1 1 1 1 1~ UNLESS ~CIPHER~
+  APPEND ~hpclass.2da~ ~CIPHER HPPRS~ UNLESS ~CIPHER~
+END ELSE BEGIN
+  APPEND ~classes.2da~ ~CIPHER %ci_lower% %ci_desc% %ci_title% SAVECIPH 0 %ci_class_id% HPPRS 0 -1 1 1 1 1 1 1 1 0 10~ UNLESS ~CIPHER~
+END
+
+APPEND ~class.ids~ ~%ci_class_id% CIPHER~ UNLESS ~CIPHER~
+APPEND ~alignmnt.2da~ ~CIPHER 1 1 1 1 1 1 1 1 1~ UNLESS ~CIPHER~
+APPEND ~abclasrq.2da~ ~CIPHER 0 0 0 13 0 0~ UNLESS ~CIPHER~
+APPEND ~profs.2da~ ~CIPHER 2 4~ UNLESS ~CIPHER~
+APPEND ~avprefc.2da~ ~CIPHER 0x600~ UNLESS ~CIPHER~
+APPEND ~qslots.2da~ ~CIPHER 3 4 5 2 8 9 11 12 13~ UNLESS ~CIPHER~
+
+OUTER_SET ci_weapprof_valid = 0
+OUTER_SPRINT ci_weapprof_values ~~
+COPY_EXISTING ~weapprof.2da~ ~override~
+  COUNT_2DA_COLS ci_cols
+  COUNT_2DA_ROWS ci_cols ci_rows
+  PATCH_IF ci_cols >= 2 BEGIN
+    SPRINT ci_values ~~
+    FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+      READ_2DA_ENTRY ci_i 0 ci_cols ci_prof
+      SET ci_max = 0
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~DAGGER~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~SHORTSWORD~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~LONGSWORD~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~SCIMITARWAKISASHININJATO~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~KATANA~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~CLUB~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~MACE~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~WARHAMMER~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~FLAILMORNINGSTAR~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~QUARTERSTAFF~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~CROSSBOW~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~LONGBOW~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~SHORTBOW~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~DART~ BEGIN SET ci_max = 1 END
+      PATCH_IF ~%ci_prof%~ STRING_EQUAL_CASE ~SLING~ BEGIN SET ci_max = 1 END
+      SPRINT ci_values ~%ci_values% %ci_max%~
+    END
+    INNER_ACTION BEGIN
+      OUTER_SPRINT ci_weapprof_values ~%ci_values%~
+      OUTER_SET ci_weapprof_valid = 1
+    END
+  END
+BUT_ONLY
+ACTION_IF ci_weapprof_valid != 1 THEN BEGIN FAIL ~Cipher could not map WEAPPROF.2DA.~ END
+APPEND_COL ~weapprof.2da~ ~$ $ CIPHER%ci_weapprof_values%~ UNLESS ~CIPHER~
+
+OUTER_SET ci_xp_found = 0
+OUTER_SPRINT ci_xp_values ~~
+COPY_EXISTING ~xplevel.2da~ ~override~
+  COUNT_2DA_COLS ci_cols
+  COUNT_2DA_ROWS ci_cols ci_rows
+  FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+    READ_2DA_ENTRY ci_i 0 ci_cols ci_name
+    PATCH_IF ~%ci_name%~ STRING_EQUAL_CASE ~MAGE~ BEGIN
+      SPRINT ci_values ~~
+      FOR (ci_col = 1; ci_col < ci_cols; ++ci_col) BEGIN
+        READ_2DA_ENTRY ci_i ci_col ci_cols ci_value
+        SPRINT ci_values ~%ci_values% %ci_value%~
+      END
+      INNER_ACTION BEGIN
+        OUTER_SPRINT ci_xp_values ~%ci_values%~
+        OUTER_SET ci_xp_found = 1
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF ci_xp_found != 1 THEN BEGIN FAIL ~Cipher could not locate MAGE in XPLEVEL.2DA.~ END
+APPEND ~xplevel.2da~ ~CIPHER%ci_xp_values%~ UNLESS ~CIPHER~
+
+OUTER_SET ci_thac0_valid = 0
+OUTER_SPRINT ci_thac0_values ~~
+COPY_EXISTING ~thac0.2da~ ~override~
+  COUNT_2DA_COLS ci_cols
+  PATCH_IF ci_cols > 1 BEGIN
+    SPRINT ci_values ~~
+    FOR (ci_col = 1; ci_col < ci_cols; ++ci_col) BEGIN
+      SET ci_value = 20 - (ci_col / 2)
+      PATCH_IF ci_value < 0 BEGIN SET ci_value = 0 END
+      SPRINT ci_values ~%ci_values% %ci_value%~
+    END
+    INNER_ACTION BEGIN
+      OUTER_SPRINT ci_thac0_values ~%ci_values%~
+      OUTER_SET ci_thac0_valid = 1
+    END
+  END
+BUT_ONLY
+ACTION_IF ci_thac0_valid != 1 THEN BEGIN FAIL ~Cipher could not map THAC0.2DA.~ END
+APPEND ~thac0.2da~ ~CIPHER%ci_thac0_values%~ UNLESS ~CIPHER~
+APPEND ~lore.2da~ ~CIPHER 3~ UNLESS ~CIPHER~
+
+OUTER_SET ci_xpcap_found = 0
+OUTER_SET ci_xpcap_value = 0
+COPY_EXISTING ~xpcap.2da~ ~override~
+  COUNT_2DA_COLS ci_cols
+  COUNT_2DA_ROWS ci_cols ci_rows
+  FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+    READ_2DA_ENTRY ci_i 0 ci_cols ci_name
+    PATCH_IF ~%ci_name%~ STRING_EQUAL_CASE ~MAGE~ BEGIN
+      READ_2DA_ENTRY ci_i 1 ci_cols ci_value
+      INNER_ACTION BEGIN
+        OUTER_SET ci_xpcap_value = ci_value
+        OUTER_SET ci_xpcap_found = 1
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF ci_xpcap_found != 1 THEN BEGIN FAIL ~Cipher could not locate MAGE in XPCAP.2DA.~ END
+APPEND ~xpcap.2da~ ~CIPHER %ci_xpcap_value%~ UNLESS ~CIPHER~
+
+OUTER_SET ci_skill_cols = 0
+OUTER_SPRINT ci_startxp ~0~
+OUTER_SPRINT ci_startxp2 ~*~
+OUTER_SPRINT ci_noprof ~-4~
+COPY_EXISTING ~clskills.2da~ ~override~
+  COUNT_2DA_COLS ci_skill_cols
+  READ_2DA_ENTRIES_NOW ~ci_skill_rows~ ci_skill_cols
+  FOR (ci_i = 0; ci_i < ci_skill_rows; ++ci_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~ci_skill_rows~ ci_i 0 ci_name
+    PATCH_IF ~%ci_name%~ STRING_EQUAL_CASE ~SORCERER~ BEGIN
+      READ_2DA_ENTRY_FORMER ~ci_skill_rows~ ci_i 4 ci_startxp
+      PATCH_IF ci_skill_cols = 17 BEGIN
+        READ_2DA_ENTRY_FORMER ~ci_skill_rows~ ci_i 12 ci_noprof
+        READ_2DA_ENTRY_FORMER ~ci_skill_rows~ ci_i 13 ci_startxp2
+      END ELSE BEGIN
+        READ_2DA_ENTRY_FORMER ~ci_skill_rows~ ci_i 12 ci_startxp2
+      END
+    END
+  END
+BUT_ONLY
+ACTION_IF (ci_skill_cols != 16) AND (ci_skill_cols != 17) THEN BEGIN FAIL @5 END
+ACTION_IF ci_skill_cols = 17 THEN BEGIN
+  APPEND ~clskills.2da~ ~CIPHER * * MXPSION %ci_startxp% * * * 0 2 * CLABCIPH %ci_noprof% %ci_startxp2% * 0 *~ UNLESS ~CIPHER~
+END ELSE BEGIN
+  APPEND ~clskills.2da~ ~CIPHER * * MXPSION %ci_startxp% * * * 0 2 * CLABCIPH %ci_startxp2% * 0 *~ UNLESS ~CIPHER~
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~strtgold.2da~ THEN BEGIN
+  OUTER_SET ci_gold_found = 0
+  OUTER_SPRINT ci_gold_values ~~
+  COPY_EXISTING ~strtgold.2da~ ~override~
+    COUNT_2DA_COLS ci_cols
+    COUNT_2DA_ROWS ci_cols ci_rows
+    FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
+      READ_2DA_ENTRY ci_i 0 ci_cols ci_name
+      PATCH_IF ~%ci_name%~ STRING_EQUAL_CASE ~THIEF~ BEGIN
+        SPRINT ci_values ~~
+        FOR (ci_col = 1; ci_col < ci_cols; ++ci_col) BEGIN
+          READ_2DA_ENTRY ci_i ci_col ci_cols ci_value
+          SPRINT ci_values ~%ci_values% %ci_value%~
+        END
+        INNER_ACTION BEGIN
+          OUTER_SPRINT ci_gold_values ~%ci_values%~
+          OUTER_SET ci_gold_found = 1
+        END
+      END
+    END
+  BUT_ONLY
+  ACTION_IF ci_gold_found = 1 THEN BEGIN
+    APPEND ~strtgold.2da~ ~CIPHER%ci_gold_values%~ UNLESS ~CIPHER~
+  END
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~lunumab.2da~ THEN BEGIN
+  APPEND ~lunumab.2da~ ~CIPHER 99 1 99 1~ UNLESS ~CIPHER~
+END
