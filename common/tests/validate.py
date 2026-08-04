@@ -130,6 +130,11 @@ def fixture_texts():
     }
 
 
+def write_fixture(folder, originals):
+    for name, text in originals.items():
+        (folder / name).write_text(text, encoding="utf-8")
+
+
 def exercise_order(first, second):
     installer = load("core_installer_%s_%s" % (first, second), TOOLS / "install_guiscripts.py")
     originals = fixture_texts()
@@ -139,8 +144,7 @@ def exercise_order(first, second):
     }
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
-        for name, text in originals.items():
-            (folder / name).write_text(text, encoding="utf-8")
+        write_fixture(folder, originals)
 
         installer.install_handler(folder, first, runtime[first])
         installer.install_handler(folder, second, runtime[second])
@@ -166,9 +170,57 @@ def exercise_order(first, second):
             assert not (folder / name).exists()
 
 
+def exercise_legacy_runtime_upgrade(handler, legacy_tag):
+    installer = load("legacy_installer_%s" % handler, TOOLS / "install_guiscripts.py")
+    originals = fixture_texts()
+    runtime_source = ROOT / ("psion" if handler == "Psionics" else "cipher") / "guiscripts" / (handler + ".py")
+
+    # Legacy replacement: preserve the true pre-mod runtime through migration.
+    with tempfile.TemporaryDirectory() as folder_name:
+        folder = Path(folder_name)
+        write_fixture(folder, originals)
+        runtime_target = folder / (handler + ".py")
+        runtime_target.write_text("legacy installed runtime\n", encoding="utf-8")
+        legacy_backup = runtime_target.with_suffix(runtime_target.suffix + f".{legacy_tag}.bak")
+        legacy_backup.write_text("original user runtime\n", encoding="utf-8")
+
+        installer.install_handler(folder, handler, runtime_source)
+        backup, created = installer._owned_paths(runtime_target, handler)
+        assert not legacy_backup.exists()
+        assert backup.read_text(encoding="utf-8") == "original user runtime\n"
+        assert not created.exists()
+        assert runtime_target.read_bytes() == runtime_source.read_bytes()
+
+        installer.uninstall_handler(folder, handler)
+        assert runtime_target.read_text(encoding="utf-8") == "original user runtime\n"
+        assert not backup.exists()
+
+    # Legacy creation: keep ownership as "created", so uninstall removes it.
+    with tempfile.TemporaryDirectory() as folder_name:
+        folder = Path(folder_name)
+        write_fixture(folder, originals)
+        runtime_target = folder / (handler + ".py")
+        runtime_target.write_text("legacy installed runtime\n", encoding="utf-8")
+        legacy_created = runtime_target.with_suffix(runtime_target.suffix + f".{legacy_tag}.created")
+        legacy_created.write_text("legacy owner\n", encoding="utf-8")
+
+        installer.install_handler(folder, handler, runtime_source)
+        backup, created = installer._owned_paths(runtime_target, handler)
+        assert not legacy_created.exists()
+        assert not backup.exists()
+        assert created.exists()
+        assert runtime_target.read_bytes() == runtime_source.read_bytes()
+
+        installer.uninstall_handler(folder, handler)
+        assert not runtime_target.exists()
+        assert not created.exists()
+
+
 def test_gui_lifecycle():
     exercise_order("Psionics", "Cipher")
     exercise_order("Cipher", "Psionics")
+    exercise_legacy_runtime_upgrade("Psionics", "psion")
+    exercise_legacy_runtime_upgrade("Cipher", "cipher")
 
 
 def main():
