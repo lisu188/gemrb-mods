@@ -47,8 +47,48 @@ assert profs["CIPHER"] == ["2", "4"], (layout, profs["CIPHER"])
 _, xp = rows(override / "xplevel.2da")
 assert xp["CIPHER"] == xp["MAGE"], (layout, xp["CIPHER"], xp["MAGE"])
 
-for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS34"):
+for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
     assert (override / f"{resref}.SPL").is_file(), (layout, resref)
+
+
+def resource(data, offset):
+    return data[offset:offset + 8].split(b"\0", 1)[0].decode("ascii")
+
+
+def spell_effects(path):
+    data = path.read_bytes()
+    assert data[:8] == b"SPL V1  "
+    header_offset = struct.unpack_from("<I", data, 0x64)[0]
+    header_count = struct.unpack_from("<H", data, 0x68)[0]
+    effect_offset = struct.unpack_from("<I", data, 0x6A)[0]
+    result = []
+    for header_index in range(header_count):
+        header = header_offset + 0x28 * header_index
+        effect_count = struct.unpack_from("<H", data, header + 0x1E)[0]
+        first_effect = struct.unpack_from("<H", data, header + 0x20)[0]
+        for effect_index in range(effect_count):
+            offset = effect_offset + (first_effect + effect_index) * 0x30
+            result.append((
+                struct.unpack_from("<H", data, offset)[0],
+                data[offset + 0x02],
+                struct.unpack_from("<I", data, offset + 0x04)[0],
+                struct.unpack_from("<I", data, offset + 0x08)[0],
+                data[offset + 0x0C],
+                resource(data, offset + 0x14),
+            ))
+    return result
+
+
+core = spell_effects(override / "CIFCORE.SPL")
+assert any(effect[0] == 146 and effect[3] == 1 and effect[4] == 1 and effect[5] == "CIFS4" for effect in core), (layout, core)
+assert not any(effect[0] == 282 and effect[3] == 9 for effect in core), (layout, core)
+
+setter = spell_effects(override / "CIFS4.SPL")
+removals = [effect for effect in setter if effect[0] == 321]
+state = [effect for effect in setter if effect[0] == 282]
+assert len(removals) == 35, (layout, len(removals))
+assert {effect[5] for effect in removals} == {f"CIFS{index}" for index in range(35)}, (layout, removals)
+assert state == [(282, 1, 4, 9, 9, "CIFOCUS")], (layout, state)
 
 
 def header_effects(path):
@@ -61,6 +101,7 @@ def header_effects(path):
     for header_index in range(header_count):
         header = header_offset + 0x38 * header_index
         attack_type = data[header]
+        location = data[header + 0x02]
         effect_count = struct.unpack_from("<H", data, header + 0x1E)[0]
         first_effect = struct.unpack_from("<H", data, header + 0x20)[0]
         effects = []
@@ -71,16 +112,18 @@ def header_effects(path):
                 data[offset + 0x02],
                 struct.unpack_from("<I", data, offset + 0x08)[0],
                 data[offset + 0x0C],
-                data[offset + 0x14:offset + 0x1C].split(b"\0", 1)[0].decode("ascii"),
+                resource(data, offset + 0x14),
             ))
-        result.append((attack_type, effects))
+        result.append((attack_type, location, effects))
     return result
 
 
 hit = header_effects(override / "CIFHIT.ITM")
 assert len(hit) == 2, (layout, hit)
-for attack_type, effects in hit:
+for attack_type, location, effects in hit:
     assert attack_type in (1, 2)
+    assert location == 1
     assert effects == [(146, 9, 1, 1, "CIFGAIN")], (layout, attack_type, effects)
 
-assert header_effects(override / "CIFMAGIC.ITM") == [(3, [])]
+assert header_effects(override / "CIFMWEAP.ITM") == [(3, 1, [(146, 9, 1, 1, "CIFGAIN")])]
+assert header_effects(override / "CIFMAGIC.ITM") == [(3, 3, [])]
