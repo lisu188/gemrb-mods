@@ -7,4 +7,4 @@
 @6 = ~No free one-byte class identifier is available for Cipher.~
 @100 = ~cipher~
 @101 = ~CIPHER:~
-@102 = ~Ciphers are weapon-driven psychic combatants inspired by Pillars of Eternity. Successful weapon hits generate Focus, which is spent on reusable soul and mind powers instead of spell slots. Ciphers use d8 hit points, rogue-rate THAC0, Mage saving throws, Intelligence 13 minimum, broad one-handed and missile weapon proficiency, and any alignment. Soul Whip increases all damage by 10 percent at level 1, 15 percent at level 10, and 20 percent at level 20. Focus starts at 20 after resting and has a maximum of 20 + 5 per Cipher level.~
+@102 = ~Ciphers are weapon-driven psychic combatants inspired by Pillars of Eternity. Successful weapon hits generate Focus, which is spent on reusable soul and mind powers instead of spell slots. Ciphers use d8 hit points, rogue-rate THAC0, Mage saving throws, Intelligence 13 minimum, broad one-handed and missile weapon proficiency, and any alignment. Soul Whip adds 1 weapon damage at level 1, 2 at level 10, and 3 at level 20. Focus starts at 20 after resting and has a maximum of 20 + 5 per Cipher level.~
