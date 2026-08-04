@@ -197,10 +197,10 @@ BEGIN
   READ_SHORT 0x6e ps_item_equipping_index
   READ_SHORT 0x70 ps_item_equipping_count
 
-  // Append to the existing equipping block. WeiDU's ITM helper treats the
-  // equipping index at 0x6e as the byte displacement within the common effect
-  // table; ability feature indexes remain 0x30-sized logical indexes.
-  SET ps_new_item_effect = ps_item_effect_offset + ps_item_equipping_index + (ps_item_equipping_count * 0x30)
+  // Append to the existing equipping block. The field at 0x6e is a logical
+  // feature-block index, exactly like the per-ability indexes, so both the
+  // index and count must be scaled by the 0x30-byte ITM V1 feature size.
+  SET ps_new_item_effect = ps_item_effect_offset + ((ps_item_equipping_index + ps_item_equipping_count) * 0x30)
   INSERT_BYTES ps_new_item_effect 0x30
 
   WRITE_SHORT ps_new_item_effect opcode
