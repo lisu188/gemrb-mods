@@ -1,0 +1,243 @@
+DEFINE_ACTION_FUNCTION cipher_create_power
+INT_VAR
+  ci_tier = 1
+  ci_target = 2
+  ci_range = 30
+  ci_speed = 3
+  ci_projectile = 1
+  ci_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ci_resref = ~~
+  ci_name = ~~
+  ci_description = ~~
+  ci_icon = ~spwi105~
+BEGIN
+  CREATE ~spl~ ~%ci_resref%~
+  COPY_EXISTING ~%ci_resref%.spl~ ~override~
+    SAY NAME1 ~%ci_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ci_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 ci_flags
+    WRITE_LONG 0x34 ci_tier
+    WRITE_ASCII 0x3a ~%ci_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ci_target
+        range = ci_range
+        speed = ci_speed
+        projectile = ci_projectile
+      STR_VAR
+        icon = ~%ci_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET ci_none_projectile = IDS_OF_SYMBOL(~missile~ ~None~)
+OUTER_SET ci_area_projectile = IDS_OF_SYMBOL(~missile~ ~Fireball_Just_Projectile~)
+OUTER_SET ci_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CIFCORE~ ci_name = ~Soul Whip~ ci_description = ~The Cipher begins combat with 20 Focus, gains 5 Focus on each successful weapon hit, and deals 10 percent additional damage with Soul Whip.~ ci_icon = ~spcl321~
+END
+COPY_EXISTING ~CIFCORE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 282 target = 1 timing = 1 parameter1 = 4 parameter2 = 9 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 332 target = 1 timing = 9 parameter1 = 10 parameter2 = 0 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CIFSW15~ ci_name = ~Improved Soul Whip~ ci_description = ~Soul Whip now deals 15 percent additional damage.~ ci_icon = ~spcl321~
+END
+COPY_EXISTING ~CIFSW15.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 STR_VAR resource = ~CIFCORE~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 332 target = 1 timing = 9 parameter1 = 15 parameter2 = 0 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CIFSW20~ ci_name = ~Greater Soul Whip~ ci_description = ~Soul Whip now deals 20 percent additional damage.~ ci_icon = ~spcl321~
+END
+COPY_EXISTING ~CIFSW20.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 STR_VAR resource = ~CIFSW15~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 332 target = 1 timing = 9 parameter1 = 20 parameter2 = 0 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI1WHSP~ ci_name = ~Whisper of Treason~ ci_description = ~The Cipher twists a humanoid mind, charming it for three rounds unless it saves vs spell. Costs 10 Focus.~ ci_icon = ~spwi104~
+END
+COPY_EXISTING ~CI1WHSP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 parameter2 = 1 timing = 0 duration = 18 savingthrow = BIT0 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI1EYES~ ci_name = ~Eyestrike~ ci_description = ~Psychic pain blinds the target for two rounds unless it saves vs spell. Costs 10 Focus.~ ci_icon = ~spwi201~
+END
+COPY_EXISTING ~CI1EYES.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 74 target = 2 resist_dispel = BIT0 timing = 0 duration = 12 savingthrow = BIT0 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 2 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI2MBND~ ci_name = ~Mental Binding~ ci_description = ~The target is held for two rounds unless it saves vs spell. Costs 15 Focus.~ ci_icon = ~spwi305~
+END
+COPY_EXISTING ~CI2MBND.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 12 savingthrow = BIT0 savebonus = (0 - 1) END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 2 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI2PVSH~ ci_name = ~Psychovampiric Shield~ ci_description = ~The Cipher steals defensive instinct: the enemy suffers 2 worse Armor Class while the Cipher gains 2 Armor Class for four rounds. Costs 15 Focus.~ ci_icon = ~spwi215~
+END
+COPY_EXISTING ~CI2PVSH.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 24 savingthrow = BIT0 savebonus = (0 - 1) END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 9 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 24 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 3 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI3PUPP~ ci_name = ~Puppet Master~ ci_description = ~A humanoid is dominated for three rounds unless it saves vs spell. Costs 20 Focus.~ ci_icon = ~spwi506~
+END
+COPY_EXISTING ~CI3PUPP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 parameter2 = 1003 timing = 0 duration = 18 savingthrow = BIT0 savebonus = (0 - 2) END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 3 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI3SIGN~ ci_name = ~Soul Ignition~ ci_description = ~The target burns from within for 2d6 fire damage immediately and 1d6 each round for five rounds. Costs 20 Focus.~ ci_icon = ~spwi319~
+END
+COPY_EXISTING ~CI3SIGN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~FIRE~) dicenumber = 2 dicesize = 6 END
+  PATCH_FOR_EACH ci_delay IN 6 12 18 24 30 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~FIRE~) dicenumber = 1 dicesize = 6 timing = 4 duration = ci_delay END
+  END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 4 ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CI4PBLK~ ci_name = ~Pain Block~ ci_description = ~One ally gains 20 percent resistance to physical damage and +2 to all saving throws for five rounds. Costs 25 Focus.~ ci_icon = ~sppr403~
+END
+COPY_EXISTING ~CI4PBLK.spl~ ~override~
+  PATCH_FOR_EACH ci_resist_opcode IN 86 87 88 89 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_resist_opcode target = 2 resist_dispel = BIT1 parameter1 = 20 parameter2 = 0 timing = 0 duration = 30 END
+  END
+  FOR (ci_save_opcode = 33; ci_save_opcode <= 37; ++ci_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 2 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 4 ci_target = 4 ci_range = 30 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI4SSCR~ ci_name = ~Silent Scream~ ci_description = ~A psychic scream deals 6d6 magical damage in an area; a save vs spell halves the damage. Costs 25 Focus.~ ci_icon = ~spwi404~
+END
+COPY_EXISTING ~CI4SSCR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~MAGIC~) dicenumber = 6 dicesize = 6 savingthrow = BIT0 savebonus = (0 - 3) special = BIT8 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 5 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI5BINS~ ci_name = ~Borrowed Instinct~ ci_description = ~The target loses 3 attack and saving-throw points while the Cipher gains equivalent bonuses for five rounds. Costs 30 Focus.~ ci_icon = ~spwi508~
+END
+COPY_EXISTING ~CI5BINS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 2 resist_dispel = BIT0 parameter1 = (0 - 3) timing = 0 duration = 30 savingthrow = BIT0 savebonus = (0 - 4) END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 9 resist_dispel = BIT1 parameter1 = 3 timing = 0 duration = 30 END
+  FOR (ci_save_opcode = 33; ci_save_opcode <= 37; ++ci_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 3 timing = 0 duration = 30 savingthrow = BIT0 savebonus = (0 - 4) END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 9 resist_dispel = BIT1 parameter1 = (0 - 3) timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 5 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI5DETN~ ci_name = ~Detonate~ ci_description = ~The target's soul erupts for 8d6 magical damage; a save vs spell halves the damage. Costs 30 Focus.~ ci_icon = ~spwi512~
+END
+COPY_EXISTING ~CI5DETN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~MAGIC~) dicenumber = 8 dicesize = 6 savingthrow = BIT0 savebonus = (0 - 4) special = BIT8 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 6 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI6DSIN~ ci_name = ~Disintegration~ ci_description = ~The target takes 2d6 magical damage per round for six rounds and suffers 2 worse Armor Class and saving throws. Costs 35 Focus.~ ci_icon = ~spwi614~
+END
+COPY_EXISTING ~CI6DSIN.spl~ ~override~
+  PATCH_FOR_EACH ci_delay IN 0 6 12 18 24 30 BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~MAGIC~) dicenumber = 2 dicesize = 6 timing = 4 duration = ci_delay savingthrow = BIT0 savebonus = (0 - 5) special = BIT8 END
+  END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 36 savingthrow = BIT0 savebonus = (0 - 5) END
+  FOR (ci_save_opcode = 33; ci_save_opcode <= 37; ++ci_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 2 timing = 0 duration = 36 savingthrow = BIT0 savebonus = (0 - 5) END
+  END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 6 ci_target = 4 ci_range = 30 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI6AWAV~ ci_name = ~Amplified Wave~ ci_description = ~A telekinetic wave deals 8d6 crushing damage in an area and holds failed saves for one round as a knockdown approximation. Costs 35 Focus.~ ci_icon = ~spwi603~
+END
+COPY_EXISTING ~CI6AWAV.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~CRUSHING~) dicenumber = 8 dicesize = 6 savingthrow = BIT1 savebonus = (0 - 5) special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 6 savingthrow = BIT1 savebonus = (0 - 5) END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 7 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI7STAS~ ci_name = ~Stasis Shell~ ci_description = ~The target is frozen and immune to damage for three rounds. Costs 40 Focus.~ ci_icon = ~spwi710~
+END
+COPY_EXISTING ~CI7STAS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 101 target = 2 resist_dispel = BIT1 parameter2 = 12 timing = 0 duration = 18 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 18 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 7 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI7TPAR~ ci_name = ~Time Parasite~ ci_description = ~The target is slowed while the Cipher gains an extra attack, +4 to attack rolls and 50 percent movement speed for five rounds. Costs 40 Focus.~ ci_icon = ~spwi613~
+END
+COPY_EXISTING ~CI7TPAR.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 40 target = 2 resist_dispel = BIT0 timing = 0 duration = 30 savingthrow = BIT0 savebonus = (0 - 6) END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 9 resist_dispel = BIT1 parameter1 = 1 parameter2 = 0 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 9 resist_dispel = BIT1 parameter1 = 4 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 9 resist_dispel = BIT1 parameter1 = 150 parameter2 = 2 timing = 0 duration = 30 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 8 ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CI8RKNI~ ci_name = ~Reaping Knives~ ci_description = ~An ally's attacks gain +2 to hit and 20 percent damage for five rounds. The PoE ally-to-Cipher Focus transfer remains a runtime extension. Costs 50 Focus.~ ci_icon = ~spwi802~
+END
+COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 2 resist_dispel = BIT1 parameter1 = 2 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 332 target = 2 resist_dispel = BIT1 parameter1 = 20 parameter2 = 0 timing = 0 duration = 30 END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 8 ci_target = 4 ci_range = 35 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI8SCAS~ ci_name = ~Soul Cascade~ ci_description = ~A cascading psychic rupture deals 10d6 magical damage in an area and worsens all saves by 1 for three rounds. Costs 50 Focus.~ ci_icon = ~spwi805~
+END
+COPY_EXISTING ~CI8SCAS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~MAGIC~) dicenumber = 10 dicesize = 6 savingthrow = BIT0 savebonus = (0 - 7) special = BIT8 END
+  FOR (ci_save_opcode = 33; ci_save_opcode <= 37; ++ci_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 1 timing = 0 duration = 18 savingthrow = BIT0 savebonus = (0 - 7) END
+  END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 9 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI9ADOM~ ci_name = ~Absolute Domination~ ci_description = ~A humanoid is dominated for one turn unless it saves vs spell at a severe penalty. Costs 60 Focus.~ ci_icon = ~spwi905~
+END
+COPY_EXISTING ~CI9ADOM.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 5 target = 2 resist_dispel = BIT0 parameter1 = 1 parameter2 = 1003 timing = 0 duration = 60 savingthrow = BIT0 savebonus = (0 - 8) END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 9 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI9SCOL~ ci_name = ~Soul Collapse~ ci_description = ~The target suffers 12d6 magical damage, is held for two rounds on a failed save, and suffers 4 worse saving throws for five rounds. Costs 60 Focus.~ ci_icon = ~spwi917~
+END
+COPY_EXISTING ~CI9SCOL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~MAGIC~) dicenumber = 12 dicesize = 6 savingthrow = BIT0 savebonus = (0 - 8) special = BIT8 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT0 timing = 0 duration = 12 savingthrow = BIT0 savebonus = (0 - 8) END
+  FOR (ci_save_opcode = 33; ci_save_opcode <= 37; ++ci_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ci_save_opcode target = 2 resist_dispel = BIT0 parameter1 = 4 timing = 0 duration = 30 savingthrow = BIT0 savebonus = (0 - 8) END
+  END
+BUT_ONLY
