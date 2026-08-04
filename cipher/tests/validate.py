@@ -39,7 +39,10 @@ def test_sources():
     for required in (
         "cipher/lib/class.tpa",
         "cipher/lib/class-skills-fix.tpa",
+        "cipher/lib/class-thac0-fix.tpa",
         "cipher/lib/powers.tpa",
+        "cipher/lib/power-thac0-fix.tpa",
+        "cipher/lib/soul-whip-fix.tpa",
         "cipher/lib/focus.tpa",
         "cipher/lib/focus-core.tpa",
     ):
@@ -64,12 +67,27 @@ def test_sources():
     assert "CIFS4" in focus_core
     assert "WRITE_SHORT ci_core_effect 146" in focus_core
 
+    thac0_fix = (CIPHER / "lib" / "class-thac0-fix.tpa").read_text(encoding="utf-8")
+    assert "20 - ((ci_thac0_fix_col - 1) / 2)" in thac0_fix
+
+    power_thac0_fix = (CIPHER / "lib" / "power-thac0-fix.tpa").read_text(encoding="utf-8")
+    assert "CI5BINS" in power_thac0_fix
+    assert "CI7TPAR" in power_thac0_fix
+    assert "CI8RKNI" in power_thac0_fix
+    assert "(0 - 2)" in power_thac0_fix
+    assert "(0 - 3)" in power_thac0_fix
+    assert "(0 - 4)" in power_thac0_fix
+
+    soul_whip_fix = (CIPHER / "lib" / "soul-whip-fix.tpa").read_text(encoding="utf-8")
+    assert "ci_whip_bonus = 1" in soul_whip_fix
+    assert "ci_whip_bonus = 2" in soul_whip_fix
+    assert "ci_whip_bonus = 3" in soul_whip_fix
+    assert "ci_whip_opcode = 332" in soul_whip_fix
+    assert "ci_whip_parameter2 = 0" in soul_whip_fix
+
     powers = (CIPHER / "lib" / "powers.tpa").read_text(encoding="utf-8")
     for resref in read_2da(CIPHER / "tables" / "cipherpowers.2da")[1]:
         assert f"~{resref}~" in powers
-    assert "parameter1 = 10 parameter2 = 0" in powers
-    assert "parameter1 = 15 parameter2 = 0" in powers
-    assert "parameter1 = 20 parameter2 = 0" in powers
 
 
 def load_runtime():
@@ -143,6 +161,8 @@ def test_patcher():
     patched = patcher.render_patch(actions, "actions", path)
     assert patched.count(patcher.MARK_BEGIN) == 3
     assert "import Cipher" in patched
+    assert 'if GemRB.GetVar("SettingButtons"):' in patched
+    assert "Cipher.cancel_pending(pc)" in patched
     assert patcher.render_patch(patched, "actions", path) is None
 
     rest = "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0, 0)\n"
