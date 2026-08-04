@@ -4,6 +4,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMON = ROOT.parent / "common"
 DISCIPLINES = (
     "PSION_SEER",
     "PSION_SHAPER",
@@ -20,7 +21,7 @@ def main() -> None:
     class_saves = (ROOT / "lib" / "class-saves.tpa").read_text(encoding="utf-8")
     class_layout = (ROOT / "lib" / "class-layout.tpa").read_text(encoding="utf-8")
     item_usability = (ROOT / "lib" / "item-usability.tpa").read_text(encoding="utf-8")
-    spell_helpers = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
+    spell_helpers = (COMMON / "weidu" / "spell-functions.tpa").read_text(encoding="utf-8")
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     fixture = (ROOT / "tests" / "make_weidu_fixture.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "tests" / "validate_weidu_install.sh").read_text(encoding="utf-8")
