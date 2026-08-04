@@ -18,6 +18,15 @@ def rows(path):
     return lines[2].split(), result
 
 
+def row_index(path, name):
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    for index, line in enumerate(lines[3:]):
+        fields = line.split()
+        if fields and fields[0] == name:
+            return index
+    raise AssertionError((layout, path.name, name))
+
+
 def spl_path(resref):
     return override / f"{resref}.spl"
 
@@ -53,6 +62,10 @@ assert xp["CIPHER"] == xp["MAGE"], (layout, xp["CIPHER"], xp["MAGE"])
 
 _, thac0 = rows(override / "thac0.2da")
 assert thac0["CIPHER"][:8] == ["20", "20", "19", "19", "18", "18", "17", "17"], (layout, thac0["CIPHER"][:8])
+
+_, splprot = rows(override / "splprot.2da")
+assert splprot["CIPHER_HOSTILE"] == ["0x108", "2", "1"], (layout, splprot["CIPHER_HOSTILE"])
+hostile_row = row_index(override / "splprot.2da", "CIPHER_HOSTILE")
 
 for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
     assert spl_path(resref).is_file(), (layout, resref)
@@ -139,6 +152,7 @@ def header_effects(path):
             effects.append((
                 struct.unpack_from("<H", data, offset)[0],
                 data[offset + 0x02],
+                struct.unpack_from("<I", data, offset + 0x04)[0],
                 struct.unpack_from("<I", data, offset + 0x08)[0],
                 data[offset + 0x0C],
                 resource(data, offset + 0x14),
@@ -152,7 +166,7 @@ assert len(hit) == 2, (layout, hit)
 for attack_type, location, effects in hit:
     assert attack_type in (1, 2)
     assert location == 1
-    assert effects == [(146, 9, 1, 1, "CIFGAIN")], (layout, attack_type, effects)
+    assert effects == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, attack_type, effects)
 
-assert header_effects(override / "CIFMWEAP.ITM") == [(3, 1, [(146, 9, 1, 1, "CIFGAIN")])]
+assert header_effects(override / "CIFMWEAP.ITM") == [(3, 1, [(326, 2, 0, hostile_row, 1, "CIFGAIN")])]
 assert header_effects(override / "CIFMAGIC.ITM") == [(3, 3, [])]
