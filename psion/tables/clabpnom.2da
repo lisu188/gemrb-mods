@@ -1,23 +1,23 @@
 2DA V1.0
 ****
-        ABILITY1 ABILITY2 ABILITY3 ABILITY4 ABILITY5
-1       GA_PS1ERAY GA_PS1IARM GA_PS1BRST GA_PXCNTR GA_PXFSEL
-2       GA_PS1MTHR GA_PS1VIGR **** **** ****
-3       GA_PS2AMOR GA_PS2DSWP **** **** ****
-4       GA_PS1FSCR GA_PS2DHIN **** **** ****
-5       GA_PS3DPSI GA_PS3SSTP **** **** ****
-6       GA_PS3BADJ GA_PS3EBLT **** **** ****
-7       GA_PS4EADP GA_PS4PFLY **** **** ****
-8       GA_PS4FOMV GA_PS4IFOR **** **** ****
-9       GA_PS5PRES GA_PS5BALT **** **** ****
-10      **** **** **** **** ****
-11      **** **** **** **** ****
-12      **** **** **** **** ****
-13      **** **** **** **** ****
-14      **** **** **** **** ****
-15      **** **** **** **** ****
-16      **** **** **** **** ****
-17      **** **** **** **** ****
-18      **** **** **** **** ****
-19      **** **** **** **** ****
-20      **** **** **** **** ****
+        ABILITY1 ABILITY2 ABILITY3 ABILITY4 ABILITY5 ABILITY6
+1       GA_PS1ERAY GA_PS1IARM GA_PS1BRST GA_PXCNTR GA_PXFSEL GA_PXSKILL
+2       GA_PS1MTHR GA_PS1VIGR **** **** **** ****
+3       GA_PS2AMOR GA_PS2DSWP **** **** **** ****
+4       GA_PS1FSCR GA_PS2DHIN **** **** **** ****
+5       GA_PS3DPSI GA_PS3SSTP **** **** **** ****
+6       GA_PS3BADJ GA_PS3EBLT **** **** **** ****
+7       GA_PS4EADP GA_PS4PFLY **** **** **** ****
+8       GA_PS4FOMV GA_PS4IFOR **** **** **** ****
+9       GA_PS5PRES GA_PS5BALT **** **** **** ****
+10      **** **** **** **** **** ****
+11      **** **** **** **** **** ****
+12      **** **** **** **** **** ****
+13      **** **** **** **** **** ****
+14      **** **** **** **** **** ****
+15      **** **** **** **** **** ****
+16      **** **** **** **** **** ****
+17      **** **** **** **** **** ****
+18      **** **** **** **** **** ****
+19      **** **** **** **** **** ****
+20      **** **** **** **** **** ****
