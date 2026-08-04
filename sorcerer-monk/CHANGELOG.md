@@ -42,7 +42,7 @@
 - Gave the merged action bar the Monk's Search and Stealth buttons alongside the Sorcerer's spellbook and quick spell, and left out the Monk's third quick-weapon button because `NUMWSLOT.2DA` restricts the class to two weapon slots.
 - Rejected a `QSLOTS.2DA` that is out of step with `CLSKILLS.2DA` before making any changes. GemRB addresses the action bar by row index, so an appended row would otherwise be applied to a different class.
 - Rejected class tables that do not provide both a Sorcerer and a Monk row rather than silently installing a class with no starting experience.
-- Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
+- Inherited the live Monk `CLSWPBON.2DA` combat row instead of freezing `1 3 2`, while retaining that stock Monk row as a compatibility fallback when no usable Monk entry exists; unsupported schemas and duplicate valid Monk rows are rejected before mutation.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Copied the game's own Monk `FISTWEAP.2DA` row instead of compensating for a rounded multiclass-level lookup: GemRB resolves fists by the Monk component level, so the multiclass now reaches every fist tier at the same Monk level as a single-class Monk.
 - Rejected pre-existing `FISTWEAP.2DA` rows for the allocated numeric class ID instead of silently preserving ambiguous numeric ownership or appending a duplicate row.
