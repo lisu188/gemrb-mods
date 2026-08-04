@@ -49,6 +49,8 @@ OUTER_SET sm_classes_cols = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
+OUTER_SET sm_found_sorcerer_spell_metadata = 0
+OUTER_SET sm_booktype = (0 - 1)
 OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
 OUTER_SET sm_sm0_taken = 0
@@ -125,6 +127,7 @@ OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
+OUTER_SPRINT sm_magespell ~~
 OUTER_SPRINT sm_25stweap_actual ~~
 OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
 OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
@@ -157,6 +160,16 @@ COPY_EXISTING ~clskills.2da~ ~override~
     END
     PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
       SET sm_sorcerer_clskills_id = sm_i
+      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 3 sm_magespell_candidate
+      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 9 sm_booktype_candidate
+      PATCH_IF (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~*~)
+          AND (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~~)
+          AND (IS_AN_INT ~%sm_booktype_candidate%~)
+          AND (sm_booktype_candidate >= 0) BEGIN
+        SPRINT sm_magespell ~%sm_magespell_candidate%~
+        SET sm_booktype = sm_booktype_candidate
+        SET sm_found_sorcerer_spell_metadata = 1
+      END
       READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
       PATCH_IF sm_clskills_cols = 17 BEGIN
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 13 sm_startxp2
@@ -180,6 +193,9 @@ ACTION_IF (sm_clskills_cols != 16) AND (sm_clskills_cols != 17) THEN BEGIN
 END
 ACTION_IF sm_clskills_matches > 1 THEN BEGIN
   FAIL @20
+END
+ACTION_IF sm_found_sorcerer_spell_metadata != 1 THEN BEGIN
+  FAIL @30
 END
 
 // The custom MULTI mask below is the standard Sorcerer/Monk mask: class ID 19
@@ -1002,13 +1018,13 @@ APPEND ~avprefc.2da~ ~SORCERER_MONK%sm_avatar%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Released and development GemRB tables differ only by the legacy NO_PROF
-// column. STARTXP values follow Sorcerer while the legacy non-proficiency
-// penalty follows the better Monk component value.
+// column. Sorcerer spell-table, book type and starting-XP metadata are copied
+// from the live Sorcerer row; the legacy non-proficiency penalty follows Monk.
 ACTION_IF sm_clskills_cols = 17 THEN BEGIN
-  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
+  APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~
+  APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_startxp2% * 0 *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
