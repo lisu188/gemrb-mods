@@ -29,11 +29,25 @@ OUTER_FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
   APPEND ~splprot.2da~ ~CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1~
 END
 
-OUTER_FOR (ci_unit = 1; ci_unit <= 34; ++ci_unit) BEGIN
+// Every setter owns one permanent ScriptingState effect. Before installing the
+// next state it removes every previous CIFS<n> parent resource. Timing mode 9
+// keeps the current Focus state in the actor effect queue, so normal CRE
+// save/load serialization preserves Focus without relying on a GUI-only stat.
+OUTER_FOR (ci_unit = 0; ci_unit <= 34; ++ci_unit) BEGIN
   OUTER_SPRINT ci_setter ~CIFS%ci_unit%~
   LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_setter%~ END
   COPY_EXISTING ~%ci_setter%.spl~ ~override~
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 282 target = 1 timing = 1 parameter1 = ci_unit parameter2 = 9 END
+    FOR (ci_old_unit = 0; ci_old_unit <= 34; ++ci_old_unit) BEGIN
+      SPRINT ci_old_setter ~CIFS%ci_old_unit%~
+      LPF ADD_SPELL_EFFECT
+        INT_VAR opcode = 321 target = 1 timing = 1 parameter2 = 0
+        STR_VAR resource = ~%ci_old_setter%~
+      END
+    END
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 282 target = 1 timing = 9 parameter1 = ci_unit parameter2 = 9
+      STR_VAR resource = ~CIFOCUS~
+    END
   BUT_ONLY
 END
 
