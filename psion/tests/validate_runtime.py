@@ -327,14 +327,16 @@ def main() -> None:
         roll_value["value"] = 20
 
         # Accounted levels are persistent. Moving from level 1 to 5 at INT 18
-        # adds four ordinary six-point allotments. Raising INT before level 6
+        # adds four ordinary six-point allotments. Raising base INT before level 6
         # changes only the new level's allotment.
         stats[(1, 34)] = 5
         assert module.sync_skill_points(1) == 44
         stats[(1, 38)] = 22
+        base_stats[(1, 38)] = 22
         stats[(1, 34)] = 6
         assert module.sync_skill_points(1) == 52
         stats[(1, 38)] = 18
+        base_stats[(1, 38)] = 18
 
         # Meditation is unavailable before Concentration 7, then requires WIS 13.
         assert not module.can_select_feat(1, module.PSIONIC_MEDITATION)
