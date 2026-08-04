@@ -6,6 +6,7 @@ import py_compile
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMON = ROOT.parent / "common"
 
 DISCIPLINE_CLABS = {
     "SEER": "clabpsee.2da",
@@ -142,12 +143,15 @@ def validate_weidu_integer_syntax() -> None:
 
 def validate_release_infrastructure() -> None:
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
-    includes = re.findall(r"INCLUDE ~psion/lib/([^~]+)~", driver)
-    assert includes[0] == "spell-functions.tpa", includes
+    shared_includes = re.findall(r"INCLUDE ~(common/weidu/[^~]+)~", driver)
+    psion_includes = re.findall(r"INCLUDE ~psion/lib/([^~]+)~", driver)
+    assert shared_includes == ["common/weidu/spell-functions.tpa"], shared_includes
     for level in range(1, 10):
-        assert f"level{level}-powers.tpa" in includes, level
+        assert f"level{level}-powers.tpa" in psion_includes, level
 
-    helpers = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
+    compatibility = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
+    assert "INCLUDE ~common/weidu/spell-functions.tpa~" in compatibility
+    helpers = (COMMON / "weidu" / "spell-functions.tpa").read_text(encoding="utf-8")
     for fragment in (
         "DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~",
         "DEFINE_PATCH_FUNCTION ~ADD_SPELL_EFFECT~",
@@ -181,21 +185,40 @@ def validate_release_infrastructure() -> None:
         assert fragment in lifecycle, fragment
 
     runtime = (ROOT / "guiscripts" / "Psionics.py").read_text(encoding="utf-8")
-    patcher = (ROOT / "tools" / "install_guiscripts.py").read_text(encoding="utf-8")
     for fragment in (
-        "def refresh_innate_charges(actor):",
-        "GemRB.GetKnownSpellsCount",
-        "GemRB.UnmemorizeSpell",
-        "GemRB.MemorizeSpell",
+        "import Transactions",
+        "import InnateCharges",
+        "import PersistentState",
+        "import Selectors",
         "POOL_STATE_SIGNATURE = 0x50530000",
         "CURRENT_POOL_STAT = 239",
         "def resolve_power_entry(spellbook, actor, raw_spell):",
     ):
         assert fragment in runtime, fragment
     assert "POOL_READY_STAT" not in runtime
-    assert "Psionics.refresh_innate_charges" in patcher
-    assert "spellResRefs = Psionics.filter_spellinfo" not in patcher
-    assert "memorizedSpells = [entry for entry in memorizedSpells if entry[\"SpellResRef\"] in psionAllowedResRefs]" in patcher
+
+    shared_charges = (COMMON / "guiscripts" / "InnateCharges.py").read_text(encoding="utf-8")
+    for fragment in (
+        "GemRB.GetKnownSpellsCount",
+        "GemRB.UnmemorizeSpell",
+        "GemRB.MemorizeSpell",
+    ):
+        assert fragment in shared_charges, fragment
+
+    patcher = (ROOT / "tools" / "install_guiscripts.py").read_text(encoding="utf-8")
+    for fragment in (
+        'CORE = ROOT / "common" / "tools" / "install_guiscripts.py"',
+        'module.main_for_handler("Psionics"',
+    ):
+        assert fragment in patcher, fragment
+    core_patcher = (COMMON / "tools" / "install_guiscripts.py").read_text(encoding="utf-8")
+    for fragment in (
+        "GemRBModCore.refresh_innate_charges",
+        "GemRBModCore.filter_spellinfo",
+        "GemRBModCore.begin_spell",
+        "_migrate_legacy_runtime_ownership",
+    ):
+        assert fragment in core_patcher, fragment
 
 
 def validate_builders() -> None:
