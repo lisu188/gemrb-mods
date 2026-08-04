@@ -1,11 +1,10 @@
-// Psionic focus and the first runtime-backed bonus feats.
+// Psionic focus and runtime-backed bonus feats.
 //
-// The actual focused/unfocused flag and feat ownership live in save-serialized
-// GemRB actor effects. These SPLs provide action-bar/selector resources only;
-// Psionics.py performs runtime transitions on SpellPressed confirmation except
-// for Center Mind, whose focused state is applied by the SPL only on resolution.
-// PX-prefixed resources are deliberately outside the PS power namespace so
-// class-progression audits cannot mistake utility abilities for learned powers.
+// Focus and feat ownership live in save-serialized GemRB actor effects. These
+// SPLs provide action-bar/selector resources; Psionics.py performs prerequisite
+// checks and irreversible selection changes. Center Mind writes focus only from
+// the resolving SPL, so interruption/cancellation never restores it early.
+// PX-prefixed resources stay outside the PS power namespace.
 
 DEFINE_ACTION_FUNCTION psion_create_focus_action
 INT_VAR
@@ -34,31 +33,42 @@ BEGIN
 END
 
 // Keep this marker synchronized with FOCUS_EFFECT_MARKER in Psionics.py.
-// Applying it from the completed SPL, rather than the pre-cast GUI callback,
-// means an interrupted/canceled Center Mind action never grants focus.
 OUTER_SET psion_focus_state_marker = 0x50534643
+
+// Normal focus recovery: a full-round approximation. Runtime performs the
+// Concentration DC 20 authorization; this SPL applies focus only on resolution.
 LAF psion_create_focus_action
   INT_VAR ps_speed = 9
   STR_VAR
     ps_resref = ~PXCNTR~
     ps_name = ~Center Mind~
-    ps_description = ~Spend a full-round action centering your thoughts to regain psionic focus. The Concentration DC 20 check will become active when player-allocated psionic skills are implemented.~
+    ps_description = ~Spend a full-round action centering your thoughts to regain psionic focus. Requires at least 1 power point and a successful Concentration check against DC 20.~
     ps_icon = ~sppr101~
 END
 COPY_EXISTING ~PXCNTR.spl~ ~override~
-  // Protection:Spell is a private persistent carrier here. PSFOCUS is not a
-  // real spell resource, so this state effect grants no meaningful immunity.
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 parameter1 = 1 parameter2 = psion_focus_state_marker timing = 9 STR_VAR resource = ~PSFOCUS~ END
-  // Resolve focus-dependent passives at the same moment focus returns. The
-  // runtime keeps non-owners privately immune to PXFSPED, so this immediate
-  // helper cast grants movement only to characters with Speed of Thought.
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 1 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 timing = 1 STR_VAR resource = ~PXFSPED~ END
+BUT_ONLY
+
+// Psionic Meditation replaces the normal Center Mind action with this faster
+// half-round approximation of a tabletop move action. The DC and resolution
+// semantics remain identical to ordinary Center Mind.
+LAF psion_create_focus_action
+  INT_VAR ps_speed = 5
+  STR_VAR
+    ps_resref = ~PXCMEDI~
+    ps_name = ~Center Mind (Meditation)~
+    ps_description = ~Psionic Meditation lets you regain focus as a move-action approximation. Requires at least 1 power point and a successful Concentration check against DC 20.~
+    ps_icon = ~sppr101~
+END
+COPY_EXISTING ~PXCMEDI.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 parameter1 = 1 parameter2 = psion_focus_state_marker timing = 9 STR_VAR resource = ~PSFOCUS~ END
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 1 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 timing = 1 STR_VAR resource = ~PXFSPED~ END
 BUT_ONLY
 
 // The selector itself is learned once at level 1. Psionics.py derives earned
 // bonus-feat credits from class level (1, 5, 10, 15 and 20) and recharges this
-// same selector only while an unspent credit remains. Opening or canceling a
-// choice therefore cannot destroy a class entitlement.
+// same selector only while an unspent credit remains.
 LAF psion_create_focus_action
   STR_VAR
     ps_resref = ~PXFSEL~
@@ -94,9 +104,16 @@ LAF psion_create_focus_action
     ps_icon = ~spwi305~
 END
 
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXFMEDI~
+    ps_name = ~Psionic Meditation~
+    ps_description = ~Requires Wisdom 13 and 7 ranks in Concentration. You can regain psionic focus using the faster Center Mind (Meditation) action instead of the normal full-round action.~
+    ps_icon = ~sppr101~
+END
+
 // Dedicated helper resources keep Speed of Thought isolated from haste, slow,
-// Burst, and third-party movement effects. PXFSPED removes only its own older
-// application before reapplying the bonus; PXFSPOF strips only PXFSPED effects.
+// Burst, and third-party movement effects.
 LAF psion_create_focus_action
   STR_VAR
     ps_resref = ~PXFSPED~
