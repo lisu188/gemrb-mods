@@ -45,8 +45,9 @@ def main() -> None:
         ["SPEED_OF_THOUGHT", "PXFSPD", "3"],
     ], selector_rows
 
-    # Psionic Meditation remains deliberately absent until Concentration ranks
-    # exist, so its Concentration 7 prerequisite cannot accidentally be skipped.
+    # Psionic Meditation remains a later feat addition; this branch first makes
+    # real Concentration ranks available so its 7-rank prerequisite can be
+    # implemented faithfully instead of bypassed.
     assert all("MEDIT" not in token for row in feat_rows for token in row)
 
     for filename in DISCIPLINE_CLABS:
@@ -57,7 +58,6 @@ def main() -> None:
         assert level1.count("GA_PXFSEL") == 1, filename
         assert text.count("GA_PXCNTR") == 1, filename
         assert text.count("GA_PXFSEL") == 1, filename
-        # Level thresholds are runtime credits, not repeated spell grants.
         for level in ("5", "10", "15", "20"):
             row = next(row for row in rows if row[0] == level)
             assert "GA_PXFSEL" not in row, (filename, level)
@@ -134,20 +134,20 @@ def main() -> None:
         "SPEED_ON_RESOURCE",
         "_sync_speed_gate(actor, owns_speed)",
         "_sync_speed_gate(actor)",
-        "PXCNTR.spl itself writes the focus marker and casts PXFSPED",
-        "lambda: True",
+        "lambda: concentration_check(actor, 20)",
     ):
         assert fragment in runtime, fragment
 
-    # Center Mind confirmation must neither restore focus nor directly apply the
-    # focused movement helper before the speed-9 spell actually resolves.
+    # Center Mind confirmation may roll Concentration, but it must neither
+    # restore focus nor directly apply the focused movement helper before the
+    # speed-9 spell actually resolves.
     center_runtime = runtime[runtime.index('if info["kind"] == "center":') :]
     center_runtime = center_runtime[: center_runtime.index('if info["kind"] == "feat_selector":')]
     assert "_write_focus_state(actor, True)" not in center_runtime
     assert "GemRB.ApplySpell(actor, SPEED_ON_RESOURCE)" not in center_runtime
     assert "_sync_speed_gate(actor)" in center_runtime
+    assert "concentration_check(actor, 20)" in center_runtime
 
-    # The serialized feat carriers must never reuse live SPL resource names.
     for live in ("PXFTALT", "PXFBODY", "PXFSPD"):
         assert f'"{live}": "{live}"' not in runtime
 
@@ -157,7 +157,7 @@ def main() -> None:
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
-    print("Psion resolution-safe focus, immediate focus-passive sync, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
+    print("Psion resolution-safe focus, Concentration authorization, immediate focus-passive sync, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
 
 
 if __name__ == "__main__":
