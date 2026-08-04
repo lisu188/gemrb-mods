@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~1.0.0~
+VERSION ~1.1.0~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -14,7 +14,10 @@ COPY ~psion/tables/psionpool.2da~ ~override/psionpool.2da~
 COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
 COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
+COPY ~psion/tables/psskill.2da~ ~override/psskill.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
+COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
+COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
 COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
@@ -24,9 +27,10 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed power selections through class level 20. Every discipline follows the
-// 3-to-36 powers-known progression and gains its own discipline power whenever
-// a new power tier unlocks, including tiers 6-9 at levels 11, 13, 15 and 17.
+// Fixed power selections through class level 20 plus level-1 utility actions.
+// Every discipline follows the 3-to-36 powers-known progression and gains its
+// discipline power whenever a new tier unlocks. Center Mind is reusable;
+// bonus-feat and skill-training selectors are re-enabled by runtime credits.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
