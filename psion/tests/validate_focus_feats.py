@@ -83,6 +83,9 @@ def main() -> None:
         "parameter2 = psion_focus_state_marker",
         "timing = 9",
         "resource = ~PSFOCUS~",
+        "opcode = 146",
+        "parameter2 = 1",
+        "resource = ~PXFSPED~",
     ):
         assert fragment in center or fragment in builder, fragment
 
@@ -110,6 +113,7 @@ def main() -> None:
     for fragment in (
         "BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)",
         "BONUS_FEAT_SPENT_RESOURCE = \"PSFSPENT\"",
+        "SPEED_BLOCK_MARKER = 0x50534642",
         "\"PXFTALT\": \"PXTALST\"",
         "\"PXFBODY\": \"PXBODST\"",
         "\"PXFSPD\": \"PXSPDST\"",
@@ -125,15 +129,23 @@ def main() -> None:
         "if key == FEAT_SELECTOR_RESOURCE:",
         "return bonus_feats_remaining(actor) > 0",
         "focused = focused or bool(int(effect.get(\"Param1\", 0)))",
-        "PXCNTR.spl itself writes the focus marker",
+        "def _sync_speed_gate(actor, owns_speed=None):",
+        "SPEED_BLOCK_MARKER",
+        "SPEED_ON_RESOURCE",
+        "_sync_speed_gate(actor, owns_speed)",
+        "_sync_speed_gate(actor)",
+        "PXCNTR.spl itself writes the focus marker and casts PXFSPED",
         "lambda: True",
     ):
         assert fragment in runtime, fragment
 
-    # Center Mind confirmation must not restore focus before the spell resolves.
+    # Center Mind confirmation must neither restore focus nor directly apply the
+    # focused movement helper before the speed-9 spell actually resolves.
     center_runtime = runtime[runtime.index('if info["kind"] == "center":') :]
     center_runtime = center_runtime[: center_runtime.index('if info["kind"] == "feat_selector":')]
     assert "_write_focus_state(actor, True)" not in center_runtime
+    assert "GemRB.ApplySpell(actor, SPEED_ON_RESOURCE)" not in center_runtime
+    assert "_sync_speed_gate(actor)" in center_runtime
 
     # The serialized feat carriers must never reuse live SPL resource names.
     for live in ("PXFTALT", "PXFBODY", "PXFSPD"):
@@ -145,7 +157,7 @@ def main() -> None:
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
-    print("Psion resolution-safe focus, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
+    print("Psion resolution-safe focus, immediate focus-passive sync, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
 
 
 if __name__ == "__main__":
