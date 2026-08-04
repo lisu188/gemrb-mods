@@ -15,6 +15,7 @@ cp "$repo_root/psion/lib/spell-functions.tpa" "$game/psion/lib/spell-functions.t
 python3 "$repo_root/cipher/tests/seed_weidu_fixture.py" "$game"
 
 hit_baseline="$(sha256sum "$game/override/CIFHIT.ITM" | cut -d' ' -f1)"
+bow_baseline="$(sha256sum "$game/override/CIFBOW.ITM" | cut -d' ' -f1)"
 mweap_baseline="$(sha256sum "$game/override/CIFMWEAP.ITM" | cut -d' ' -f1)"
 magic_baseline="$(sha256sum "$game/override/CIFMAGIC.ITM" | cut -d' ' -f1)"
 
@@ -34,6 +35,7 @@ install
 verify
 uninstall
 test "$(sha256sum "$game/override/CIFHIT.ITM" | cut -d' ' -f1)" = "$hit_baseline"
+test "$(sha256sum "$game/override/CIFBOW.ITM" | cut -d' ' -f1)" = "$bow_baseline"
 test "$(sha256sum "$game/override/CIFMWEAP.ITM" | cut -d' ' -f1)" = "$mweap_baseline"
 test "$(sha256sum "$game/override/CIFMAGIC.ITM" | cut -d' ' -f1)" = "$magic_baseline"
 ! grep -q 'CIPHER' "$game/override/class.ids"
