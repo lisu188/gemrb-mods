@@ -67,7 +67,10 @@ _, splprot = rows(override / "splprot.2da")
 assert splprot["CIPHER_HOSTILE"] == ["0x108", "2", "1"], (layout, splprot["CIPHER_HOSTILE"])
 hostile_row = row_index(override / "splprot.2da", "CIPHER_HOSTILE")
 
-for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
+effects_ids = (override / "effects.ids").read_text(encoding="utf-8", errors="replace")
+assert "0x155 CastSpellOnCriticalHit" in effects_ids, layout
+
+for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CIFCRIT", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
     assert spl_path(resref).is_file(), (layout, resref)
 
 
@@ -109,8 +112,14 @@ soul_whip = {
     "CIFSW20": 3,
 }
 for resref, bonus in soul_whip.items():
-    effects = [effect for effect in spell_effects(spl_path(resref)) if effect[0] == 332 and effect[3] == 0]
-    assert any(effect[2] == bonus for effect in effects), (layout, resref, effects)
+    effects = spell_effects(spl_path(resref))
+    damage_effects = [effect for effect in effects if effect[0] == 332 and effect[3] == 0]
+    assert any(effect[2] == bonus for effect in damage_effects), (layout, resref, damage_effects)
+    critical_effects = [effect for effect in effects if effect[0] == 341]
+    assert critical_effects == [(341, 1, 0, 0, 9, "CIFCRIT")], (layout, resref, critical_effects)
+
+critical = spell_effects(spl_path("CIFCRIT"))
+assert critical == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, critical)
 
 setter = spell_effects(spl_path("CIFS4"))
 removals = [effect for effect in setter if effect[0] == 321]
