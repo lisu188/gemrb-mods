@@ -301,9 +301,12 @@ def main() -> None:
         assert module.action_info(module.FEAT_SELECTOR_RESOURCE)["kind"] == "feat_selector"
         assert module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
 
-        # Existing v1.1 feat/charge behavior remains unchanged. PXSKILL is
-        # already charged here, so the three restored entries remain the
-        # depleted Psion power, Center Mind, and the bonus-feat selector.
+        # The earlier skill-selector reconciliation may also have restored these
+        # three reusable entries. Re-deplete exactly the v1.1 regression targets
+        # here so this assertion remains independent of preceding skill tests.
+        for spell in memorized_innates:
+            if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR", "PXFSEL"):
+                spell["Flags"] = 0
         assert module.refresh_innate_charges(1) == 3
         states = {spell["SpellResRef"]: spell["Flags"] for spell in memorized_innates}
         assert states["PS1ERAY"] == 1
