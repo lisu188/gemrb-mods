@@ -26,9 +26,10 @@ Dual-classing is not supported.~
 @21 = ~QSLOTS.2DA does not have one row per existing class. GemRB reads the action bar by row index, so the Sorcerer/Monk row would be applied to the wrong class. Remove or reorder conflicting custom-class mods before installing.~
 @22 = ~Another class already uses the SM0 high-level-ability abbreviation in LUABBR.2DA. Installing would replace its LUSM0.2DA list with the Sorcerer/Monk merge. Remove the conflicting custom-class mod before installing.~
 @23 = ~25STWEAP.2DA does not match GemRB's 20-slot ToB starter-equipment layout. GemRB maps these rows by position, so adding the Sorcerer/Monk column would assign items to the wrong slots. Restore the canonical row count and order before installing.~
-@24 = ~Could not derive Sorcerer/Monk ability requirements from ABCLASRQ.2DA. Expected six numeric ability columns and valid Sorcerer and Monk rows.~
+@24 = ~Could not derive Sorcerer/Monk ability requirements from ABCLASRQ.2DA. Expected six numeric ability columns and exactly one Sorcerer row and one Monk row.~
 @25 = ~Could not build a complete Sorcerer/Monk high-level-ability table from LUABBR.2DA and the Sorcerer/Monk LU*.2DA sources. Fix or remove conflicting HLA mods before installing.~
-@26 = ~Could not derive Sorcerer/Monk alignment restrictions from ALIGNMNT.2DA. Expected nine binary alignment columns and valid Sorcerer and Monk rows.~
+@26 = ~Could not derive Sorcerer/Monk alignment restrictions from ALIGNMNT.2DA. Expected nine binary alignment columns and exactly one Sorcerer row and one Monk row.~
 @27 = ~Could not derive Sorcerer/Monk proficiency progression from PROFS.2DA. Expected numeric FIRST_LEVEL and positive RATE values for exactly one Sorcerer row and one Monk row.~
-@28 = ~Unsupported CLSWPBON.2DA layout or duplicate Monk combat rows. Expected GETS_PROF_APR, UNARMED_DIVISOR and ZERO_SKILL_THAC0 columns with at most one valid Monk row.~
+@28 = ~Unsupported CLSWPBON.2DA layout or ambiguous Monk combat metadata. Expected exactly one MONK row with non-negative GETS_PROF_APR, UNARMED_DIVISOR and ZERO_SKILL_THAC0 values.~
 @29 = ~Could not derive Sorcerer/Monk modern Monk-skill metadata. Expected a binary MONK column in THIEFSCL.2DA and exactly one non-negative MONK row in THIEFSKL.2DA.~
+@30 = ~Could not derive Sorcerer spell metadata from CLSKILLS.2DA. Expected exactly one SORCERER row with a non-empty MAGESPELL table and a non-negative numeric BOOKTYPE.~
