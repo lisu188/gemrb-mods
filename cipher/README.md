@@ -4,11 +4,11 @@ A Pillars of Eternity-inspired single class for BG-family games running under Ge
 
 ## Combat loop
 
-Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits add 5 Focus, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
+Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
 
 Soul Whip adds +1 weapon damage at level 1, +2 at level 10, and +3 at level 20. This is the portable BG-family approximation of PoE's percentage weapon-damage scaling: GemRB's common weapon damage bonus is applied only during weapon damage calculation, while percentage damage opcodes are damage-type based rather than weapon-source based.
 
-Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities trigger an internal spell on successful impact; opcode 326 gates that spell to the Cipher class, and a descending state dispatch advances Focus by exactly one unit without cascading multiple increments in the same hit. Rest and power spending use the same state-transition spells.
+Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities carry an `ApplyEffectsList` hit effect that evaluates the struck creature against the weapon user through SPLPROT's caster↔target EA relation (`0x108`). Only hostile targets pass that gate. `CIFGAIN` is then applied with the weapon user preserved as caster; its self-targeted class gate and descending state dispatch advance Focus on the Cipher by exactly one unit without cascading multiple increments in the same hit. Rest and power spending use the same state-transition spells.
 
 ## Power progression
 
@@ -58,7 +58,6 @@ If the Psion GUI patch is also used, install the Psion GUI patch first and the C
 - Soul Collapse omits the conditional execute below 20% HP.
 - Power choice on level-up, Beguiler, Soul Blade, and Ascendant are not part of this first core implementation.
 - Armor/shield usability has not yet been narrowed to the final light-armor/no-shield design; the class table and Focus mechanics are implemented first to avoid global item-usability changes before playtesting.
-- Successful attacks against non-hostile creatures can currently generate Focus because the on-hit effect is attached to weapon abilities rather than an allegiance-filtered victim callback.
 
 ## Validation
 
@@ -74,4 +73,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, weapon-only Focus injection, and WeiDU rollback of patched items.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only weapon Focus injection, and WeiDU rollback of patched items.
