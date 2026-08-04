@@ -98,7 +98,9 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(values, ["10", "10", "-1", "-1", "1", "1", "1", "-1", "-1"])
 
     def test_gameplay_restrictions(self):
-        self.assertIn("SORCERER_MONK 1 1 1 0 0 0 0 0 0", payloads("APPEND", "alignmnt.2da"))
+        self.assertIn("SORCERER_MONK %sm_alignmnt_row%", payloads("APPEND", "alignmnt.2da"))
+        self.assertIn("sm_found_sorcerer_alignmnt != 1", TP2)
+        self.assertIn("sm_found_monk_alignmnt != 1", TP2)
 
     def test_proficiency_progression_uses_fastest_component(self):
         prof_rows = payloads("APPEND", "profs.2da")
