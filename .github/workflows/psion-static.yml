@@ -86,6 +86,10 @@ jobs:
       - name: Seed missing Mage saving throw fixture
         run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
 
+      - name: Validate nonzero ITM equipping-effect offsets
+        shell: bash
+        run: bash psion/tests/validate_item_effect_offset.sh vendor/gemrb
+
       - name: Install, uninstall and reinstall every class-table layout
         shell: bash
         run: |
