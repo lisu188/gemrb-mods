@@ -41,6 +41,7 @@ def test_sources():
         "cipher/lib/class-skills-fix.tpa",
         "cipher/lib/powers.tpa",
         "cipher/lib/focus.tpa",
+        "cipher/lib/focus-core.tpa",
     ):
         assert required in setup
     assert "override/mxcipher.2da" in setup
@@ -49,10 +50,19 @@ def test_sources():
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
     assert "opcode = 146" in focus
     assert "opcode = 282" in focus
+    assert "opcode = 321" in focus
     assert "opcode = 326" in focus
+    assert "timing = 9 parameter1 = ci_unit parameter2 = 9" in focus
     assert "ci_unit = 33; ci_unit >= 0; --ci_unit" in focus
+    assert "ci_location = 1" in focus
     assert "ci_attack_type = 1" in focus
     assert "ci_attack_type = 2" in focus
+    assert "ci_attack_type = 3" in focus
+    assert "ci_equipping_index" in focus
+
+    focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
+    assert "CIFS4" in focus_core
+    assert "WRITE_SHORT ci_core_effect 146" in focus_core
 
     powers = (CIPHER / "lib" / "powers.tpa").read_text(encoding="utf-8")
     for resref in read_2da(CIPHER / "tables" / "cipherpowers.2da")[1]:
@@ -64,6 +74,7 @@ def test_sources():
 
 def load_runtime():
     state = {34: 10, 165: 4}
+    applied = []
 
     class Table:
         def GetValue(self, row, column):
@@ -71,9 +82,14 @@ def load_runtime():
             index = {"TIER": 0, "UNLOCK": 1, "COST": 2}[column]
             return powers[row][index]
 
+    def apply_spell(actor, resref, caster=None):
+        applied.append((actor, resref, caster))
+        if resref.startswith("CIFS"):
+            state[165] = int(resref[4:])
+
     gemrb = types.ModuleType("GemRB")
     gemrb.GetPlayerStat = lambda actor, stat: state.get(stat, 0)
-    gemrb.SetPlayerStat = lambda actor, stat, value: state.__setitem__(stat, value)
+    gemrb.ApplySpell = apply_spell
     gemrb.LoadTable = lambda name, *args: Table()
     gemrb.DisplayString = lambda *args: None
     gemrb.Log = lambda *args: None
@@ -88,24 +104,28 @@ def load_runtime():
     spec = importlib.util.spec_from_file_location("cipher_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module, state
+    return module, state, applied
 
 
 def test_runtime():
-    runtime, state = load_runtime()
+    runtime, state, applied = load_runtime()
     assert runtime.maximum_focus(1) == 70
     assert runtime.current_focus(1) == 20
     runtime.set_focus(1, 200)
     assert runtime.current_focus(1) == 70
+    assert applied[-1] == (1, "CIFS14", 1)
     runtime.set_focus(1, 25)
+    assert applied[-1] == (1, "CIFS5", 1)
     assert runtime.can_manifest(1, "CI2MBND")
     assert runtime.begin_manifest(1, "CI2MBND")
     assert runtime.current_focus(1) == 25
     assert runtime.begin_manifest(1, "CI2MBND")
     assert runtime.current_focus(1) == 10
+    assert applied[-1] == (1, "CIFS2", 1)
     assert not runtime.can_manifest(1, "CI2MBND")
     runtime.restore_party()
     assert state[165] == 4
+    assert applied[-1] == (1, "CIFS4", 1)
     assert runtime.current_focus(1) == 20
 
 
