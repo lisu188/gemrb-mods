@@ -1,0 +1,22 @@
+COPY_EXISTING ~effects.ids~ ~override~
+  REPLACE_TEXTUALLY ~0x155 ChangeCritical~ ~0x155 CastSpellOnCriticalHit~
+BUT_ONLY
+
+APPEND ~effects.ids~ ~0x155 CastSpellOnCriticalHit~ UNLESS ~CastSpellOnCriticalHit~
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFCRIT~ END
+COPY_EXISTING ~CIFCRIT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 2 timing = 1 parameter2 = ci_hostile_splprot
+    STR_VAR resource = ~CIFGAIN~
+  END
+BUT_ONLY
+
+PATCH_FOR_EACH ci_whip_resref IN ~CIFCORE~ ~CIFSW15~ ~CIFSW20~ BEGIN
+  COPY_EXISTING ~%ci_whip_resref%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 341 target = 1 timing = 9
+      STR_VAR resource = ~CIFCRIT~
+    END
+  BUT_ONLY
+END
