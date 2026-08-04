@@ -1,39 +1,108 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Runtime support for the GemRB Psion mod.
 
-Power-point state is persisted in a private, non-dispellable actor effect that
-GemRB serializes with normal CRE effect blocks. GemRB user stat 239 is only a
-fast runtime cache: its high word carries a Psion signature and its low word the
-current PP value. This avoids depending on arbitrary user-stat serialization
-across save/load while still keeping PP reads cheap during selector filtering.
+Power points, psionic focus, feats, class bonus-feat credits, and Psion skill
+state use private non-dispellable actor effects that GemRB serializes with CRE
+save data. GemRB user stat 239 remains only a fast PP cache.
 
-Manifestation uses a two-phase transaction: the first SpellPressed callback
-reserves a power, while the second callback commits its cost. Selector resources
-are free; their chosen child resources carry the authoritative augmented PP cost.
-
-Opcode 214 places selector children in GemRB's temporary spellinfo list. The
-``filter_spellinfo`` hook removes Psion variants that the selected actor cannot
-currently afford or legally augment to, while leaving unrelated temporary
-spell selectors untouched. Cast-time type-255 resolution uses the raw GemRB
-spellinfo array, so confirmation can still identify and reject a child even if
-its affordability changed after the selector UI was built.
+Manifestation uses a two-phase SpellPressed transaction: the first callback
+reserves an action while target/selector UI is active and the matching callback
+performs irreversible PP, feat, or skill changes. Center Mind is special:
+confirmation performs the Concentration check, while its SPL writes focus only
+when the action resolves, so interruption cannot grant focus.
 """
 import GemRB
+from ie_spells import LS_MEMO
 
 CURRENT_POOL_STAT = 239
-POOL_STATE_SIGNATURE = 0x50530000  # ASCII-ish "PS" in the high word.
+POOL_STATE_SIGNATURE = 0x50530000
 POOL_STATE_SIGNATURE_MASK = 0xFFFF0000
 POOL_VALUE_MASK = 0x0000FFFF
 
-# Save-safe PP storage. Protection:Spell ignores Param1/Param2; a private,
-# nonexistent resource therefore acts only as an inert serialized state carrier.
-# GemRB.ApplyEffect defaults to resistance 0 (not resistible and not dispellable).
-POOL_EFFECT_OPCODE = "Protection:Spell"
-POOL_EFFECT_MARKER = 0x50535050  # ASCII-ish "PSPP", positive signed 32-bit.
+STATE_EFFECT_OPCODE = "Protection:Spell"
+POOL_EFFECT_MARKER = 0x50535050
 POOL_EFFECT_RESOURCE = "PSPPSTAT"
 POOL_EFFECT_SOURCE = "PSPPMOD"
 
+FOCUS_EFFECT_MARKER = 0x50534643
+FOCUS_EFFECT_RESOURCE = "PSFOCUS"
+FOCUS_EFFECT_SOURCE = "PSFMOD"
+CENTER_RESOURCE = "PXCNTR"
+MEDITATION_CENTER_RESOURCE = "PXCMEDI"
+CENTER_RESOURCES = (CENTER_RESOURCE, MEDITATION_CENTER_RESOURCE)
+FEAT_SELECTOR_RESOURCE = "PXFSEL"
+SKILL_SELECTOR_RESOURCE = "PXSKILL"
+SPEED_ON_RESOURCE = "PXFSPED"
+SPEED_OFF_RESOURCE = "PXFSPOF"
+SPEED_BLOCK_MARKER = 0x50534642
+SPEED_BLOCK_SOURCE = "PSFMOD"
+
+BONUS_FEAT_SPENT_MARKER = 0x50534653
+BONUS_FEAT_SPENT_RESOURCE = "PSFSPENT"
+BONUS_FEAT_SPENT_SOURCE = "PSFMOD"
+FEAT_EFFECT_SOURCE = "PSFEAT"
+FEAT_MARKERS = {
+    "PXFTALT": 0x50534601,
+    "PXFBODY": 0x50534602,
+    "PXFSPD": 0x50534603,
+    "PXFMEDI": 0x50534604,
+}
+FEAT_STATE_RESOURCES = {
+    "PXFTALT": "PXTALST",
+    "PXFBODY": "PXBODST",
+    "PXFSPD": "PXSPDST",
+    "PXFMEDI": "PXMEDST",
+}
+PSIONIC_TALENT = "PXFTALT"
+PSIONIC_BODY = "PXFBODY"
+SPEED_OF_THOUGHT = "PXFSPD"
+PSIONIC_MEDITATION = "PXFMEDI"
+BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)
+
+SKILL_POINTS_MARKER = 0x50535350
+SKILL_POINTS_RESOURCE = "PSSKPTS"
+SKILL_LEVEL_MARKER = 0x5053534C
+SKILL_LEVEL_RESOURCE = "PSSKLVL"
+SKILL_EFFECT_SOURCE = "PSSKIL"
+SKILL_MARKERS = {
+    "CONCENTRATION": 0x50535301,
+    "PSICRAFT": 0x50535302,
+    "SELF_DISCIPLINE": 0x50535303,
+    "PSIONIC_KNOWLEDGE": 0x50535304,
+    "DEVICE_LORE": 0x50535305,
+    "AWARENESS": 0x50535306,
+    "ECTOPLASMIC_CRAFT": 0x50535307,
+    "ENERGY_LORE": 0x50535308,
+    "HEAL": 0x50535309,
+    "SPATIAL_NAVIGATION": 0x5053530A,
+    "INFLUENCE": 0x5053530B,
+}
+SKILL_STATE_RESOURCES = {
+    "CONCENTRATION": "PSCNCST",
+    "PSICRAFT": "PSPSIST",
+    "SELF_DISCIPLINE": "PSSLFST",
+    "PSIONIC_KNOWLEDGE": "PSKNWST",
+    "DEVICE_LORE": "PSDVCST",
+    "AWARENESS": "PSAWRST",
+    "ECTOPLASMIC_CRAFT": "PSECTST",
+    "ENERGY_LORE": "PSENRST",
+    "HEAL": "PSHEAST",
+    "SPATIAL_NAVIGATION": "PSSPTST",
+    "INFLUENCE": "PSINFST",
+}
+CONCENTRATION_SKILL = "CONCENTRATION"
+SKILL_ABILITY_STATS = {
+    "STR": 36,
+    "INT": 38,
+    "WIS": 39,
+    "DEX": 40,
+    "CON": 41,
+    "CHA": 42,
+}
+
 INT_STAT = 38
+WIS_STAT = 39
+CON_STAT = 41
 LEVEL_STAT = 34
 INNATE_TYPE = 2
 INNATE_LEVEL = 0
@@ -73,8 +142,394 @@ def manifester_level(actor):
     return max(1, min(20, GemRB.GetPlayerStat(actor, LEVEL_STAT)))
 
 
+def _feat_table():
+    try:
+        return GemRB.LoadTable("psionfeatpick", False, True)
+    except Exception:
+        return None
+
+
+def _skill_table():
+    try:
+        return GemRB.LoadTable("psionskills", False, True)
+    except Exception:
+        return None
+
+
+def _skill_pick_table():
+    try:
+        return GemRB.LoadTable("psskill", False, True)
+    except Exception:
+        return None
+
+
+def feat_choice_info(resref):
+    key = (resref or "").upper()
+    if key not in FEAT_MARKERS:
+        return None
+    table = _feat_table()
+    if not table:
+        return None
+    try:
+        skill = str(table.GetValue(key, "SKILL")).upper()
+        if skill == "****":
+            skill = ""
+        return {
+            "kind": "feat_choice",
+            "resref": key,
+            "parent": key,
+            "feat": str(table.GetValue(key, "FEAT")).upper(),
+            "min_level": int(table.GetValue(key, "MIN_LEVEL")),
+            "wis": int(table.GetValue(key, "WIS")),
+            "repeatable": bool(int(table.GetValue(key, "REPEATABLE"))),
+            "skill": skill,
+            "rank": int(table.GetValue(key, "RANK")),
+        }
+    except Exception:
+        return None
+
+
+def skill_rule_info(skill):
+    key = (skill or "").upper()
+    if key not in SKILL_MARKERS:
+        return None
+    table = _skill_table()
+    if not table:
+        return None
+    try:
+        return {
+            "skill": key,
+            "ability": str(table.GetValue(key, "ABILITY")).upper(),
+            "access": str(table.GetValue(key, "ACCESS")).upper(),
+            "cost": int(table.GetValue(key, "COST")),
+            "break1": int(table.GetValue(key, "BREAK1")),
+            "break2": int(table.GetValue(key, "BREAK2")),
+            "break3": int(table.GetValue(key, "BREAK3")),
+        }
+    except Exception:
+        return None
+
+
+def skill_choice_info(resref):
+    key = (resref or "").upper()
+    table = _skill_pick_table()
+    if not table:
+        return None
+    try:
+        for index in range(table.GetRowCount()):
+            skill = str(table.GetRowName(index)).upper()
+            if str(table.GetValue(skill, "ResRef")).upper() != key:
+                continue
+            info = skill_rule_info(skill)
+            if not info:
+                return None
+            info.update({
+                "kind": "skill_choice",
+                "resref": key,
+                "parent": key,
+            })
+            return info
+    except Exception:
+        return None
+    return None
+
+
+def feat_rank(actor, resref):
+    key = (resref or "").upper()
+    marker = FEAT_MARKERS.get(key)
+    state_resource = FEAT_STATE_RESOURCES.get(key)
+    if marker is None or state_resource is None:
+        return 0
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != marker:
+                continue
+            if str(effect.get("Resource1", "")).upper() != state_resource.upper():
+                continue
+            return max(0, int(effect.get("Param1", 0)))
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "feat state read failed: %s" % error)
+    return 0
+
+
+def _write_feat_rank(actor, resref, rank):
+    key = resref.upper()
+    marker = FEAT_MARKERS[key]
+    state_resource = FEAT_STATE_RESOURCES[key]
+    rank = max(0, int(rank))
+    GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, marker)
+    if rank:
+        GemRB.ApplyEffect(
+            actor, STATE_EFFECT_OPCODE, rank, marker, state_resource,
+            "", "", FEAT_EFFECT_SOURCE,
+        )
+    return rank
+
+
+def _read_private_value(actor, marker, resource):
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != marker:
+                continue
+            if str(effect.get("Resource1", "")).upper() != resource.upper():
+                continue
+            return True, max(0, int(effect.get("Param1", 0)))
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "private state read failed: %s" % error)
+    return False, 0
+
+
+def _write_private_value(actor, marker, resource, value, source=SKILL_EFFECT_SOURCE):
+    value = max(0, int(value))
+    GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, marker)
+    GemRB.ApplyEffect(
+        actor, STATE_EFFECT_OPCODE, value, marker, resource,
+        "", "", source,
+    )
+    return value
+
+
+def skill_rank(actor, skill):
+    key = (skill or "").upper()
+    marker = SKILL_MARKERS.get(key)
+    resource = SKILL_STATE_RESOURCES.get(key)
+    if marker is None or resource is None:
+        return 0
+    found, rank = _read_private_value(actor, marker, resource)
+    return rank if found else 0
+
+
+def _write_skill_rank(actor, skill, rank):
+    key = skill.upper()
+    return _write_private_value(
+        actor, SKILL_MARKERS[key], SKILL_STATE_RESOURCES[key], rank,
+    )
+
+
+def _ability_modifier(actor, ability):
+    stat = SKILL_ABILITY_STATS.get((ability or "").upper())
+    if stat is None:
+        return 0
+    return (int(GemRB.GetPlayerStat(actor, stat)) - 10) // 2
+
+
+def _base_ability_modifier(actor, ability):
+    stat = SKILL_ABILITY_STATS.get((ability or "").upper())
+    if stat is None:
+        return 0
+    return (int(GemRB.GetPlayerStat(actor, stat, 1)) - 10) // 2
+
+
+def skill_rank_cap(actor):
+    return manifester_level(actor) + 3 if is_psion(actor) else 0
+
+
+def _skill_points_per_level(actor):
+    return max(1, 2 + _base_ability_modifier(actor, "INT"))
+
+
+def _spent_skill_points(actor):
+    total = 0
+    for skill in SKILL_MARKERS:
+        info = skill_rule_info(skill)
+        if info:
+            total += skill_rank(actor, skill) * max(1, info["cost"])
+    return total
+
+
+def sync_skill_points(actor):
+    """Initialize/mature the persistent Psion skill-point ledger.
+
+    Progression uses base Intelligence, so temporary buffs/debuffs cannot
+    permanently alter newly credited levels. A migrated character with no
+    ledger receives the normal level-1 x4 allotment plus one ordinary allotment
+    for every existing later Psion level, minus any already serialized ranks.
+    Once a level is accounted, later base-Intelligence changes affect only new
+    levels and never rewrite already credited levels.
+    """
+    if not is_psion(actor):
+        return 0
+    level = manifester_level(actor)
+    per_level = _skill_points_per_level(actor)
+    have_level, accounted = _read_private_value(
+        actor, SKILL_LEVEL_MARKER, SKILL_LEVEL_RESOURCE,
+    )
+    have_points, points = _read_private_value(
+        actor, SKILL_POINTS_MARKER, SKILL_POINTS_RESOURCE,
+    )
+
+    if not have_level:
+        if not have_points:
+            earned = per_level * (level + 3)
+            points = max(0, earned - _spent_skill_points(actor))
+        _write_private_value(
+            actor, SKILL_LEVEL_MARKER, SKILL_LEVEL_RESOURCE, level,
+        )
+        _write_private_value(
+            actor, SKILL_POINTS_MARKER, SKILL_POINTS_RESOURCE, points,
+        )
+        return points
+
+    if not have_points:
+        earned = per_level * (max(1, accounted) + 3)
+        points = max(0, earned - _spent_skill_points(actor))
+
+    if level > accounted:
+        points += per_level * (level - accounted)
+        accounted = level
+        _write_private_value(
+            actor, SKILL_LEVEL_MARKER, SKILL_LEVEL_RESOURCE, accounted,
+        )
+
+    _write_private_value(
+        actor, SKILL_POINTS_MARKER, SKILL_POINTS_RESOURCE, points,
+    )
+    return points
+
+
+def skill_points_remaining(actor):
+    return sync_skill_points(actor)
+
+
+def _skill_access_allowed(actor, info):
+    if not info or not is_psion(actor):
+        return False
+    return info["access"] in ("CORE", discipline(actor))
+
+
+def can_train_skill(actor, resref):
+    info = skill_choice_info(resref)
+    if not _skill_access_allowed(actor, info):
+        return False
+    if skill_rank(actor, info["skill"]) >= skill_rank_cap(actor):
+        return False
+    return skill_points_remaining(actor) >= max(1, info["cost"])
+
+
+def available_skill_choices(actor):
+    table = _skill_pick_table()
+    if not table or skill_points_remaining(actor) <= 0:
+        return []
+    available = []
+    try:
+        for index in range(table.GetRowCount()):
+            skill = table.GetRowName(index)
+            resref = str(table.GetValue(skill, "ResRef")).upper()
+            if can_train_skill(actor, resref):
+                available.append(resref)
+    except Exception:
+        return []
+    return available
+
+
+def _ensure_skill_selector_known(actor):
+    """Grant PXSKILL to pre-v1.2 Psions once legal training exists."""
+    if not is_psion(actor) or not available_skill_choices(actor):
+        return False
+    try:
+        known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(known_count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            if str(spell.get("SpellResRef", "")).upper() == SKILL_SELECTOR_RESOURCE:
+                return True
+        result = GemRB.LearnSpell(actor, SKILL_SELECTOR_RESOURCE, LS_MEMO)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "skill selector migration failed: %s" % error)
+        return False
+
+
+def _train_skill(actor, resref):
+    info = skill_choice_info(resref)
+    if not info or not can_train_skill(actor, resref):
+        return False
+    points = skill_points_remaining(actor)
+    cost = max(1, info["cost"])
+    _write_skill_rank(actor, info["skill"], skill_rank(actor, info["skill"]) + 1)
+    _write_private_value(
+        actor, SKILL_POINTS_MARKER, SKILL_POINTS_RESOURCE, points - cost,
+    )
+    return True
+
+
+def skill_check_total(actor, skill, roll=None):
+    info = skill_rule_info(skill)
+    if not info or not _skill_access_allowed(actor, info):
+        return None
+    if roll is None:
+        roll = int(GemRB.Roll(1, 20, 0))
+    return int(roll) + skill_rank(actor, info["skill"]) + _ability_modifier(actor, info["ability"])
+
+
+def concentration_check(actor, dc=20, roll=None):
+    total = skill_check_total(actor, CONCENTRATION_SKILL, roll)
+    return total is not None and total >= int(dc)
+
+
+def psionic_feat_count(actor):
+    return sum(feat_rank(actor, resref) for resref in FEAT_MARKERS)
+
+
+def bonus_feat_spent(actor):
+    found, spent = _read_private_value(
+        actor, BONUS_FEAT_SPENT_MARKER, BONUS_FEAT_SPENT_RESOURCE,
+    )
+    return spent if found else 0
+
+
+def _write_bonus_feat_spent(actor, spent):
+    return _write_private_value(
+        actor, BONUS_FEAT_SPENT_MARKER, BONUS_FEAT_SPENT_RESOURCE,
+        spent, BONUS_FEAT_SPENT_SOURCE,
+    )
+
+
+def bonus_feat_slots(actor):
+    level = manifester_level(actor)
+    return sum(1 for threshold in BONUS_FEAT_LEVELS if level >= threshold)
+
+
+def bonus_feats_remaining(actor):
+    return max(0, bonus_feat_slots(actor) - bonus_feat_spent(actor))
+
+
+def psionic_talent_bonus(actor):
+    rank = feat_rank(actor, PSIONIC_TALENT)
+    return rank * (rank + 3) // 2
+
+
+def can_select_feat(actor, resref):
+    info = feat_choice_info(resref)
+    if not info or not is_psion(actor) or bonus_feats_remaining(actor) <= 0:
+        return False
+    if manifester_level(actor) < info["min_level"]:
+        return False
+    if GemRB.GetPlayerStat(actor, WIS_STAT) < info["wis"]:
+        return False
+    if info["skill"] and skill_rank(actor, info["skill"]) < info["rank"]:
+        return False
+    if not info["repeatable"] and feat_rank(actor, info["resref"]):
+        return False
+    return True
+
+
+def available_feat_choices(actor):
+    table = _feat_table()
+    if not table or bonus_feats_remaining(actor) <= 0:
+        return []
+    available = []
+    try:
+        for index in range(table.GetRowCount()):
+            resref = table.GetRowName(index)
+            if can_select_feat(actor, resref):
+                available.append(resref.upper())
+    except Exception:
+        return []
+    return available
+
+
 def maximum_pool(actor):
-    """Return D&D 3.5e base PP plus the Intelligence bonus PP."""
+    """Return D&D 3.5e base PP, Intelligence bonus PP, and Psionic Talent."""
     level = manifester_level(actor)
     if not level:
         return 0
@@ -82,91 +537,205 @@ def maximum_pool(actor):
     modifier = max(0, (intelligence - 10) // 2)
     table = GemRB.LoadTable("psionpool", False, True)
     base = int(table.GetValue(str(level), "BASE_POOL"))
-    return max(0, base + (modifier * level) // 2)
+    return max(0, base + (modifier * level) // 2 + psionic_talent_bonus(actor))
 
 
 def _decode_pool_state(actor):
-    """Decode the fast stat-239 cache; it is not the save authority."""
     raw = int(GemRB.GetPlayerStat(actor, CURRENT_POOL_STAT))
-    initialized = (
-        raw & POOL_STATE_SIGNATURE_MASK
-    ) == POOL_STATE_SIGNATURE
+    initialized = (raw & POOL_STATE_SIGNATURE_MASK) == POOL_STATE_SIGNATURE
     return initialized, raw & POOL_VALUE_MASK
 
 
 def _write_pool_cache(actor, current):
     current = max(0, min(int(current), POOL_VALUE_MASK))
-    GemRB.SetPlayerStat(
-        actor,
-        CURRENT_POOL_STAT,
-        POOL_STATE_SIGNATURE | current,
-    )
+    GemRB.SetPlayerStat(actor, CURRENT_POOL_STAT, POOL_STATE_SIGNATURE | current)
     return current
 
 
 def _read_persistent_pool_state(actor):
-    """Read PP from the private serialized actor effect after save/load."""
-    try:
-        for effect in GemRB.GetEffects(actor, POOL_EFFECT_OPCODE):
-            if int(effect.get("Param2", -1)) != POOL_EFFECT_MARKER:
-                continue
-            if str(effect.get("Resource1", "")).upper() != POOL_EFFECT_RESOURCE:
-                continue
-            current = max(0, min(int(effect.get("Param1", 0)), POOL_VALUE_MASK))
-            return True, current
-    except Exception as error:
-        GemRB.Log(2, "Psionics", "persistent PP read failed: %s" % error)
-    return False, 0
+    found, current = _read_private_value(
+        actor, POOL_EFFECT_MARKER, POOL_EFFECT_RESOURCE,
+    )
+    return found, min(current, POOL_VALUE_MASK)
 
 
 def _write_pool_state(actor, current):
-    """Persist PP in the actor effect queue and mirror it into stat 239."""
     current = max(0, min(int(current), POOL_VALUE_MASK))
-    # Remove only our marker. The deliberately large Param2 value makes a
-    # collision with an unrelated Protection:Spell effect extremely unlikely.
-    GemRB.DispelEffect(actor, POOL_EFFECT_OPCODE, POOL_EFFECT_MARKER)
-    GemRB.ApplyEffect(
-        actor,
-        POOL_EFFECT_OPCODE,
-        current,
-        POOL_EFFECT_MARKER,
-        POOL_EFFECT_RESOURCE,
-        "",
-        "",
-        POOL_EFFECT_SOURCE,
+    _write_private_value(
+        actor, POOL_EFFECT_MARKER, POOL_EFFECT_RESOURCE,
+        current, POOL_EFFECT_SOURCE,
     )
-    return _write_pool_cache(actor, current)
+    cached = _write_pool_cache(actor, current)
+    # SRD focus requires a nonempty PP reserve. Spending the last point therefore
+    # clears focus immediately; raising the reserve later does not auto-refocus.
+    if current == 0 and is_psion(actor):
+        _write_focus_state(actor, False)
+    return cached
 
 
 def ensure_pool(actor, refill=False):
     if not is_psion(actor):
         return 0
     cap = min(maximum_pool(actor), POOL_VALUE_MASK)
-
-    # Normal runtime path: stat 239 is a cheap cache, avoiding effect scans for
-    # every affordability check in a large augmentation selector.
     initialized, current = _decode_pool_state(actor)
     if initialized and not refill:
         clamped = max(0, min(current, cap))
         if clamped != current:
             return _write_pool_state(actor, clamped)
         return clamped
-
     if refill:
         return _write_pool_state(actor, cap)
-
-    # A cache miss is the expected post-load path on BG-family CRE formats.
-    # Recover the authoritative serialized effect and rebuild the fast cache.
     persisted, current = _read_persistent_pool_state(actor)
     if persisted:
         clamped = max(0, min(current, cap))
         if clamped != current:
             return _write_pool_state(actor, clamped)
         return _write_pool_cache(actor, clamped)
-
-    # First use on a Psion: initialize a full pool and immediately create the
-    # save-safe effect, including for a genuine zero-cap edge case.
     return _write_pool_state(actor, cap)
+
+
+def _read_focus_state(actor):
+    found = False
+    focused = False
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != FOCUS_EFFECT_MARKER:
+                continue
+            if str(effect.get("Resource1", "")).upper() != FOCUS_EFFECT_RESOURCE:
+                continue
+            found = True
+            focused = focused or bool(int(effect.get("Param1", 0)))
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "focus state read failed: %s" % error)
+    return found, focused
+
+
+def _sync_speed_gate(actor, owns_speed=None):
+    if not is_psion(actor):
+        return
+    if owns_speed is None:
+        owns_speed = feat_rank(actor, SPEED_OF_THOUGHT) > 0
+    try:
+        GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, SPEED_BLOCK_MARKER)
+        if not owns_speed:
+            GemRB.ApplyEffect(
+                actor, STATE_EFFECT_OPCODE, 0, SPEED_BLOCK_MARKER,
+                SPEED_ON_RESOURCE, "", "", SPEED_BLOCK_SOURCE,
+            )
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "speed helper gate sync failed: %s" % error)
+
+
+def _sync_focus_passives(actor, focused=None):
+    if not is_psion(actor):
+        return
+    if focused is None:
+        persisted, focused = _read_focus_state(actor)
+        if not persisted:
+            focused = True
+    owns_speed = feat_rank(actor, SPEED_OF_THOUGHT) > 0
+    _sync_speed_gate(actor, owns_speed)
+    try:
+        if owns_speed and focused:
+            GemRB.ApplySpell(actor, SPEED_ON_RESOURCE)
+        else:
+            GemRB.ApplySpell(actor, SPEED_OFF_RESOURCE)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "focus passive sync failed: %s" % error)
+
+
+def _write_focus_state(actor, focused):
+    focused = bool(focused)
+    GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, FOCUS_EFFECT_MARKER)
+    GemRB.ApplyEffect(
+        actor, STATE_EFFECT_OPCODE, 1 if focused else 0, FOCUS_EFFECT_MARKER,
+        FOCUS_EFFECT_RESOURCE, "", "", FOCUS_EFFECT_SOURCE,
+    )
+    _sync_focus_passives(actor, focused)
+    return focused
+
+
+def ensure_focus(actor, refill=False):
+    if not is_psion(actor):
+        return False
+    if ensure_pool(actor) <= 0:
+        persisted, focused = _read_focus_state(actor)
+        if not persisted or focused:
+            return _write_focus_state(actor, False)
+        return False
+    if refill:
+        return _write_focus_state(actor, True)
+    persisted, focused = _read_focus_state(actor)
+    if persisted:
+        return focused
+    return _write_focus_state(actor, True)
+
+
+def is_focused(actor):
+    return ensure_focus(actor)
+
+
+def expend_focus(actor):
+    if not is_psion(actor):
+        return False
+    _write_focus_state(actor, False)
+    return True
+
+
+def _center_resource_for_actor(actor):
+    if feat_rank(actor, PSIONIC_MEDITATION):
+        return MEDITATION_CENTER_RESOURCE
+    return CENTER_RESOURCE
+
+
+def _sync_center_action(actor):
+    """Replace ordinary Center Mind with the Meditation version when owned."""
+    if not is_psion(actor):
+        return False
+    wanted = _center_resource_for_actor(actor)
+    unwanted = (
+        CENTER_RESOURCE if wanted == MEDITATION_CENTER_RESOURCE
+        else MEDITATION_CENTER_RESOURCE
+    )
+    try:
+        GemRB.RemoveSpell(actor, unwanted)
+        result = GemRB.LearnSpell(actor, wanted, LS_MEMO)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "Center Mind spellbook sync failed: %s" % error)
+        return False
+
+
+def _apply_body_hp(actor, amount):
+    amount = max(0, int(amount))
+    if not amount:
+        return
+    GemRB.ApplyEffect(actor, "MaximumHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
+    GemRB.ApplyEffect(actor, "CurrentHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
+
+
+def _grant_feat(actor, resref):
+    info = feat_choice_info(resref)
+    if not info or not can_select_feat(actor, resref):
+        return False
+    current_pp = ensure_pool(actor)
+    old_cap = maximum_pool(actor)
+    had_body = feat_rank(actor, PSIONIC_BODY) > 0
+    old_rank = feat_rank(actor, info["resref"])
+    spent = bonus_feat_spent(actor)
+    _write_feat_rank(actor, info["resref"], old_rank + 1)
+    _write_bonus_feat_spent(actor, spent + 1)
+    new_cap = maximum_pool(actor)
+    if new_cap > old_cap:
+        _write_pool_state(actor, min(new_cap, current_pp + (new_cap - old_cap)))
+    if info["resref"] == PSIONIC_BODY:
+        _apply_body_hp(actor, 2 * psionic_feat_count(actor))
+    elif had_body:
+        _apply_body_hp(actor, 2)
+    if info["resref"] == PSIONIC_MEDITATION:
+        _sync_center_action(actor)
+    _sync_focus_passives(actor)
+    return True
 
 
 def restore_party():
@@ -174,6 +743,10 @@ def restore_party():
     for actor in range(1, 7):
         try:
             ensure_pool(actor, True)
+            ensure_focus(actor, True)
+            sync_skill_points(actor)
+            _ensure_skill_selector_known(actor)
+            _sync_center_action(actor)
         except Exception:
             pass
 
@@ -182,6 +755,7 @@ def _base_power_info(key):
     table = GemRB.LoadTable("psionpowers", False, True)
     try:
         return {
+            "kind": "power",
             "resref": key,
             "parent": key,
             "level": int(table.GetValue(key, "LEVEL")),
@@ -202,7 +776,6 @@ def _augment_table():
 
 
 def augment_info(resref):
-    """Return child-resource augmentation metadata, if present."""
     key = (resref or "").upper()
     table = _augment_table()
     if not table:
@@ -235,11 +808,9 @@ def _has_variants(parent):
 
 
 def power_info(resref):
-    """Load base or augmented power metadata from the authoritative 2DAs."""
     key = (resref or "").upper()
     if not key.startswith("PS"):
         return None
-
     augmented = augment_info(key)
     if augmented:
         base = _base_power_info(augmented["parent"])
@@ -249,30 +820,35 @@ def power_info(resref):
         base["selector"] = False
         base["variant"] = True
         return base
-
     base = _base_power_info(key)
     if not base:
         return None
     if _has_variants(key):
-        # The parent only opens an opcode-214 choice list. Spending happens on
-        # the selected child resource, never on the selector itself.
         base["selector"] = True
         base["cost"] = 0
     return base
 
 
-def resolve_power_entry(spellbook, actor, raw_spell):
-    """Resolve a GemRB spell token to a registered Psion resource.
+def action_info(resref):
+    key = (resref or "").upper()
+    if key in CENTER_RESOURCES:
+        return {"kind": "center", "resref": key, "parent": key, "cost": 0, "selector": False}
+    if key == FEAT_SELECTOR_RESOURCE:
+        return {"kind": "feat_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
+    if key == SKILL_SELECTOR_RESOURCE:
+        return {"kind": "skill_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
+    feat = feat_choice_info(key)
+    if feat:
+        return feat
+    skill = skill_choice_info(key)
+    if skill:
+        return skill
+    return power_info(key)
 
-    Opcode-214 selector children use GemRB's synthetic spellinfo type 255. Their
-    small list indices overlap ordinary spellbook indices, so type 255 is
-    resolved directly against GemRB's raw spellinfo array. This deliberately
-    bypasses the affordability-filtered UI list: confirmation must still find a
-    selected child so ``begin_manifest`` can reject it if PP changed meanwhile.
-    """
+
+def resolve_power_entry(spellbook, actor, raw_spell):
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
-
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
         try:
             spell_resrefs = GemRB.GetSpelldata(actor)
@@ -281,10 +857,9 @@ def resolve_power_entry(spellbook, actor, raw_spell):
             resref = spell_resrefs[spell_index]
         except Exception:
             return None
-        if power_info(resref):
+        if action_info(resref):
             return {"SpellIndex": raw_spell, "SpellResRef": resref}
         return None
-
     book_types = [i for i in range(16) if encoded_type & (1 << i)]
     if not book_types:
         book_types = range(16)
@@ -293,13 +868,12 @@ def resolve_power_entry(spellbook, actor, raw_spell):
             if candidate.get("SpellIndex", -1) % 1000 != spell_index:
                 continue
             resref = candidate.get("SpellResRef", "")
-            if power_info(resref):
+            if action_info(resref):
                 return candidate
     return None
 
 
 def _meets_base_requirements(actor, info):
-    """Check restrictions shared by a selector and all of its child variants."""
     actor_discipline = discipline(actor)
     if not info or not actor_discipline:
         return False
@@ -309,34 +883,25 @@ def _meets_base_requirements(actor, info):
 
 
 def _variant_is_affordable(actor, info):
-    """Check the D&D 3.5e spending cap and the actor's current PP reserve."""
-    return (
-        info["cost"] <= manifester_level(actor)
-        and ensure_pool(actor) >= info["cost"]
-    )
+    return info["cost"] <= manifester_level(actor) and ensure_pool(actor) >= info["cost"]
 
 
 def can_manifest(actor, resref):
-    """Check class, discipline, ability score, level and pool requirements."""
     info = power_info(resref)
     if not _meets_base_requirements(actor, info):
         return False
     if info["selector"]:
-        # A selector is useful only when at least one child can actually be
-        # manifested. This prevents an empty choice list at zero PP.
         return bool(available_variants(actor, info["resref"], check_parent=False))
     return _variant_is_affordable(actor, info)
 
 
 def available_variants(actor, parent, check_parent=True):
-    """Return legal child resrefs for the selected actor, preserving 2DA order."""
     parent_info = power_info(parent)
     table = _augment_table()
     if not table or not _meets_base_requirements(actor, parent_info):
         return []
     if check_parent and not parent_info.get("selector", False):
         return []
-
     available = []
     try:
         for index in range(table.GetRowCount()):
@@ -352,14 +917,18 @@ def available_variants(actor, parent, check_parent=True):
 
 
 def filter_spellinfo(actor, resrefs):
-    """Filter temporary opcode-214 choices without affecting other mods.
-
-    Non-Psion resources and ordinary Psion powers are returned unchanged. Only
-    entries registered as children in PSIONAUGMENT.2DA are subject to the
-    current PP, manifester-level, discipline and Intelligence checks.
-    """
     filtered = []
     for resref in resrefs:
+        feat = feat_choice_info(resref)
+        if feat:
+            if can_select_feat(actor, resref):
+                filtered.append(resref)
+            continue
+        skill = skill_choice_info(resref)
+        if skill:
+            if can_train_skill(actor, resref):
+                filtered.append(resref)
+            continue
         info = power_info(resref)
         if not info or not info.get("variant", False):
             filtered.append(resref)
@@ -368,31 +937,37 @@ def filter_spellinfo(actor, resrefs):
     return filtered
 
 
-def refresh_innate_charges(actor):
-    """Replace depleted Psion innate entries with one usable copy.
+def _is_reusable_innate(actor, resref):
+    key = (resref or "").upper()
+    if power_info(key):
+        return True
+    if key in CENTER_RESOURCES:
+        return key == _center_resource_for_actor(actor)
+    if key == FEAT_SELECTOR_RESOURCE:
+        return bonus_feats_remaining(actor) > 0
+    if key == SKILL_SELECTOR_RESOURCE:
+        return bool(available_skill_choices(actor))
+    return False
 
-    CLAB ``GA_`` grants create ordinary one-charge innate entries. Psion powers
-    are limited by PP instead, so the next time the innate bar opens we remove
-    depleted Psion entries and memorize their known spell again. Other innate
-    abilities are never touched, and an already usable duplicate is preserved.
-    """
+
+def refresh_innate_charges(actor):
     if not is_psion(actor):
         return 0
-
+    _sync_focus_passives(actor)
+    sync_skill_points(actor)
+    _ensure_skill_selector_known(actor)
+    _sync_center_action(actor)
     try:
         known = {}
         known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
         for index in range(known_count):
             spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
             resref = str(spell.get("SpellResRef", "")).upper()
-            if power_info(resref):
+            if _is_reusable_innate(actor, resref):
                 known[resref] = index
-
         charged = set()
         depleted = []
-        memorized_count = GemRB.GetMemorizedSpellsCount(
-            actor, INNATE_TYPE, INNATE_LEVEL, False
-        )
+        memorized_count = GemRB.GetMemorizedSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL, False)
         for index in range(memorized_count):
             spell = GemRB.GetMemorizedSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
             resref = str(spell.get("SpellResRef", "")).upper()
@@ -402,18 +977,14 @@ def refresh_innate_charges(actor):
                 charged.add(resref)
             else:
                 depleted.append((index, resref))
-
         needed = []
         for index, resref in reversed(depleted):
             if GemRB.UnmemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, index):
                 if resref not in charged and resref not in needed:
                     needed.append(resref)
-
         restored = 0
         for resref in reversed(needed):
-            if GemRB.MemorizeSpell(
-                actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1
-            ):
+            if GemRB.MemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1):
                 restored += 1
         return restored
     except Exception as error:
@@ -421,16 +992,65 @@ def refresh_innate_charges(actor):
         return 0
 
 
-def begin_manifest(actor, resref):
-    """Reserve on the first callback and spend on the matching second callback.
+def _begin_simple_action(actor, transaction, legal, commit):
+    pending = _pending.get(actor)
+    if pending == transaction:
+        if not legal():
+            _pending.pop(actor, None)
+            return False
+        _pending.pop(actor, None)
+        return bool(commit())
+    if not legal():
+        return False
+    _pending[actor] = transaction
+    return True
 
-    GemRB's spell action invokes SpellPressed twice for an ordinary cast. This
-    avoids charging a power that the player cancels during target selection.
-    Selector resources do not reserve PP; their chosen variants do.
-    """
-    info = power_info(resref)
+
+def begin_manifest(actor, resref):
+    info = action_info(resref)
     if not info:
         return True
+
+    if info["kind"] == "center":
+        _sync_speed_gate(actor)
+        key = info["resref"]
+        return _begin_simple_action(
+            actor,
+            ("CENTER", key),
+            lambda: (
+                key == _center_resource_for_actor(actor)
+                and ensure_pool(actor) > 0
+                and not is_focused(actor)
+            ),
+            lambda: concentration_check(actor, 20),
+        )
+
+    if info["kind"] == "feat_selector":
+        cancel_pending(actor)
+        return bool(available_feat_choices(actor))
+
+    if info["kind"] == "feat_choice":
+        key = info["resref"]
+        return _begin_simple_action(
+            actor,
+            ("FEAT", key),
+            lambda: can_select_feat(actor, key),
+            lambda: _grant_feat(actor, key),
+        )
+
+    if info["kind"] == "skill_selector":
+        cancel_pending(actor)
+        return bool(available_skill_choices(actor))
+
+    if info["kind"] == "skill_choice":
+        key = info["resref"]
+        return _begin_simple_action(
+            actor,
+            ("SKILL", key),
+            lambda: can_train_skill(actor, key),
+            lambda: _train_skill(actor, key),
+        )
+
     if info["selector"]:
         cancel_pending(actor)
         return can_manifest(actor, info["resref"])
@@ -446,17 +1066,14 @@ def begin_manifest(actor, resref):
         _write_pool_state(actor, current - info["cost"])
         _pending.pop(actor, None)
         return True
-
     if not can_manifest(actor, info["resref"]):
         GemRB.DisplayString(10417, 0xFFFFFF, actor)
         return False
-
     _pending[actor] = transaction
     return True
 
 
 def cancel_pending(actor=None):
-    """Cancel one actor's reservation, or every reservation during rest."""
     if actor is None:
         _pending.clear()
     else:
@@ -465,3 +1082,11 @@ def cancel_pending(actor=None):
 
 def pool_text(actor):
     return "%d/%d" % (ensure_pool(actor), maximum_pool(actor))
+
+
+def focus_text(actor):
+    return "Focused" if is_focused(actor) else "Unfocused"
+
+
+def skill_points_text(actor):
+    return "%d skill points" % skill_points_remaining(actor)

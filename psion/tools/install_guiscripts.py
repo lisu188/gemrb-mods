@@ -36,8 +36,8 @@ def _patch_spell_pressed(text: str) -> str:
         '\tif GemRB.GetVar("SettingButtons"):\n'
         '\t\tPsionics.cancel_pending(pc)\n'
         '\telse:\n'
-        '\t\t# Resolve the selected power from the encoded spell token. GemRB calls\n'
-        '\t\t# SpellPressed twice: reserve on the first call and commit on the second.\n'
+        '\t\t# Resolve the selected Psion runtime action from the encoded spell token.\n'
+        '\t\t# SpellPressed runs twice: reserve first, commit on confirmation.\n'
         '\t\ttry:\n'
         '\t\t\traw_spell = GemRB.GetVar("Spell")\n'
         '\t\t\tentry = Psionics.resolve_power_entry(Spellbook, pc, raw_spell)\n'
@@ -54,7 +54,7 @@ def _patch_spell_pressed(text: str) -> str:
 
 
 def _patch_quickspell_pressed(text: str) -> str:
-    """Route Psion quickslots through SpellPressed instead of bypassing PP."""
+    """Route Psion powers and utility actions through SpellPressed."""
     needle = (
         'def ActionQSpellPressed (which):\n'
         '\tpc = GemRB.GameGetFirstSelectedActor ()\n\n'
@@ -66,15 +66,15 @@ def _patch_quickspell_pressed(text: str) -> str:
         'def ActionQSpellPressed (which):\n'
         '\tpc = GemRB.GameGetFirstSelectedActor ()\n\n'
         '\t' + MARK_BEGIN + '\n'
-        '\t# Classic GemRB quickspells normally call SpellCast(-2, which) directly,\n'
-        '\t# bypassing SpellPressed. Registered Psion quickspells must re-enter the\n'
-        '\t# normal spell-button path so reserve/commit PP accounting still applies.\n'
+        '\t# Classic GemRB quickspells call SpellCast(-2, which) directly, bypassing\n'
+        '\t# SpellPressed. Registered Psion actions must re-enter the normal path so\n'
+        '\t# PP accounting and focus state transitions still apply.\n'
         '\ttry:\n'
         '\t\tpcStats = GemRB.GetPCStats(pc)\n'
         '\t\tquickResRef = ""\n'
         '\t\tif pcStats and 0 <= which < len(pcStats["QuickSpells"]):\n'
         '\t\t\tquickResRef = pcStats["QuickSpells"][which]\n'
-        '\t\tquickInfo = Psionics.power_info(quickResRef)\n'
+        '\t\tquickInfo = Psionics.action_info(quickResRef)\n'
         '\t\tif quickInfo:\n'
         '\t\t\t# A canceled target leaves the old first-phase reservation behind.\n'
         '\t\t\t# Every new quickslot attempt starts a fresh transaction.\n'
@@ -148,9 +148,6 @@ def _patch_spellinfo_filter(text: str) -> str:
     if return_pos < 0 or (next_def >= 0 and return_pos > next_def):
         raise RuntimeError("Spellbook.py GetSpellinfoSpells return not recognized")
 
-    # GemRB assigns synthetic type-255 SpellIndex values while iterating the
-    # original spellResRefs list. Filter only after that construction so hidden
-    # children leave gaps instead of compacting indices used by SpellCast.
     hook = (
         '\t' + MARK_BEGIN + '\n'
         '\t# Keep original synthetic SpellIndex values; hide only completed entries.\n'
@@ -288,9 +285,6 @@ def main() -> None:
         print(("updated " if changed else "unchanged ") + str(runtime_target))
         return
 
-    # Validate every supported layout before copying or modifying anything.
-    # An incompatible shared script therefore fails without leaving a partial
-    # installation that imports a missing or only partly wired runtime.
     try:
         prepared = [
             (path, render_patch(path.read_text(encoding="utf-8"), kind, path))

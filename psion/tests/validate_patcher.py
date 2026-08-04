@@ -23,21 +23,13 @@ def main() -> None:
     nested_rest_text = '''import GemRB\n\ndef Rest():\n\tif True:\n\t\tGemRB.RestParty(0, 0)\n\t\treturn True\n'''
     runtime_source = ROOT / "guiscripts" / "Psionics.py"
 
-    # Rest hooks must inherit the exact indentation of RestParty. A nested call
-    # remains syntactically valid and the following original statement stays in
-    # the same block instead of being stranded after an accidental dedent.
-    nested_rendered = module.render_patch(
-        nested_rest_text, "rest", Path("NestedRest.py")
-    )
+    nested_rendered = module.render_patch(nested_rest_text, "rest", Path("NestedRest.py"))
     assert nested_rendered is not None
     assert "\t\t# PSION MOD BEGIN\n" in nested_rendered
     assert "\t\tPsionics.restore_party()\n" in nested_rendered
     assert "\t\t# PSION MOD END\n\t\treturn True\n" in nested_rendered
     compile(nested_rendered, "NestedRest.py", "exec")
 
-    # A script that cannot receive an import must fail during read-only
-    # preflight; otherwise the inserted hooks would reference an undefined
-    # Psionics module at runtime.
     try:
         module.render_patch(
             rest_text.replace("import GemRB\n", "import SomethingElse\n"),
@@ -63,8 +55,6 @@ def main() -> None:
         store.write_text(rest_text, encoding="utf-8")
         runtime.write_text(original_runtime, encoding="utf-8")
 
-        # Replacing a pre-existing runtime creates one backup, and reinstalling
-        # identical bytes is idempotent rather than overwriting that backup.
         assert module.install_runtime(runtime_source, runtime)
         backup, created = module._runtime_paths(runtime)
         assert backup.read_text(encoding="utf-8") == original_runtime
@@ -83,16 +73,14 @@ def main() -> None:
         assert "Psionics.begin_manifest" in patched_actions
         assert "Psionics.refresh_innate_charges" in patched_actions
         assert "if GemRB.GetVar(\"SettingButtons\")" in patched_actions
-        assert "quickInfo = Psionics.power_info(quickResRef)" in patched_actions
+        assert "quickInfo = Psionics.action_info(quickResRef)" in patched_actions
         assert "SpellPressed()" in patched_actions
         assert "Psionics.cancel_pending(pc)" in patched_actions
         assert patched_actions.count("Psionics.refresh_innate_charges") == 2
         assert "Psionics.filter_spellinfo(actor, [entry[\"SpellResRef\"] for entry in memorizedSpells])" in patched_spellbook
         assert "spellResRefs = Psionics.filter_spellinfo" not in patched_spellbook
 
-        # SpellPressed is also called while the player is assigning an action
-        # bar/quickspell button. Configuration mode must clear a stale pending
-        # reservation but never resolve, reserve, commit, or spend a Psion power.
+        # Configuration mode clears reservations without starting a Psion action.
         config_gemrb = types.ModuleType("GemRB")
         config_gemrb.GameGetFirstSelectedActor = lambda: 1
         config_gemrb.GetVar = lambda name: 1 if name == "SettingButtons" else 4000
@@ -116,10 +104,7 @@ def main() -> None:
         config_psionics.resolve_power_entry = config_resolve
         config_psionics.begin_manifest = config_begin
         config_psionics.refresh_innate_charges = lambda *_: 0
-        old_modules = {
-            name: sys.modules.get(name)
-            for name in ("GemRB", "Spellbook", "Psionics")
-        }
+        old_modules = {name: sys.modules.get(name) for name in ("GemRB", "Spellbook", "Psionics")}
         sys.modules["GemRB"] = config_gemrb
         sys.modules["Spellbook"] = config_spellbook
         sys.modules["Psionics"] = config_psionics
@@ -135,17 +120,14 @@ def main() -> None:
                 else:
                     sys.modules[name] = previous
 
-        # Classic quickspell buttons normally bypass SpellPressed entirely.
-        # A registered Psion quickspell must instead clear any stale reservation,
-        # refresh its reusable innate charge, and re-enter SpellPressed using the
-        # original encoded innate SpellIndex. Repeating after a canceled target
-        # starts fresh, while unrelated quickspells retain GemRB's direct path.
+        # Classic quickspells bypass SpellPressed. Both PP powers and Center Mind
+        # must instead route through the registered Psion action API.
         quick_vars = {"SettingButtons": 0, "Spell": 0, "Type": 0, "QSpell": None}
         quick_direct_casts = []
         quick_gemrb = types.ModuleType("GemRB")
         quick_gemrb.GameGetFirstSelectedActor = lambda: 1
         quick_gemrb.GetPCStats = lambda actor: {
-            "QuickSpells": ["PS1VIGR", "SPWI112"]
+            "QuickSpells": ["PS1VIGR", "PXCNTR", "SPWI112"]
         }
         quick_gemrb.GetVar = lambda name: quick_vars.get(name)
         quick_gemrb.SetVar = lambda name, value: quick_vars.__setitem__(name, value)
@@ -154,16 +136,18 @@ def main() -> None:
 
         quick_spellbook = types.ModuleType("Spellbook")
         quick_spellbook.GetUsableMemorizedSpells = lambda actor, book_type: [
-            {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}
+            {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"},
+            {"SpellIndex": 4001, "SpellResRef": "PXCNTR"},
         ]
 
         quick_psionics = types.ModuleType("Psionics")
         quick_psionics.INNATE_TYPE = 2
         quick_calls = {"cancel": 0, "refresh": 0, "resolve": 0, "begin": 0}
 
-        def quick_power_info(resref):
-            if str(resref).upper() == "PS1VIGR":
-                return {"parent": "PS1VIGR"}
+        def quick_action_info(resref):
+            key = str(resref).upper()
+            if key in ("PS1VIGR", "PXCNTR"):
+                return {"parent": key}
             return None
 
         def quick_cancel(actor):
@@ -175,30 +159,28 @@ def main() -> None:
 
         def quick_resolve(spellbook_module, actor, raw_spell):
             quick_calls["resolve"] += 1
-            assert raw_spell == 4000
-            return {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"}
+            mapping = {4000: "PS1VIGR", 4001: "PXCNTR"}
+            return {"SpellIndex": raw_spell, "SpellResRef": mapping[raw_spell]}
 
         def quick_begin(actor, resref):
             quick_calls["begin"] += 1
-            assert resref == "PS1VIGR"
+            assert resref in ("PS1VIGR", "PXCNTR")
             return True
 
-        quick_psionics.power_info = quick_power_info
+        quick_psionics.action_info = quick_action_info
         quick_psionics.cancel_pending = quick_cancel
         quick_psionics.refresh_innate_charges = quick_refresh
         quick_psionics.resolve_power_entry = quick_resolve
         quick_psionics.begin_manifest = quick_begin
 
-        old_modules = {
-            name: sys.modules.get(name)
-            for name in ("GemRB", "Spellbook", "Psionics")
-        }
+        old_modules = {name: sys.modules.get(name) for name in ("GemRB", "Spellbook", "Psionics")}
         sys.modules["GemRB"] = quick_gemrb
         sys.modules["Spellbook"] = quick_spellbook
         sys.modules["Psionics"] = quick_psionics
         try:
             namespace = {}
             exec(compile(patched_actions, "ActionsWindow.py", "exec"), namespace)
+
             namespace["ActionQSpellPressed"](0)
             assert quick_vars["Spell"] == 4000
             assert quick_vars["Type"] == 4
@@ -206,16 +188,22 @@ def main() -> None:
             assert quick_calls == {"cancel": 1, "refresh": 1, "resolve": 1, "begin": 1}
             assert quick_direct_casts == []
 
-            # Simulate canceling target selection: there is no confirmation
-            # callback. A new quickslot press must still cancel the stale first
-            # phase before creating a fresh reservation.
+            # A canceled target leaves no confirmation callback. Re-pressing the
+            # same quickslot must clear the stale reservation before starting over.
             namespace["ActionQSpellPressed"](0)
             assert quick_calls == {"cancel": 2, "refresh": 2, "resolve": 2, "begin": 2}
             assert quick_direct_casts == []
 
-            # Non-Psion quickspells are untouched.
+            # Center Mind is a runtime action too, so quickslot use must not take
+            # GemRB's direct SpellCast(-2) path.
             namespace["ActionQSpellPressed"](1)
-            assert quick_direct_casts == [(1, -2, 1)]
+            assert quick_vars["Spell"] == 4001
+            assert quick_calls == {"cancel": 3, "refresh": 3, "resolve": 3, "begin": 3}
+            assert quick_direct_casts == []
+
+            # An unrelated quickspell remains untouched.
+            namespace["ActionQSpellPressed"](2)
+            assert quick_direct_casts == [(1, -2, 2)]
         finally:
             for name, previous in old_modules.items():
                 if previous is None:
@@ -223,15 +211,11 @@ def main() -> None:
                 else:
                     sys.modules[name] = previous
 
-        # Affordability filtering happens only after GemRB has assigned the
-        # original synthetic type-255 indexes. Hiding entry 0 must therefore
-        # leave entry 1 at 255001 rather than compacting it to 255000.
+        # Affordability filtering happens only after original type-255 indexes.
         fake_gemrb = types.ModuleType("GemRB")
         fake_gemrb.GetSpelldata = lambda actor: ["PSRF04", "PSRF01", "SPWI112"]
         fake_psionics = types.ModuleType("Psionics")
-        fake_psionics.filter_spellinfo = (
-            lambda actor, refs: [ref for ref in refs if ref != "PSRF04"]
-        )
+        fake_psionics.filter_spellinfo = lambda actor, refs: [ref for ref in refs if ref != "PSRF04"]
         old_gemrb = sys.modules.get("GemRB")
         old_psionics = sys.modules.get("Psionics")
         sys.modules["GemRB"] = fake_gemrb
@@ -264,8 +248,6 @@ def main() -> None:
         assert runtime.read_text(encoding="utf-8") == original_runtime
         assert not backup.exists()
 
-        # When no runtime existed before installation, uninstall removes the
-        # mod-owned file instead of leaving an importable module behind.
         runtime.unlink()
         assert module.install_runtime(runtime_source, runtime)
         backup, created = module._runtime_paths(runtime)
@@ -277,9 +259,6 @@ def main() -> None:
         assert not created.exists()
         assert not module.remove_runtime(runtime)
 
-    # Main performs a full read-only preflight before copying the runtime or
-    # modifying any shared script. One incompatible layout must leave the whole
-    # target directory byte-for-byte untouched and create no backup sidecars.
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
         originals = {
@@ -305,7 +284,7 @@ def main() -> None:
             assert target.read_text(encoding="utf-8") == text
             assert not target.with_suffix(target.suffix + ".psion.bak").exists()
 
-    print("Psion GUI patcher, selector index, quickspell cancellation/routing, configuration, runtime lifecycle, indentation, import, and preflight validation passed.")
+    print("Psion GUI patcher, selector index, Psion-action quickslot routing, configuration, runtime lifecycle, indentation, import, and preflight validation passed.")
 
 
 if __name__ == "__main__":
