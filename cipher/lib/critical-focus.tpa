@@ -12,11 +12,23 @@ COPY_EXISTING ~CIFCRIT.spl~ ~override~
   END
 BUT_ONLY
 
-PATCH_FOR_EACH ci_whip_resref IN ~CIFCORE~ ~CIFSW15~ ~CIFSW20~ BEGIN
-  COPY_EXISTING ~%ci_whip_resref%.spl~ ~override~
-    LPF ADD_SPELL_EFFECT
-      INT_VAR opcode = 341 target = 1 timing = 9
-      STR_VAR resource = ~CIFCRIT~
-    END
-  BUT_ONLY
-END
+COPY_EXISTING ~CIFCORE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 341 target = 1 timing = 9
+    STR_VAR resource = ~CIFCRIT~
+  END
+BUT_ONLY
+
+COPY_EXISTING ~CIFSW15.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 341 target = 1 timing = 9
+    STR_VAR resource = ~CIFCRIT~
+  END
+BUT_ONLY
+
+COPY_EXISTING ~CIFSW20.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 341 target = 1 timing = 9
+    STR_VAR resource = ~CIFCRIT~
+  END
+BUT_ONLY
