@@ -8,10 +8,11 @@ save data. GemRB user stat 239 remains only a fast PP cache.
 Manifestation uses a two-phase SpellPressed transaction: the first callback
 reserves an action while target/selector UI is active and the matching callback
 performs irreversible PP, feat, or skill changes. Center Mind is special:
-confirmation performs the Concentration check, while PXCNTR writes focus only
-when its speed-9 spell actually resolves, so interruption cannot grant focus.
+confirmation performs the Concentration check, while its SPL writes focus only
+when the action resolves, so interruption cannot grant focus.
 """
 import GemRB
+from ie_spells import LS_MEMO
 
 CURRENT_POOL_STAT = 239
 POOL_STATE_SIGNATURE = 0x50530000
@@ -27,6 +28,8 @@ FOCUS_EFFECT_MARKER = 0x50534643
 FOCUS_EFFECT_RESOURCE = "PSFOCUS"
 FOCUS_EFFECT_SOURCE = "PSFMOD"
 CENTER_RESOURCE = "PXCNTR"
+MEDITATION_CENTER_RESOURCE = "PXCMEDI"
+CENTER_RESOURCES = (CENTER_RESOURCE, MEDITATION_CENTER_RESOURCE)
 FEAT_SELECTOR_RESOURCE = "PXFSEL"
 SKILL_SELECTOR_RESOURCE = "PXSKILL"
 SPEED_ON_RESOURCE = "PXFSPED"
@@ -42,15 +45,18 @@ FEAT_MARKERS = {
     "PXFTALT": 0x50534601,
     "PXFBODY": 0x50534602,
     "PXFSPD": 0x50534603,
+    "PXFMEDI": 0x50534604,
 }
 FEAT_STATE_RESOURCES = {
     "PXFTALT": "PXTALST",
     "PXFBODY": "PXBODST",
     "PXFSPD": "PXSPDST",
+    "PXFMEDI": "PXMEDST",
 }
 PSIONIC_TALENT = "PXFTALT"
 PSIONIC_BODY = "PXFBODY"
 SPEED_OF_THOUGHT = "PXFSPD"
+PSIONIC_MEDITATION = "PXFMEDI"
 BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)
 
 SKILL_POINTS_MARKER = 0x50535350
@@ -165,6 +171,9 @@ def feat_choice_info(resref):
     if not table:
         return None
     try:
+        skill = str(table.GetValue(key, "SKILL")).upper()
+        if skill == "****":
+            skill = ""
         return {
             "kind": "feat_choice",
             "resref": key,
@@ -173,6 +182,8 @@ def feat_choice_info(resref):
             "min_level": int(table.GetValue(key, "MIN_LEVEL")),
             "wis": int(table.GetValue(key, "WIS")),
             "repeatable": bool(int(table.GetValue(key, "REPEATABLE"))),
+            "skill": skill,
+            "rank": int(table.GetValue(key, "RANK")),
         }
     except Exception:
         return None
@@ -469,6 +480,8 @@ def can_select_feat(actor, resref):
         return False
     if GemRB.GetPlayerStat(actor, WIS_STAT) < info["wis"]:
         return False
+    if info["skill"] and skill_rank(actor, info["skill"]) < info["rank"]:
+        return False
     if not info["repeatable"] and feat_rank(actor, info["resref"]):
         return False
     return True
@@ -526,7 +539,12 @@ def _write_pool_state(actor, current):
         actor, POOL_EFFECT_MARKER, POOL_EFFECT_RESOURCE,
         current, POOL_EFFECT_SOURCE,
     )
-    return _write_pool_cache(actor, current)
+    cached = _write_pool_cache(actor, current)
+    # SRD focus requires a nonempty PP reserve. Spending the last point therefore
+    # clears focus immediately; raising the reserve later does not auto-refocus.
+    if current == 0 and is_psion(actor):
+        _write_focus_state(actor, False)
+    return cached
 
 
 def ensure_pool(actor, refill=False):
@@ -614,6 +632,11 @@ def _write_focus_state(actor, focused):
 def ensure_focus(actor, refill=False):
     if not is_psion(actor):
         return False
+    if ensure_pool(actor) <= 0:
+        persisted, focused = _read_focus_state(actor)
+        if not persisted or focused:
+            return _write_focus_state(actor, False)
+        return False
     if refill:
         return _write_focus_state(actor, True)
     persisted, focused = _read_focus_state(actor)
@@ -631,6 +654,30 @@ def expend_focus(actor):
         return False
     _write_focus_state(actor, False)
     return True
+
+
+def _center_resource_for_actor(actor):
+    if feat_rank(actor, PSIONIC_MEDITATION):
+        return MEDITATION_CENTER_RESOURCE
+    return CENTER_RESOURCE
+
+
+def _sync_center_action(actor):
+    """Replace ordinary Center Mind with the Meditation version when owned."""
+    if not is_psion(actor):
+        return False
+    wanted = _center_resource_for_actor(actor)
+    unwanted = (
+        CENTER_RESOURCE if wanted == MEDITATION_CENTER_RESOURCE
+        else MEDITATION_CENTER_RESOURCE
+    )
+    try:
+        GemRB.RemoveSpell(actor, unwanted)
+        result = GemRB.LearnSpell(actor, wanted, LS_MEMO)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "Center Mind spellbook sync failed: %s" % error)
+        return False
 
 
 def _apply_body_hp(actor, amount):
@@ -659,6 +706,8 @@ def _grant_feat(actor, resref):
         _apply_body_hp(actor, 2 * psionic_feat_count(actor))
     elif had_body:
         _apply_body_hp(actor, 2)
+    if info["resref"] == PSIONIC_MEDITATION:
+        _sync_center_action(actor)
     _sync_focus_passives(actor)
     return True
 
@@ -670,6 +719,7 @@ def restore_party():
             ensure_pool(actor, True)
             ensure_focus(actor, True)
             sync_skill_points(actor)
+            _sync_center_action(actor)
         except Exception:
             pass
 
@@ -754,7 +804,7 @@ def power_info(resref):
 
 def action_info(resref):
     key = (resref or "").upper()
-    if key == CENTER_RESOURCE:
+    if key in CENTER_RESOURCES:
         return {"kind": "center", "resref": key, "parent": key, "cost": 0, "selector": False}
     if key == FEAT_SELECTOR_RESOURCE:
         return {"kind": "feat_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
@@ -862,8 +912,10 @@ def filter_spellinfo(actor, resrefs):
 
 def _is_reusable_innate(actor, resref):
     key = (resref or "").upper()
-    if power_info(key) or key == CENTER_RESOURCE:
+    if power_info(key):
         return True
+    if key in CENTER_RESOURCES:
+        return key == _center_resource_for_actor(actor)
     if key == FEAT_SELECTOR_RESOURCE:
         return bonus_feats_remaining(actor) > 0
     if key == SKILL_SELECTOR_RESOURCE:
@@ -876,6 +928,7 @@ def refresh_innate_charges(actor):
         return 0
     _sync_focus_passives(actor)
     sync_skill_points(actor)
+    _sync_center_action(actor)
     try:
         known = {}
         known_count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
@@ -932,10 +985,15 @@ def begin_manifest(actor, resref):
 
     if info["kind"] == "center":
         _sync_speed_gate(actor)
+        key = info["resref"]
         return _begin_simple_action(
             actor,
-            ("CENTER", CENTER_RESOURCE),
-            lambda: not is_focused(actor),
+            ("CENTER", key),
+            lambda: (
+                key == _center_resource_for_actor(actor)
+                and ensure_pool(actor) > 0
+                and not is_focused(actor)
+            ),
             lambda: concentration_check(actor, 20),
         )
 
