@@ -15,6 +15,7 @@
 - Added Tutu, Tutu_TotSC, BGEE and Classic Adventures to the supported game list.
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
+- Inherited the live Sorcerer `MAGESPELL` table and `BOOKTYPE` in the combined `CLSKILLS.2DA` row, so chargen spell-level setup and spontaneous-book detection follow Sorcerer spell-system overrides instead of frozen `MXSPLSRC` / `2` literals.
 - Derived the class XP cap from the active game's Sorcerer and Monk `XPCAP.2DA` rows instead of forcing the BG2/ToB 8,000,000 cap.
 - Required valid `XPCAP.2DA` entries for both Sorcerer and Monk before deriving the multiclass cap.
 - Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.

@@ -74,7 +74,8 @@ class InstallerTests(unittest.TestCase):
         clskills_rows = payloads("APPEND", "clskills.2da")
         self.assertEqual(len(clskills_rows), 2)
         for row in clskills_rows:
-            self.assertIn("MXSPLSRC", row)
+            self.assertIn("%sm_magespell%", row)
+            self.assertIn("%sm_booktype%", row)
             self.assertIn("SKILLS", row)
             self.assertIn("CLABMO01", row)
         self.assertIn("%sm_thiefscl_column%", payloads("APPEND_COL", "thiefscl.2da"))
