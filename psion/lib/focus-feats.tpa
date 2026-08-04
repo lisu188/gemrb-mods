@@ -49,6 +49,10 @@ COPY_EXISTING ~PXCNTR.spl~ ~override~
   // Protection:Spell is a private persistent carrier here. PSFOCUS is not a
   // real spell resource, so this state effect grants no meaningful immunity.
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 206 target = 1 resist_dispel = BIT1 parameter1 = 1 parameter2 = psion_focus_state_marker timing = 9 STR_VAR resource = ~PSFOCUS~ END
+  // Resolve focus-dependent passives at the same moment focus returns. The
+  // runtime keeps non-owners privately immune to PXFSPED, so this immediate
+  // helper cast grants movement only to characters with Speed of Thought.
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 1 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 timing = 1 STR_VAR resource = ~PXFSPED~ END
 BUT_ONLY
 
 // The selector itself is learned once at level 1. Psionics.py derives earned
