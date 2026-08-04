@@ -75,12 +75,17 @@ def main() -> None:
         "def skill_rule_info(skill):",
         "def skill_choice_info(resref):",
         "def skill_rank(actor, skill):",
+        "def _base_ability_modifier(actor, ability):",
+        "GemRB.GetPlayerStat(actor, stat, 1)",
+        'return max(1, 2 + _base_ability_modifier(actor, "INT"))',
         "def skill_rank_cap(actor):",
         "def sync_skill_points(actor):",
         "earned = per_level * (level + 3)",
         "points += per_level * (level - accounted)",
         "def can_train_skill(actor, resref):",
         "def available_skill_choices(actor):",
+        "def _ensure_skill_selector_known(actor):",
+        "GemRB.LearnSpell(actor, SKILL_SELECTOR_RESOURCE, LS_MEMO)",
         "def _train_skill(actor, resref):",
         "def skill_check_total(actor, skill, roll=None):",
         "def concentration_check(actor, dc=20, roll=None):",
@@ -88,18 +93,17 @@ def main() -> None:
         'if info["kind"] == "skill_selector":',
         'if info["kind"] == "skill_choice":',
         "return bool(available_skill_choices(actor))",
+        "_ensure_skill_selector_known(actor)",
     ):
         assert fragment in runtime, fragment
 
-    # Every private marker family must remain disjoint so one targeted
-    # DispelEffect replacement cannot erase a different subsystem's state.
     marker_values = [
-        0x50535050,  # PP
-        0x50534643,  # focus
-        0x50534642,  # speed ownership gate
-        0x50534653,  # spent class bonus feats
-        0x50535350,  # unspent skill points
-        0x5053534C,  # accounted skill level
+        0x50535050,
+        0x50534643,
+        0x50534642,
+        0x50534653,
+        0x50535350,
+        0x5053534C,
         *range(0x50535301, 0x5053530C),
     ]
     assert len(marker_values) == len(set(marker_values))
@@ -109,7 +113,7 @@ def main() -> None:
     assert "psskill.2da" in setup
     assert "skills.tpa" in powers
 
-    print("Psion skill table, selector, serialized rank/point ledger, rank-cap, Concentration, CLAB, and installer validation passed.")
+    print("Psion skill table, base-INT ledger, migrated selector, serialized ranks, rank-cap, Concentration, CLAB, and installer validation passed.")
 
 
 if __name__ == "__main__":
