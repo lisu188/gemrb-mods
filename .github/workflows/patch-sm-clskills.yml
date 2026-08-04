@@ -1,0 +1,70 @@
+name: Patch SM CLSKILLS
+
+on:
+  push:
+    branches:
+      - derive-sm-sorcerer-spell-metadata
+    paths:
+      - .github/workflows/patch-sm-clskills.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: derive-sm-sorcerer-spell-metadata
+      - name: Apply exact installer patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('sorcerer-monk/setup-sorcerer-monk.tp2')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  'OUTER_SET sm_clskills_rows = 0\nOUTER_SET sm_xpcap = (0 - 2)',
+                  'OUTER_SET sm_clskills_rows = 0\nOUTER_SET sm_found_sorcerer_spell_metadata = 0\nOUTER_SET sm_booktype = (0 - 1)\nOUTER_SET sm_xpcap = (0 - 2)',
+              ),
+              (
+                  'OUTER_SPRINT sm_no_prof ~-3~\nOUTER_SPRINT sm_25stweap_actual ~~',
+                  'OUTER_SPRINT sm_no_prof ~-3~\nOUTER_SPRINT sm_magespell ~~\nOUTER_SPRINT sm_25stweap_actual ~~',
+              ),
+              (
+                  'PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN\n      SET sm_sorcerer_clskills_id = sm_i\n      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp',
+                  'PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN\n      SET sm_sorcerer_clskills_id = sm_i\n      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 3 sm_magespell_candidate\n      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 9 sm_booktype_candidate\n      PATCH_IF (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~*~)\n          AND (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~~)\n          AND (IS_AN_INT ~%sm_booktype_candidate%~)\n          AND (sm_booktype_candidate >= 0) BEGIN\n        SPRINT sm_magespell ~%sm_magespell_candidate%~\n        SET sm_booktype = sm_booktype_candidate\n        SET sm_found_sorcerer_spell_metadata = 1\n      END\n      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp',
+              ),
+              (
+                  'ACTION_IF sm_clskills_matches > 1 THEN BEGIN\n  FAIL @20\nEND\n\n// The custom MULTI mask below',
+                  'ACTION_IF sm_clskills_matches > 1 THEN BEGIN\n  FAIL @20\nEND\nACTION_IF sm_found_sorcerer_spell_metadata != 1 THEN BEGIN\n  FAIL @30\nEND\n\n// The custom MULTI mask below',
+              ),
+              (
+                  '// Released and development GemRB tables differ only by the legacy NO_PROF\n// column. STARTXP values follow Sorcerer while the legacy non-proficiency\n// penalty follows the better Monk component value.\nACTION_IF sm_clskills_cols = 17 THEN BEGIN\n  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~',
+                  '// Released and development GemRB tables differ only by the legacy NO_PROF\n// column. Sorcerer spell-table, book type and starting-XP metadata are copied\n// from the live Sorcerer row; the legacy non-proficiency penalty follows Monk.\nACTION_IF sm_clskills_cols = 17 THEN BEGIN\n  APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~',
+              ),
+              (
+                  'APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~',
+                  'APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_startxp2% * 0 *~',
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one match, found {count}: {old[:80]!r}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit patch and remove helper workflow
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/patch-sm-clskills.yml
+          git add sorcerer-monk/setup-sorcerer-monk.tp2
+          git commit -m "Derive Sorcerer spell metadata from CLSKILLS"
+          git push origin HEAD:derive-sm-sorcerer-spell-metadata
