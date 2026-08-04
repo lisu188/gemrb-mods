@@ -181,6 +181,7 @@ def validate_release_infrastructure() -> None:
         "effect_offset + maximum_effect * 0x30",
         "verify_uninstalled",
         "install\nverify_installed\nuninstall\nverify_uninstalled\ninstall\nverify_installed",
+        'cp -R "$repo_root/common" "$game/common"',
     ):
         assert fragment in lifecycle, fragment
 
@@ -397,7 +398,7 @@ def validate_power_names() -> None:
 
 def validate_installer() -> None:
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
-    assert "VERSION ~1.0.0~" in setup
+    assert re.search(r"(?m)^VERSION ~\d+\.\d+\.\d+~$", setup), "missing semantic VERSION"
     for name in (
         "psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
         "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
