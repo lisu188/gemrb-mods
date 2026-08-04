@@ -45,6 +45,7 @@ def test_sources():
         "cipher/lib/soul-whip-fix.tpa",
         "cipher/lib/focus.tpa",
         "cipher/lib/focus-core.tpa",
+        "cipher/lib/critical-focus.tpa",
     ):
         assert required in setup
     assert "override/mxcipher.2da" in setup
@@ -70,6 +71,15 @@ def test_sources():
     focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
     assert "CIFS4" in focus_core
     assert "WRITE_SHORT ci_core_effect 146" in focus_core
+
+    critical = (CIPHER / "lib" / "critical-focus.tpa").read_text(encoding="utf-8")
+    assert "0x155 CastSpellOnCriticalHit" in critical
+    assert "CIFCRIT" in critical
+    assert "opcode = 326 target = 2" in critical
+    assert "parameter2 = ci_hostile_splprot" in critical
+    assert "opcode = 341 target = 1 timing = 9" in critical
+    for resref in ("CIFCORE", "CIFSW15", "CIFSW20"):
+        assert resref in critical
 
     thac0_fix = (CIPHER / "lib" / "class-thac0-fix.tpa").read_text(encoding="utf-8")
     assert "20 - ((ci_thac0_fix_col - 1) / 2)" in thac0_fix
