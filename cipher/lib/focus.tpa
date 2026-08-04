@@ -80,11 +80,15 @@ BEGIN
       READ_LONG 0x64 ci_header_offset
       READ_SHORT 0x68 ci_header_count
       READ_LONG 0x6a ci_effect_offset
+      READ_SHORT 0x6e ci_equipping_index
+      READ_SHORT 0x70 ci_equipping_count
 
       FOR (ci_header_index = 0; ci_header_index < ci_header_count; ++ci_header_index) BEGIN
         SET ci_header = ci_header_offset + (ci_header_index * 0x38)
         READ_BYTE ci_header ci_attack_type
-        PATCH_IF (ci_attack_type = 1) OR (ci_attack_type = 2) BEGIN
+        READ_BYTE (ci_header + 0x02) ci_location
+        PATCH_IF (ci_location = 1)
+          AND ((ci_attack_type = 1) OR (ci_attack_type = 2) OR (ci_attack_type = 3)) BEGIN
           READ_SHORT (ci_header + 0x1e) ci_effect_count
           READ_SHORT (ci_header + 0x20) ci_first_effect
           SET ci_new_index = ci_first_effect + ci_effect_count
@@ -102,6 +106,11 @@ BEGIN
             SET ci_other_header = ci_header_offset + (ci_other * 0x38)
             READ_SHORT (ci_other_header + 0x20) ci_other_first
             WRITE_SHORT (ci_other_header + 0x20) (ci_other_first + 1)
+          END
+
+          PATCH_IF (ci_equipping_count > 0) AND (ci_new_index <= ci_equipping_index) BEGIN
+            SET ci_equipping_index = ci_equipping_index + 1
+            WRITE_SHORT 0x6e ci_equipping_index
           END
         END
       END
