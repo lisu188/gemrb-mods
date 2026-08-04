@@ -23,3 +23,4 @@ INCLUDE ~cipher/lib/power-thac0-fix.tpa~
 INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
+INCLUDE ~cipher/lib/critical-focus.tpa~
