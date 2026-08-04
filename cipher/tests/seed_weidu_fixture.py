@@ -31,5 +31,6 @@ def write_item(path, abilities):
 
 
 write_item(override / "CIFHIT.ITM", ((1, 1), (2, 1)))
+write_item(override / "CIFBOW.ITM", ((4, 1),))
 write_item(override / "CIFMWEAP.ITM", ((3, 1),))
 write_item(override / "CIFMAGIC.ITM", ((3, 3),))

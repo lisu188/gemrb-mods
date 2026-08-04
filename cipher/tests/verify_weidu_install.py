@@ -177,5 +177,6 @@ for attack_type, location, effects in hit:
     assert location == 1
     assert effects == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, attack_type, effects)
 
+assert header_effects(override / "CIFBOW.ITM") == [(4, 1, [])], layout
 assert header_effects(override / "CIFMWEAP.ITM") == [(3, 1, [(326, 2, 0, hostile_row, 1, "CIFGAIN")])]
 assert header_effects(override / "CIFMAGIC.ITM") == [(3, 3, [])]
