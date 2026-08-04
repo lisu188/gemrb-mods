@@ -42,7 +42,7 @@ LAF psion_create_focus_action
   STR_VAR
     ps_resref = ~PXCNTR~
     ps_name = ~Center Mind~
-    ps_description = ~Spend a full-round action centering your thoughts to regain psionic focus. The Concentration DC 20 check will become active when player-allocated psionic skills are implemented.~
+    ps_description = ~Spend a full-round action centering your thoughts to regain psionic focus. Regaining focus requires a DC 20 Concentration check; failure aborts the action without restoring focus.~
     ps_icon = ~sppr101~
 END
 COPY_EXISTING ~PXCNTR.spl~ ~override~
