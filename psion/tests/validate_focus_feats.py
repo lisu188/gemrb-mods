@@ -33,9 +33,10 @@ def section(text: str, resref: str) -> str:
 def main() -> None:
     feat_rows = table_rows("psionfeatpick.2da")
     assert feat_rows == [
-        ["PXFTALT", "PSIONIC_TALENT", "1", "0", "1"],
-        ["PXFBODY", "PSIONIC_BODY", "1", "0", "0"],
-        ["PXFSPD", "SPEED_OF_THOUGHT", "1", "13", "0"],
+        ["PXFTALT", "PSIONIC_TALENT", "1", "0", "1", "****", "0"],
+        ["PXFBODY", "PSIONIC_BODY", "1", "0", "0", "****", "0"],
+        ["PXFSPD", "SPEED_OF_THOUGHT", "1", "13", "0", "****", "0"],
+        ["PXFMEDI", "PSIONIC_MEDITATION", "1", "13", "0", "CONCENTRATION", "7"],
     ], feat_rows
 
     selector_rows = table_rows("psfsel.2da")
@@ -43,12 +44,8 @@ def main() -> None:
         ["PSIONIC_TALENT", "PXFTALT", "3"],
         ["PSIONIC_BODY", "PXFBODY", "3"],
         ["SPEED_OF_THOUGHT", "PXFSPD", "3"],
+        ["PSIONIC_MEDITATION", "PXFMEDI", "3"],
     ], selector_rows
-
-    # Psionic Meditation remains a later feat addition; this branch first makes
-    # real Concentration ranks available so its 7-rank prerequisite can be
-    # implemented faithfully instead of bypassed.
-    assert all("MEDIT" not in token for row in feat_rows for token in row)
 
     for filename in DISCIPLINE_CLABS:
         text = (ROOT / "tables" / filename).read_text(encoding="utf-8")
@@ -66,28 +63,36 @@ def main() -> None:
     created = set(re.findall(r"ps_resref = ~(PX[A-Z0-9]+)~", builder))
     assert created == {
         "PXCNTR",
+        "PXCMEDI",
         "PXFSEL",
         "PXFTALT",
         "PXFBODY",
         "PXFSPD",
+        "PXFMEDI",
         "PXFSPED",
         "PXFSPOF",
     }, created
 
-    center = section(builder, "PXCNTR")
-    for fragment in (
-        "ps_speed = 9",
-        "psion_focus_state_marker = 0x50534643",
-        "opcode = 206",
-        "parameter1 = 1",
-        "parameter2 = psion_focus_state_marker",
-        "timing = 9",
-        "resource = ~PSFOCUS~",
-        "opcode = 146",
-        "parameter2 = 1",
-        "resource = ~PXFSPED~",
-    ):
-        assert fragment in center or fragment in builder, fragment
+    for resref, speed in (("PXCNTR", "9"), ("PXCMEDI", "5")):
+        center = section(builder, resref)
+        for fragment in (
+            f"ps_speed = {speed}",
+            "opcode = 206",
+            "parameter1 = 1",
+            "parameter2 = psion_focus_state_marker",
+            "timing = 9",
+            "resource = ~PSFOCUS~",
+            "opcode = 146",
+            "parameter2 = 1",
+            "resource = ~PXFSPED~",
+        ):
+            assert fragment in center, (resref, fragment)
+    assert "psion_focus_state_marker = 0x50534643" in builder
+
+    meditation = section(builder, "PXFMEDI")
+    assert "Psionic Meditation" in meditation
+    assert "Wisdom 13" in meditation
+    assert "7 ranks in Concentration" in meditation
 
     selector = section(builder, "PXFSEL")
     assert "opcode = 214" in selector
@@ -111,44 +116,38 @@ def main() -> None:
 
     runtime = (ROOT / "guiscripts" / "Psionics.py").read_text(encoding="utf-8")
     for fragment in (
-        "BONUS_FEAT_LEVELS = (1, 5, 10, 15, 20)",
-        "BONUS_FEAT_SPENT_RESOURCE = \"PSFSPENT\"",
-        "SPEED_BLOCK_MARKER = 0x50534642",
-        "\"PXFTALT\": \"PXTALST\"",
-        "\"PXFBODY\": \"PXBODST\"",
-        "\"PXFSPD\": \"PXSPDST\"",
-        "state_resource = FEAT_STATE_RESOURCES.get(key)",
-        "state_resource = FEAT_STATE_RESOURCES[key]",
-        "def bonus_feat_spent(actor):",
-        "def _write_bonus_feat_spent(actor, spent):",
-        "def bonus_feat_slots(actor):",
-        "def bonus_feats_remaining(actor):",
-        "bonus_feat_slots(actor) - bonus_feat_spent(actor)",
-        "_write_bonus_feat_spent(actor, spent + 1)",
-        "def available_feat_choices(actor):",
-        "if key == FEAT_SELECTOR_RESOURCE:",
-        "return bonus_feats_remaining(actor) > 0",
-        "focused = focused or bool(int(effect.get(\"Param1\", 0)))",
-        "def _sync_speed_gate(actor, owns_speed=None):",
-        "SPEED_BLOCK_MARKER",
-        "SPEED_ON_RESOURCE",
-        "_sync_speed_gate(actor, owns_speed)",
-        "_sync_speed_gate(actor)",
+        "from ie_spells import LS_MEMO",
+        'MEDITATION_CENTER_RESOURCE = "PXCMEDI"',
+        'PSIONIC_MEDITATION = "PXFMEDI"',
+        '"PXFMEDI": 0x50534604',
+        '"PXFMEDI": "PXMEDST"',
+        'skill = str(table.GetValue(key, "SKILL")).upper()',
+        '"rank": int(table.GetValue(key, "RANK"))',
+        'if info["skill"] and skill_rank(actor, info["skill"]) < info["rank"]:',
+        "def _center_resource_for_actor(actor):",
+        "def _sync_center_action(actor):",
+        "GemRB.RemoveSpell(actor, unwanted)",
+        "GemRB.LearnSpell(actor, wanted, LS_MEMO)",
+        'if info["resref"] == PSIONIC_MEDITATION:',
+        "if current == 0 and is_psion(actor):",
+        "_write_focus_state(actor, False)",
+        "if ensure_pool(actor) <= 0:",
+        "key == _center_resource_for_actor(actor)",
+        "and ensure_pool(actor) > 0",
         "lambda: concentration_check(actor, 20)",
     ):
         assert fragment in runtime, fragment
 
-    # Center Mind confirmation may roll Concentration, but it must neither
-    # restore focus nor directly apply the focused movement helper before the
-    # speed-9 spell actually resolves.
+    # Neither normal nor Meditation Center confirmation may write focus or apply
+    # the focused movement helper before the chosen SPL actually resolves.
     center_runtime = runtime[runtime.index('if info["kind"] == "center":') :]
     center_runtime = center_runtime[: center_runtime.index('if info["kind"] == "feat_selector":')]
     assert "_write_focus_state(actor, True)" not in center_runtime
     assert "GemRB.ApplySpell(actor, SPEED_ON_RESOURCE)" not in center_runtime
-    assert "_sync_speed_gate(actor)" in center_runtime
     assert "concentration_check(actor, 20)" in center_runtime
+    assert "ensure_pool(actor) > 0" in center_runtime
 
-    for live in ("PXFTALT", "PXFBODY", "PXFSPD"):
+    for live in ("PXFTALT", "PXFBODY", "PXFSPD", "PXFMEDI"):
         assert f'"{live}": "{live}"' not in runtime
 
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
@@ -157,7 +156,7 @@ def main() -> None:
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
-    print("Psion resolution-safe focus, Concentration authorization, immediate focus-passive sync, private feat state, bonus-feat credit, CLAB, and helper-resource validation passed.")
+    print("Psion Meditation prerequisites, move-action Center swap, zero-PP focus loss, resolution-safe focus, and private feat-state validation passed.")
 
 
 if __name__ == "__main__":
