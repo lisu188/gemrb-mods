@@ -47,6 +47,9 @@ assert profs["CIPHER"] == ["2", "4"], (layout, profs["CIPHER"])
 _, xp = rows(override / "xplevel.2da")
 assert xp["CIPHER"] == xp["MAGE"], (layout, xp["CIPHER"], xp["MAGE"])
 
+_, thac0 = rows(override / "thac0.2da")
+assert thac0["CIPHER"][:8] == ["20", "20", "19", "19", "18", "18", "17", "17"], (layout, thac0["CIPHER"][:8])
+
 for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
     assert (override / f"{resref}.SPL").is_file(), (layout, resref)
 
@@ -89,6 +92,13 @@ state = [effect for effect in setter if effect[0] == 282]
 assert len(removals) == 35, (layout, len(removals))
 assert {effect[5] for effect in removals} == {f"CIFS{index}" for index in range(35)}, (layout, removals)
 assert state == [(282, 1, 4, 9, 9, "CIFOCUS")], (layout, state)
+
+borrowed = [effect for effect in spell_effects(override / "CI5BINS.SPL") if effect[0] == 54]
+assert any(effect[1] == 2 and effect[2] == 3 for effect in borrowed), (layout, borrowed)
+assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFD for effect in borrowed), (layout, borrowed)
+
+time_parasite = [effect for effect in spell_effects(override / "CI7TPAR.SPL") if effect[0] == 54]
+assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFC for effect in time_parasite), (layout, time_parasite)
 
 
 def header_effects(path):
