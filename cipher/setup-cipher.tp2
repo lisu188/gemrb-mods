@@ -17,6 +17,8 @@ COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 INCLUDE ~psion/lib/spell-functions.tpa~
 INCLUDE ~cipher/lib/class.tpa~
 INCLUDE ~cipher/lib/class-skills-fix.tpa~
+INCLUDE ~cipher/lib/class-thac0-fix.tpa~
 INCLUDE ~cipher/lib/powers.tpa~
+INCLUDE ~cipher/lib/power-thac0-fix.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
