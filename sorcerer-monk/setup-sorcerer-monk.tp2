@@ -104,6 +104,15 @@ OUTER_SET sm_align_ne = 0
 OUTER_SET sm_align_cg = 0
 OUTER_SET sm_align_cn = 0
 OUTER_SET sm_align_ce = 0
+OUTER_SET sm_profs_cols = 0
+OUTER_SET sm_found_sorcerer_profs = 0
+OUTER_SET sm_found_monk_profs = 0
+OUTER_SET sm_sorcerer_prof_first = 0
+OUTER_SET sm_sorcerer_prof_rate = 0
+OUTER_SET sm_monk_prof_first = 0
+OUTER_SET sm_monk_prof_rate = 0
+OUTER_SET sm_prof_first = 0
+OUTER_SET sm_prof_rate = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
@@ -112,6 +121,7 @@ OUTER_SPRINT sm_25stweap_actual ~~
 OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
 OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
 OUTER_SPRINT sm_alignmnt_row ~1 1 1 0 0 0 0 0 0~
+OUTER_SPRINT sm_profs_row ~2 4~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -516,6 +526,54 @@ OUTER_SET sm_align_cn = sm_sorcerer_align_cn * sm_monk_align_cn
 OUTER_SET sm_align_ce = sm_sorcerer_align_ce * sm_monk_align_ce
 OUTER_SPRINT sm_alignmnt_row ~%sm_align_lg% %sm_align_ln% %sm_align_le% %sm_align_ng% %sm_align_tn% %sm_align_ne% %sm_align_cg% %sm_align_cn% %sm_align_ce%~
 
+// GemRB reads FIRST_LEVEL and RATE from the combined class's own PROFS row.
+// For a true multiclass, use the most generous starting allotment and the
+// fastest component progression so level-up logic stays aligned with whichever
+// component gains proficiency points fastest.
+COPY_EXISTING ~profs.2da~ ~override~
+  COUNT_2DA_COLS sm_profs_cols
+  PATCH_IF sm_profs_cols = 3 BEGIN
+    READ_2DA_ENTRIES_NOW ~sm_profs~ sm_profs_cols
+    FOR (sm_i = 0; sm_i < sm_profs; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 0 sm_prof_class
+      PATCH_IF (~%sm_prof_class%~ STRING_EQUAL_CASE ~SORCERER~)
+          OR (~%sm_prof_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 1 sm_prof_first
+        READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 2 sm_prof_rate
+        PATCH_IF (IS_AN_INT ~%sm_prof_first%~)
+            AND (IS_AN_INT ~%sm_prof_rate%~)
+            AND (sm_prof_first >= 0)
+            AND (sm_prof_rate > 0) BEGIN
+          PATCH_IF (~%sm_prof_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+            SET sm_found_sorcerer_profs += 1
+            SET sm_sorcerer_prof_first = sm_prof_first
+            SET sm_sorcerer_prof_rate = sm_prof_rate
+          END ELSE BEGIN
+            SET sm_found_monk_profs += 1
+            SET sm_monk_prof_first = sm_prof_first
+            SET sm_monk_prof_rate = sm_prof_rate
+          END
+        END
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF (sm_profs_cols != 3)
+    OR (sm_found_sorcerer_profs != 1)
+    OR (sm_found_monk_profs != 1) THEN BEGIN
+  FAIL @27
+END
+OUTER_SET sm_prof_first = sm_sorcerer_prof_first
+ACTION_IF sm_monk_prof_first > sm_prof_first THEN BEGIN
+  OUTER_SET sm_prof_first = sm_monk_prof_first
+END
+OUTER_SET sm_prof_rate = sm_sorcerer_prof_rate
+ACTION_IF sm_monk_prof_rate < sm_prof_rate THEN BEGIN
+  OUTER_SET sm_prof_rate = sm_monk_prof_rate
+END
+OUTER_SPRINT sm_profs_row ~%sm_prof_first% %sm_prof_rate%~
+
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
 // fixed column order: both are read by column name at runtime, so a game whose
 // table is ordered differently would otherwise get the values transposed.
@@ -659,9 +717,9 @@ BUT_ONLY
 APPEND_COL ~weapprof.2da~ ~%sm_weapprof_column%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-// Match the fastest component proficiency progression (Monk: one point every
-// four levels) while retaining the Monk starting allotment of two points.
-APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
+// Use the live multiclass progression derived above. GemRB reads RATE from this
+// row even when it selects the fastest component level during level-up.
+APPEND ~profs.2da~ ~SORCERER_MONK %sm_profs_row%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 APPEND ~xpcap.2da~ ~SORCERER_MONK %sm_xpcap%~
