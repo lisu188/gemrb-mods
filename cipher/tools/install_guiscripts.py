@@ -38,7 +38,9 @@ def _insert_before_in_function(text: str, function_name: str, needle: str, hook:
 def _patch_spell_pressed(text: str) -> str:
     hook = (
         "\t" + MARK_BEGIN + "\n"
-        "\tif not GemRB.GetVar(\"SettingButtons\"):\n"
+        "\tif GemRB.GetVar(\"SettingButtons\"):\n"
+        "\t\tCipher.cancel_pending(pc)\n"
+        "\telse:\n"
         "\t\ttry:\n"
         "\t\t\traw_spell = GemRB.GetVar(\"Spell\")\n"
         "\t\t\tentry = Cipher.resolve_power_entry(Spellbook, pc, raw_spell)\n"
@@ -107,6 +109,20 @@ def _patch_innate_open(text: str) -> str:
     )
 
 
+def _patch_cast_open(text: str) -> str:
+    hook = (
+        "\t" + MARK_BEGIN + "\n"
+        "\tCipher.cancel_pending(GemRB.GameGetFirstSelectedActor ())\n"
+        "\t" + MARK_END + "\n"
+    )
+    return _insert_before_in_function(
+        text,
+        "ActionCastPressed",
+        '\tGemRB.SetVar ("QSpell", None)',
+        hook,
+    )
+
+
 def _patch_rest(text: str, path: Path) -> str:
     match = re.search(r"(?m)^([ \t]*)(GemRB\.RestParty\([^\n]*\)\n)", text)
     if not match:
@@ -129,6 +145,8 @@ def render_patch(text: str, kind: str, path: Path) -> str | None:
         text = _patch_spell_pressed(text)
         text = _patch_quickspell(text)
         text = _patch_innate_open(text)
+        if "def ActionCastPressed" in text:
+            text = _patch_cast_open(text)
     elif kind == "rest":
         text = _patch_rest(text, path)
     else:
