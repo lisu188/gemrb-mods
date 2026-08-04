@@ -144,6 +144,8 @@ OUTER_SPRINT sm_avatar ~ 0x500~
 OUTER_SPRINT sm_fist_row ~ MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
 OUTER_SPRINT sm_weapprof_column ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
 
+INCLUDE ~sorcerer-monk/lib/source-row-preflight.tpa~
+
 // GemRB indexes several class-specific arrays directly with IE_CLASS and also
 // tracks class categories in a 32-bit mask. A custom class ID therefore has to
 // match its CLSKILLS row index and stay below 32; an arbitrary free 8-bit ID is
@@ -655,7 +657,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
       SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK~
       FOR (sm_i = 3; VARIABLE_IS_SET $sm_thiefscl(~%sm_i%~ ~%sm_thiefscl_monk_col%~); ++sm_i) BEGIN
         READ_2DA_ENTRY_FORMER ~sm_thiefscl~ sm_i sm_thiefscl_monk_col sm_thiefscl_value
-        PATCH_IF NOT (IS_AN_INT ~%sm_thiefscl_value%~) BEGIN
+        PATCH_IF !(IS_AN_INT ~%sm_thiefscl_value%~) BEGIN
           SET sm_thiefscl_invalid = 1
         END ELSE PATCH_IF (sm_thiefscl_value < 0) OR (sm_thiefscl_value > 1) BEGIN
           SET sm_thiefscl_invalid = 1
@@ -951,7 +953,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
       END
       // LUSM0.2DA is written as a new file, so another class already using the
       // SM0 abbreviation would have its HLA list replaced by this merge.
-      PATCH_IF NOT (~%sm_luabbr_class%~ STRING_EQUAL_CASE ~SORCERER_MONK~) BEGIN
+      PATCH_IF !(~%sm_luabbr_class%~ STRING_EQUAL_CASE ~SORCERER_MONK~) BEGIN
         READ_2DA_ENTRY_FORMER ~sm_luabbr~ sm_i 1 sm_other_abbr
         PATCH_IF (~%sm_other_abbr%~ STRING_EQUAL_CASE ~SM0~) BEGIN
           SET sm_sm0_taken = 1
