@@ -18,6 +18,10 @@ def rows(path):
     return lines[2].split(), result
 
 
+def spl_path(resref):
+    return override / f"{resref}.spl"
+
+
 class_ids = {}
 for line in (override / "class.ids").read_text(encoding="utf-8").splitlines():
     fields = line.split()
@@ -51,7 +55,7 @@ _, thac0 = rows(override / "thac0.2da")
 assert thac0["CIPHER"][:8] == ["20", "20", "19", "19", "18", "18", "17", "17"], (layout, thac0["CIPHER"][:8])
 
 for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
-    assert (override / f"{resref}.SPL").is_file(), (layout, resref)
+    assert spl_path(resref).is_file(), (layout, resref)
 
 
 def resource(data, offset):
@@ -82,7 +86,7 @@ def spell_effects(path):
     return result
 
 
-core = spell_effects(override / "CIFCORE.SPL")
+core = spell_effects(spl_path("CIFCORE"))
 assert any(effect[0] == 146 and effect[3] == 1 and effect[4] == 1 and effect[5] == "CIFS4" for effect in core), (layout, core)
 assert not any(effect[0] == 282 and effect[3] == 9 for effect in core), (layout, core)
 
@@ -92,25 +96,28 @@ soul_whip = {
     "CIFSW20": 3,
 }
 for resref, bonus in soul_whip.items():
-    effects = [effect for effect in spell_effects(override / f"{resref}.SPL") if effect[0] == 332 and effect[3] == 0]
+    effects = [effect for effect in spell_effects(spl_path(resref)) if effect[0] == 332 and effect[3] == 0]
     assert any(effect[2] == bonus for effect in effects), (layout, resref, effects)
 
-setter = spell_effects(override / "CIFS4.SPL")
+setter = spell_effects(spl_path("CIFS4"))
 removals = [effect for effect in setter if effect[0] == 321]
 state = [effect for effect in setter if effect[0] == 282]
 assert len(removals) == 35, (layout, len(removals))
 assert {effect[5] for effect in removals} == {f"CIFS{index}" for index in range(35)}, (layout, removals)
 assert state == [(282, 1, 4, 9, 9, "CIFOCUS")], (layout, state)
 
-borrowed = [effect for effect in spell_effects(override / "CI5BINS.SPL") if effect[0] == 54]
+borrowed = [effect for effect in spell_effects(spl_path("CI5BINS")) if effect[0] == 54]
 assert any(effect[1] == 2 and effect[2] == 3 for effect in borrowed), (layout, borrowed)
 assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFD for effect in borrowed), (layout, borrowed)
 
-time_parasite = [effect for effect in spell_effects(override / "CI7TPAR.SPL") if effect[0] == 54]
+time_parasite = [effect for effect in spell_effects(spl_path("CI7TPAR")) if effect[0] == 54]
 assert any(effect[1] == 9 and effect[2] == 0xFFFFFFFC for effect in time_parasite), (layout, time_parasite)
 
-reaping = [effect for effect in spell_effects(override / "CI8RKNI.SPL") if effect[0] == 54]
-assert any(effect[1] == 2 and effect[2] == 0xFFFFFFFE for effect in reaping), (layout, reaping)
+reaping_effects = spell_effects(spl_path("CI8RKNI"))
+reaping_thac0 = [effect for effect in reaping_effects if effect[0] == 54]
+assert any(effect[1] == 2 and effect[2] == 0xFFFFFFFE for effect in reaping_thac0), (layout, reaping_thac0)
+reaping_damage = [effect for effect in reaping_effects if effect[0] == 332 and effect[3] == 0]
+assert any(effect[1] == 2 and effect[2] == 3 for effect in reaping_damage), (layout, reaping_damage)
 
 
 def header_effects(path):
