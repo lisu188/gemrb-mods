@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """GemRB runtime support for the Pillars-inspired Cipher class."""
 import GemRB
+import Transactions
+import InnateCharges
 
 FOCUS_STAT = 165
 FOCUS_UNIT = 5
@@ -9,8 +11,7 @@ LEVEL_STAT = 34
 INNATE_TYPE = 2
 INNATE_LEVEL = 0
 CIPHER_CLASS = "CIPHER"
-
-_pending = {}
+TRANSACTION_NAMESPACE = "Cipher"
 
 
 def _class_row(actor):
@@ -116,37 +117,12 @@ def refresh_innate_charges(actor):
     if not is_cipher(actor):
         return 0
     try:
-        known = {}
-        for index in range(GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)):
-            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
-            resref = str(spell.get("SpellResRef", "")).upper()
-            if power_info(resref):
-                known[resref] = index
-
-        charged = set()
-        depleted = []
-        count = GemRB.GetMemorizedSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL, False)
-        for index in range(count):
-            spell = GemRB.GetMemorizedSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
-            resref = str(spell.get("SpellResRef", "")).upper()
-            if resref not in known:
-                continue
-            if spell.get("Flags", 0):
-                charged.add(resref)
-            else:
-                depleted.append((index, resref))
-
-        needed = []
-        for index, resref in reversed(depleted):
-            if GemRB.UnmemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, index):
-                if resref not in charged and resref not in needed:
-                    needed.append(resref)
-
-        restored = 0
-        for resref in reversed(needed):
-            if GemRB.MemorizeSpell(actor, INNATE_TYPE, INNATE_LEVEL, known[resref], 1):
-                restored += 1
-        return restored
+        return InnateCharges.refresh(
+            actor,
+            lambda resref: bool(power_info(resref)),
+            INNATE_TYPE,
+            INNATE_LEVEL,
+        )
     except Exception as error:
         GemRB.Log(2, "Cipher", "charge refresh failed: %s" % error)
         return 0
@@ -158,28 +134,22 @@ def begin_manifest(actor, resref):
         return True
 
     transaction = (info["resref"], info["cost"])
-    if _pending.get(actor) == transaction:
-        if not can_manifest(actor, info["resref"]):
-            _pending.pop(actor, None)
+
+    def legal():
+        allowed = can_manifest(actor, info["resref"])
+        if not allowed:
             GemRB.DisplayString(10417, 0xFFFFFF, actor)
-            return False
+        return allowed
+
+    def commit():
         set_focus(actor, current_focus(actor) - info["cost"])
-        _pending.pop(actor, None)
         return True
 
-    if not can_manifest(actor, info["resref"]):
-        GemRB.DisplayString(10417, 0xFFFFFF, actor)
-        return False
-
-    _pending[actor] = transaction
-    return True
+    return Transactions.begin(TRANSACTION_NAMESPACE, actor, transaction, legal, commit)
 
 
 def cancel_pending(actor=None):
-    if actor is None:
-        _pending.clear()
-    else:
-        _pending.pop(actor, None)
+    Transactions.cancel(TRANSACTION_NAMESPACE, actor)
 
 
 def focus_text(actor):
