@@ -50,6 +50,12 @@ def main() -> None:
         (1, 34): 20,
         (1, 239): 0,
     }
+    base_stats = {
+        (1, 38): 18,
+        (1, 39): 14,
+        (1, 41): 14,
+        (1, 34): 20,
+    }
     effects = {1: []}
     tables = {
         name: fake_table(name + ".2da")
@@ -83,7 +89,13 @@ def main() -> None:
     roll_value = {"value": 20}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
-    gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
+
+    def get_player_stat(actor, stat, base=0):
+        if base:
+            return base_stats.get((actor, stat), stats.get((actor, stat), 0))
+        return stats.get((actor, stat), 0)
+
+    gemrb.GetPlayerStat = get_player_stat
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
     gemrb.LoadTable = lambda name, *_: tables[name.lower()]
     gemrb.DisplayString = lambda *_: None
@@ -151,8 +163,18 @@ def main() -> None:
         )
         return True
 
+    def learn_spell(actor, resref, flags=0, *args):
+        key = str(resref).upper()
+        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates):
+            return 1
+        known_innates.append({"SpellResRef": key})
+        if int(flags) & 8:
+            memorized_innates.append({"SpellResRef": key, "Flags": 1})
+        return 0
+
     gemrb.UnmemorizeSpell = unmemorize
     gemrb.MemorizeSpell = memorize
+    gemrb.LearnSpell = learn_spell
 
     old_gemrb, old_gui = sys.modules.get("GemRB"), sys.modules.get("GUICommon")
     sys.modules["GemRB"], sys.modules["GUICommon"] = gemrb, gui
@@ -170,7 +192,6 @@ def main() -> None:
             )
 
         def resolve_center_mind():
-            """Model both native effects of a successfully resolved PXCNTR.spl."""
             apply_effect(
                 1,
                 module.STATE_EFFECT_OPCODE,
@@ -199,9 +220,6 @@ def main() -> None:
         assert module.ensure_pool(1) == 0
         assert module.ensure_pool(1, True) == initial_cap
 
-        # With no trained ranks yet, CON 14 and a natural 20 pass Center Mind's
-        # live DC 20 Concentration authorization. Focus itself still changes
-        # only after the speed-9 resource resolves.
         assert module.ensure_focus(1)
         focus = [
             effect for effect in get_effects(1, module.STATE_EFFECT_OPCODE)
@@ -220,10 +238,8 @@ def main() -> None:
         assert module.is_focused(1)
         assert len(applied_spells) == before_resolution
 
-        # Skill points use the D&D 3.5 Psion formula: (2 + INT modifier) x4 at
-        # first level, then the same ordinary allotment once for each later
-        # Psion level. INT 18 therefore grants 24 points at level 1.
         stats[(1, 34)] = 1
+        base_stats[(1, 34)] = 1
         assert module.sync_skill_points(1) == 24
         assert module.skill_points_remaining(1) == 24
         assert module.skill_rank_cap(1) == 4
@@ -239,9 +255,6 @@ def main() -> None:
         assert module.action_info(module.SKILL_SELECTOR_RESOURCE)["kind"] == "skill_selector"
         assert module.begin_manifest(1, module.SKILL_SELECTOR_RESOURCE)
 
-        # Skill children follow the same cancellation-safe two-phase transaction
-        # used by feats and manifested powers: selection reserves; confirmation
-        # writes one rank and spends exactly one point.
         for expected_rank in range(1, 5):
             before_points = module.skill_points_remaining(1)
             assert module.begin_manifest(1, "PXSCONC")
@@ -254,8 +267,6 @@ def main() -> None:
         assert module.can_train_skill(1, "PXSHEAL")
         assert not module.can_train_skill(1, "PXSAWAR")
 
-        # Concentration = rank + CON modifier + d20. At rank 4 and CON 14,
-        # a 13 totals 19 and a 14 reaches DC 20 exactly.
         assert not module.concentration_check(1, 20, roll=13)
         assert module.concentration_check(1, 20, roll=14)
         assert module.expend_focus(1)
@@ -271,39 +282,48 @@ def main() -> None:
         assert module.is_focused(1)
         roll_value["value"] = 20
 
-        # Accounted levels are persistent. Moving from level 1 to 5 at INT 18
-        # adds four ordinary six-point allotments. Raising INT before level 6
-        # changes only the new level's allotment; it does not rewrite levels 1-5.
+        # Temporary modified INT must not affect permanent skill-point accrual.
         stats[(1, 34)] = 5
+        base_stats[(1, 34)] = 5
         assert module.sync_skill_points(1) == 44
         stats[(1, 38)] = 22
         stats[(1, 34)] = 6
-        assert module.sync_skill_points(1) == 52
+        base_stats[(1, 34)] = 6
+        assert module.sync_skill_points(1) == 50
+        # A real base-INT increase affects only subsequently accounted levels.
+        base_stats[(1, 38)] = 22
+        stats[(1, 34)] = 7
+        base_stats[(1, 34)] = 7
+        assert module.sync_skill_points(1) == 58
         stats[(1, 38)] = 18
+        base_stats[(1, 38)] = 18
 
-        # If the reusable training selector is depleted while points and legal
-        # ranks remain, opening/reconciling the innate bar restores it.
-        for spell in memorized_innates:
-            if spell["SpellResRef"] == "PXSKILL":
-                spell["Flags"] = 0
+        # Simulate a migrated PR #16 save that never received the new level-1
+        # CLAB grant. Runtime reconciliation must learn and memorize PXSKILL.
+        known_innates[:] = [
+            spell for spell in known_innates if spell["SpellResRef"] != "PXSKILL"
+        ]
+        memorized_innates[:] = [
+            spell for spell in memorized_innates if spell["SpellResRef"] != "PXSKILL"
+        ]
+        assert "PXSKILL" not in {spell["SpellResRef"] for spell in known_innates}
         restored = module.refresh_innate_charges(1)
-        assert restored >= 1
+        assert "PXSKILL" in {spell["SpellResRef"] for spell in known_innates}
         assert next(
             spell for spell in memorized_innates if spell["SpellResRef"] == "PXSKILL"
         )["Flags"] == 1
+        assert restored >= 0
 
-        # Class bonus-feat credits unlock exactly at the SRD Psion thresholds.
         for level, slots in ((1, 1), (4, 1), (5, 2), (9, 2), (10, 3), (15, 4), (20, 5)):
             stats[(1, 34)] = level
+            base_stats[(1, 34)] = level
             assert module.bonus_feat_slots(1) == slots
         stats[(1, 34)] = 20
+        base_stats[(1, 34)] = 20
         assert module.bonus_feats_remaining(1) == 5
         assert module.action_info(module.FEAT_SELECTOR_RESOURCE)["kind"] == "feat_selector"
         assert module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
 
-        # The earlier skill-selector reconciliation may also have restored these
-        # three reusable entries. Re-deplete exactly the v1.1 regression targets
-        # here so this assertion remains independent of preceding skill tests.
         for spell in memorized_innates:
             if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR", "PXFSEL"):
                 spell["Flags"] = 0
@@ -389,8 +409,8 @@ def main() -> None:
         assert module.refresh_innate_charges(1) == 0
         assert next(spell for spell in memorized_innates if spell["SpellResRef"] == "PXFSEL")["Flags"] == 0
 
-        # Retain the original low-level affordability and type-255 regressions.
         stats[(1, 34)] = 3
+        base_stats[(1, 34)] = 3
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]
             assert module.can_manifest(1, parent)
@@ -435,9 +455,6 @@ def main() -> None:
         assert not module.begin_manifest(1, confirmed["SpellResRef"])
         module.ensure_pool(1, True)
 
-        # Reusable ordinary powers and Center Mind remain charge-backed. The
-        # exhausted feat selector, charged skill selector, and unrelated innate
-        # are untouched.
         for spell in memorized_innates:
             if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR"):
                 spell["Flags"] = 0
@@ -460,7 +477,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB PP, persistent skill ledger, Concentration, resolution-safe focus, immediate passive sync, feat-credit, selector, and persistence validation passed.")
+    print("Psion fake-GemRB PP, base-INT skill ledger, migrated selector, Concentration, focus, feat-credit, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
