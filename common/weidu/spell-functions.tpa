@@ -1,0 +1,249 @@
+// Self-contained SPL V1 / ITM V1 construction helpers.
+//
+// WeiDU's commonly used ADD_SPELL_EFFECT and ADD_ITEM_EQEFFECT helpers are
+// distributed as optional library includes rather than automatically available
+// language primitives, and ADD_SPELL_HEADER is a community helper. The Psion
+// installer keeps compact local implementations so a stock WeiDU installation
+// has no undeclared helper-library dependency.
+//
+// SPL/ITM V1 layout used below:
+//   0x64  extended-header offset
+//   0x68  extended-header count
+//   0x6a  feature-block offset
+//   0x6e  ITM equipping-feature index
+//   0x70  SPL global / ITM equipping feature count
+//   0x28  bytes per SPL extended header
+//   0x38  bytes per ITM extended header
+//   0x30  bytes per feature block
+//
+// The functions intentionally support the argument subset used by this mod,
+// while retaining conventional helper names so the resource definitions remain
+// readable.
+
+DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~
+  INT_VAR
+    type = 1
+    location = 4
+    target = 1
+    target_count = 0
+    range = 0
+    required_level = 1
+    speed = 0
+    projectile = 1
+  STR_VAR
+    icon = ~~
+BEGIN
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    PATCH_FAIL ~ADD_SPELL_HEADER requires a complete SPL V1 header.~
+  END
+
+  READ_LONG 0x64 ps_header_offset
+  READ_SHORT 0x68 ps_header_count
+  READ_LONG 0x6a ps_effect_offset
+  READ_SHORT 0x70 ps_global_effect_count
+
+  // Extended headers are stored contiguously immediately before feature blocks.
+  // Append rather than insert at an arbitrary position; all generated Psion
+  // resources have one ability and therefore do not need header reordering.
+  SET ps_new_header = ps_header_offset + (ps_header_count * 0x28)
+  INSERT_BYTES ps_new_header 0x28
+  WRITE_SHORT 0x68 (ps_header_count + 1)
+  WRITE_LONG 0x6a (ps_effect_offset + 0x28)
+
+  WRITE_BYTE ps_new_header type
+  WRITE_BYTE (ps_new_header + 0x02) location
+  WRITE_ASCIIE (ps_new_header + 0x04) ~%icon%~ #8
+  WRITE_BYTE (ps_new_header + 0x0c) target
+  WRITE_BYTE (ps_new_header + 0x0d) target_count
+  WRITE_SHORT (ps_new_header + 0x0e) range
+  WRITE_SHORT (ps_new_header + 0x10) required_level
+  WRITE_LONG (ps_new_header + 0x12) speed
+  WRITE_SHORT (ps_new_header + 0x26) projectile
+
+  // Recompute each ability's first feature index. The newly inserted header is
+  // zero-filled, so its feature count is zero until ADD_SPELL_EFFECT is called.
+  SET ps_next_effect = ps_global_effect_count
+  FOR (ps_header_index = 0; ps_header_index < (ps_header_count + 1); ++ps_header_index) BEGIN
+    SET ps_current_header = ps_header_offset + (ps_header_index * 0x28)
+    READ_SHORT (ps_current_header + 0x1e) ps_header_effect_count
+    WRITE_SHORT (ps_current_header + 0x20) ps_next_effect
+    SET ps_next_effect = ps_next_effect + ps_header_effect_count
+  END
+END
+
+DEFINE_PATCH_FUNCTION ~ADD_SPELL_EFFECT~
+  INT_VAR
+    opcode = 0
+    target = 0
+    timing = 0
+    parameter1 = 0
+    parameter2 = 0
+    // 255 is a local sentinel meaning "inherit the owning SPL's level". None
+    // of the Psion resources explicitly requests effect power 255, while power
+    // levels are 1-9, so callers can still override this with any real byte.
+    power = 255
+    resist_dispel = 0
+    duration = 0
+    probability1 = 100
+    probability2 = 0
+    dicenumber = 0
+    dicesize = 0
+    savingthrow = 0
+    savebonus = 0
+    header = 0
+    special = 0
+    ps_special = special
+  STR_VAR
+    resource = ~~
+BEGIN
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    PATCH_FAIL ~ADD_SPELL_EFFECT requires a complete SPL V1 header.~
+  END
+
+  READ_LONG 0x64 ps_header_offset
+  READ_SHORT 0x68 ps_header_count
+  READ_LONG 0x6a ps_effect_offset
+
+  PATCH_IF (ps_header_count < 1) BEGIN
+    PATCH_FAIL ~ADD_SPELL_EFFECT requires at least one extended SPL header.~
+  END
+  PATCH_IF (header < 0) OR (header > ps_header_count) BEGIN
+    PATCH_FAIL ~ADD_SPELL_EFFECT received an invalid header number.~
+  END
+
+  SET ps_effect_power = power
+  PATCH_IF (ps_effect_power = 255) BEGIN
+    // The generated resources write their actual power level at SPL offset
+    // 0x34 before adding effects. Mirroring that value into each feature's
+    // Power byte makes spell-level bounce/deflection/globe mechanics see Psion
+    // effects at their real level instead of the helper's former default 0.
+    READ_LONG 0x34 ps_effect_power
+  END
+  PATCH_IF (ps_effect_power < 0) OR (ps_effect_power > 255) BEGIN
+    PATCH_FAIL ~ADD_SPELL_EFFECT received an invalid effect power.~
+  END
+
+  // Header 0 follows the conventional WeiDU helper meaning: apply the effect
+  // to every ability. A positive value is one-based (header 1 is index 0).
+  FOR (ps_header_index = 0; ps_header_index < ps_header_count; ++ps_header_index) BEGIN
+    PATCH_IF (header = 0) OR (ps_header_index = (header - 1)) BEGIN
+      SET ps_current_header = ps_header_offset + (ps_header_index * 0x28)
+      READ_SHORT (ps_current_header + 0x1e) ps_header_effect_count
+      READ_SHORT (ps_current_header + 0x20) ps_first_effect_index
+      SET ps_new_effect_index = ps_first_effect_index + ps_header_effect_count
+      SET ps_new_effect = ps_effect_offset + (ps_new_effect_index * 0x30)
+
+      INSERT_BYTES ps_new_effect 0x30
+      WRITE_SHORT ps_new_effect opcode
+      WRITE_BYTE (ps_new_effect + 0x02) target
+      WRITE_BYTE (ps_new_effect + 0x03) ps_effect_power
+      WRITE_LONG (ps_new_effect + 0x04) parameter1
+      WRITE_LONG (ps_new_effect + 0x08) parameter2
+      WRITE_BYTE (ps_new_effect + 0x0c) timing
+      WRITE_BYTE (ps_new_effect + 0x0d) resist_dispel
+      WRITE_LONG (ps_new_effect + 0x0e) duration
+      WRITE_BYTE (ps_new_effect + 0x12) probability1
+      WRITE_BYTE (ps_new_effect + 0x13) probability2
+      WRITE_EVALUATED_ASCII (ps_new_effect + 0x14) ~%resource%~ #8
+      WRITE_LONG (ps_new_effect + 0x1c) dicenumber
+      WRITE_LONG (ps_new_effect + 0x20) dicesize
+      WRITE_LONG (ps_new_effect + 0x24) savingthrow
+      WRITE_LONG (ps_new_effect + 0x28) savebonus
+      WRITE_LONG (ps_new_effect + 0x2c) ps_special
+
+      WRITE_SHORT (ps_current_header + 0x1e) (ps_header_effect_count + 1)
+
+      // Inserting into one ability's feature range shifts the first-feature
+      // index of every later ability by one. Offsets do not change because the
+      // insertion occurs inside the feature table itself.
+      FOR (ps_other_header = 0; ps_other_header < ps_header_count; ++ps_other_header) BEGIN
+        PATCH_IF (ps_other_header != ps_header_index) BEGIN
+          SET ps_other_header_offset = ps_header_offset + (ps_other_header * 0x28)
+          READ_SHORT (ps_other_header_offset + 0x20) ps_other_first_effect
+          PATCH_IF (ps_other_first_effect > ps_first_effect_index)
+            OR ((ps_other_first_effect = ps_first_effect_index)
+                AND (ps_header_effect_count = 0)
+                AND (ps_other_header > ps_header_index)) BEGIN
+            WRITE_SHORT (ps_other_header_offset + 0x20) (ps_other_first_effect + 1)
+          END
+        END
+      END
+    END
+  END
+END
+
+// Add one ITM V1 equipping effect. This mirrors WeiDU's established helper
+// layout while remaining local to the mod. Equipping effects are the right home
+// for opcode 319 class restrictions because GemRB evaluates them in its core
+// Actor::Unusable path before allowing an item to be equipped or activated.
+DEFINE_PATCH_FUNCTION ~ADD_ITEM_EQEFFECT~
+  INT_VAR
+    opcode = 0
+    target = 0
+    timing = 0
+    parameter1 = 0
+    parameter2 = 0
+    power = 0
+    resist_dispel = 0
+    duration = 0
+    probability1 = 100
+    probability2 = 0
+    dicenumber = 0
+    dicesize = 0
+    savingthrow = 0
+    savebonus = 0
+    special = 0
+    ps_special = special
+  STR_VAR
+    resource = ~~
+BEGIN
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    PATCH_FAIL ~ADD_ITEM_EQEFFECT requires a complete ITM V1 header.~
+  END
+
+  READ_ASCII 0 ps_item_signature (8)
+  PATCH_IF ~%ps_item_signature%~ STRING_COMPARE_CASE ~ITM V1  ~ BEGIN
+    PATCH_FAIL ~ADD_ITEM_EQEFFECT supports ITM V1 resources only.~
+  END
+
+  READ_LONG 0x64 ps_item_header_offset
+  READ_SHORT 0x68 ps_item_header_count
+  READ_LONG 0x6a ps_item_effect_offset
+  READ_SHORT 0x6e ps_item_equipping_index
+  READ_SHORT 0x70 ps_item_equipping_count
+
+  // Append to the existing equipping block. The field at 0x6e is a logical
+  // feature-block index, exactly like the per-ability indexes, so both the
+  // index and count must be scaled by the 0x30-byte ITM V1 feature size.
+  SET ps_new_item_effect = ps_item_effect_offset + ((ps_item_equipping_index + ps_item_equipping_count) * 0x30)
+  INSERT_BYTES ps_new_item_effect 0x30
+
+  WRITE_SHORT ps_new_item_effect opcode
+  WRITE_BYTE (ps_new_item_effect + 0x02) target
+  WRITE_BYTE (ps_new_item_effect + 0x03) power
+  WRITE_LONG (ps_new_item_effect + 0x04) parameter1
+  WRITE_LONG (ps_new_item_effect + 0x08) parameter2
+  WRITE_BYTE (ps_new_item_effect + 0x0c) timing
+  WRITE_BYTE (ps_new_item_effect + 0x0d) resist_dispel
+  WRITE_LONG (ps_new_item_effect + 0x0e) duration
+  WRITE_BYTE (ps_new_item_effect + 0x12) probability1
+  WRITE_BYTE (ps_new_item_effect + 0x13) probability2
+  WRITE_EVALUATED_ASCII (ps_new_item_effect + 0x14) ~%resource%~ #8
+  WRITE_LONG (ps_new_item_effect + 0x1c) dicenumber
+  WRITE_LONG (ps_new_item_effect + 0x20) dicesize
+  WRITE_LONG (ps_new_item_effect + 0x24) savingthrow
+  WRITE_LONG (ps_new_item_effect + 0x28) savebonus
+  WRITE_LONG (ps_new_item_effect + 0x2c) ps_special
+  WRITE_SHORT 0x70 (ps_item_equipping_count + 1)
+
+  // Every ability whose first effect lies after the equipping block shifts by
+  // one logical feature when a new equipping effect is inserted.
+  FOR (ps_item_header_index = 0; ps_item_header_index < ps_item_header_count; ++ps_item_header_index) BEGIN
+    SET ps_current_item_header = ps_item_header_offset + (ps_item_header_index * 0x38)
+    READ_SHORT (ps_current_item_header + 0x20) ps_item_first_effect
+    PATCH_IF (ps_item_first_effect > ps_item_equipping_index)
+      OR ((ps_item_first_effect = ps_item_equipping_index) AND (ps_item_equipping_count = 0)) BEGIN
+      WRITE_SHORT (ps_current_item_header + 0x20) (ps_item_first_effect + 1)
+    END
+  END
+END

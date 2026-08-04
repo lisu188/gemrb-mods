@@ -14,7 +14,7 @@ COPY ~cipher/tables/cipherpowers.2da~ ~override/cipherpowers.2da~
 COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
 COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 
-INCLUDE ~psion/lib/spell-functions.tpa~
+INCLUDE ~common/weidu/spell-functions.tpa~
 INCLUDE ~cipher/lib/class.tpa~
 INCLUDE ~cipher/lib/class-skills-fix.tpa~
 INCLUDE ~cipher/lib/class-thac0-fix.tpa~
