@@ -31,6 +31,8 @@ CENTER_RESOURCE = "PXCNTR"
 FEAT_SELECTOR_RESOURCE = "PXFSEL"
 SPEED_ON_RESOURCE = "PXFSPED"
 SPEED_OFF_RESOURCE = "PXFSPOF"
+SPEED_BLOCK_MARKER = 0x50534642
+SPEED_BLOCK_SOURCE = "PSFMOD"
 
 BONUS_FEAT_SPENT_MARKER = 0x50534653
 BONUS_FEAT_SPENT_RESOURCE = "PSFSPENT"
@@ -328,6 +330,29 @@ def _read_focus_state(actor):
     return found, focused
 
 
+def _sync_speed_gate(actor, owns_speed=None):
+    """Allow PXFSPED only for characters who own Speed of Thought."""
+    if not is_psion(actor):
+        return
+    if owns_speed is None:
+        owns_speed = feat_rank(actor, SPEED_OF_THOUGHT) > 0
+    try:
+        GemRB.DispelEffect(actor, STATE_EFFECT_OPCODE, SPEED_BLOCK_MARKER)
+        if not owns_speed:
+            GemRB.ApplyEffect(
+                actor,
+                STATE_EFFECT_OPCODE,
+                0,
+                SPEED_BLOCK_MARKER,
+                SPEED_ON_RESOURCE,
+                "",
+                "",
+                SPEED_BLOCK_SOURCE,
+            )
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "speed helper gate sync failed: %s" % error)
+
+
 def _sync_focus_passives(actor, focused=None):
     if not is_psion(actor):
         return
@@ -335,8 +360,10 @@ def _sync_focus_passives(actor, focused=None):
         persisted, focused = _read_focus_state(actor)
         if not persisted:
             focused = True
+    owns_speed = feat_rank(actor, SPEED_OF_THOUGHT) > 0
+    _sync_speed_gate(actor, owns_speed)
     try:
-        if feat_rank(actor, SPEED_OF_THOUGHT) and focused:
+        if owns_speed and focused:
             GemRB.ApplySpell(actor, SPEED_ON_RESOURCE)
         else:
             GemRB.ApplySpell(actor, SPEED_OFF_RESOURCE)
@@ -672,12 +699,15 @@ def begin_manifest(actor, resref):
         return True
 
     if info["kind"] == "center":
+        # Guarantee the ownership gate before the resolution SPL fires, even
+        # for an unfocused save created by an earlier development build.
+        _sync_speed_gate(actor)
         return _begin_simple_action(
             actor,
             ("CENTER", CENTER_RESOURCE),
             lambda: not is_focused(actor),
-            # PXCNTR.spl itself writes the focus marker after successful spell
-            # resolution. Confirmation must not grant focus before that point.
+            # PXCNTR.spl itself writes the focus marker and casts PXFSPED after
+            # successful resolution. Confirmation must not grant focus early.
             lambda: True,
         )
 
