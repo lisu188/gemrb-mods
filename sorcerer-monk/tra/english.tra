@@ -30,3 +30,4 @@ Dual-classing is not supported.~
 @25 = ~Could not build a complete Sorcerer/Monk high-level-ability table from LUABBR.2DA and the Sorcerer/Monk LU*.2DA sources. Fix or remove conflicting HLA mods before installing.~
 @26 = ~Could not derive Sorcerer/Monk alignment restrictions from ALIGNMNT.2DA. Expected nine binary alignment columns and valid Sorcerer and Monk rows.~
 @27 = ~Could not derive Sorcerer/Monk proficiency progression from PROFS.2DA. Expected numeric FIRST_LEVEL and positive RATE values for exactly one Sorcerer row and one Monk row.~
+@28 = ~Unsupported CLSWPBON.2DA layout or duplicate Monk combat rows. Expected GETS_PROF_APR, UNARMED_DIVISOR and ZERO_SKILL_THAC0 columns with at most one valid Monk row.~
