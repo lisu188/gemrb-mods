@@ -145,8 +145,15 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        def speed_helper_blocked():
+            return any(
+                effect["Param2"] == module.SPEED_BLOCK_MARKER
+                and effect["Resource1"] == module.SPEED_ON_RESOURCE
+                for effect in get_effects(1, module.STATE_EFFECT_OPCODE)
+            )
+
         def resolve_center_mind():
-            """Model PXCNTR.spl successfully applying its native state effect."""
+            """Model both native effects of a successfully resolved PXCNTR.spl."""
             apply_effect(
                 1,
                 module.STATE_EFFECT_OPCODE,
@@ -158,6 +165,10 @@ def main() -> None:
                 module.CENTER_RESOURCE,
                 9,
             )
+            # PXCNTR then casts PXFSPED through opcode 146. A non-owner's
+            # private Protection:Spell gate absorbs that helper in the engine.
+            if not speed_helper_blocked():
+                applied_spells.append((1, module.SPEED_ON_RESOURCE))
 
         initial_cap = module.maximum_pool(1)
         assert initial_cap == 383
@@ -179,16 +190,23 @@ def main() -> None:
             if effect["Param2"] == module.FOCUS_EFFECT_MARKER
         ]
         assert len(focus) == 1 and focus[0]["Param1"] == 1
+        assert speed_helper_blocked()
         assert module.expend_focus(1)
         assert not module.is_focused(1)
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
+        assert speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert not module.is_focused(1)
+        assert speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         # Confirmation authorizes the speed-9 spell but must not restore focus.
         assert not module.is_focused(1)
+        before_resolution = len(applied_spells)
         resolve_center_mind()
         assert module.is_focused(1)
+        # Non-owners still resolve Center Mind, but the private gate absorbs the
+        # unconditional PXFSPED helper cast.
+        assert len(applied_spells) == before_resolution
 
         # Class bonus-feat credits unlock exactly at the SRD Psion thresholds.
         for level, slots in ((1, 1), (4, 1), (5, 2), (9, 2), (10, 3), (15, 4), (20, 5)):
@@ -248,18 +266,21 @@ def main() -> None:
         assert module.begin_manifest(1, "PXFSPD")
         assert module.begin_manifest(1, "PXFSPD")
         assert module.feat_rank(1, "PXFSPD") == 1
+        assert not speed_helper_blocked()
         assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
         assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2]
         assert module.expend_focus(1)
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
+        assert not speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert not module.is_focused(1)
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
         resolve_center_mind()
         assert module.is_focused(1)
-        # Reopening the Psion bar reconciles focus-dependent passive effects.
-        module.refresh_innate_charges(1)
+        # Successful resolution immediately applies the focused passive; no
+        # innate-bar reopen or other GUI refresh is required.
         assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
         assert not module.can_select_feat(1, "PXFSPD")
 
@@ -351,7 +372,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB PP, resolution-safe focus, feat-credit, selector, and persistence validation passed.")
+    print("Psion fake-GemRB PP, resolution-safe focus, immediate passive sync, feat-credit, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
