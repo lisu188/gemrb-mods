@@ -12,6 +12,7 @@ on:
 
 env:
   WEIDU_VERSION: '251.00'
+  GEMRB_FIXTURE_COMMIT: '8c853a764ab489eee7e990a713eeb24dc8cc2d53'
 
 jobs:
   validate:
@@ -48,3 +49,20 @@ jobs:
           echo "$bin_dir" >> "$GITHUB_PATH"
       - name: Parse complete WeiDU installer
         run: bash cipher/tests/validate_weidu.sh
+      - name: Check out pinned GemRB fixture data
+        uses: actions/checkout@v4
+        with:
+          repository: gemrb/gemrb
+          ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
+          path: vendor/gemrb
+          fetch-depth: 1
+      - name: Seed missing Mage saving throw fixture
+        run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
+      - name: Install, uninstall and reinstall every class-table layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          for layout in normalized native legacy; do
+            echo "Validating Cipher $layout layout"
+            bash cipher/tests/validate_weidu_install.sh vendor/gemrb "$layout"
+          done
