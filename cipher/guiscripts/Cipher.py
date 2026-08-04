@@ -46,7 +46,8 @@ def set_focus(actor, amount):
     cap = maximum_focus(actor)
     amount = max(0, min(int(amount), cap))
     amount -= amount % FOCUS_UNIT
-    GemRB.SetPlayerStat(actor, FOCUS_STAT, amount // FOCUS_UNIT)
+    units = amount // FOCUS_UNIT
+    GemRB.ApplySpell(actor, "CIFS%d" % units, actor)
     return amount
 
 
