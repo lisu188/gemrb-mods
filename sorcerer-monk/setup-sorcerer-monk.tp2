@@ -115,6 +115,12 @@ OUTER_SET sm_prof_first = 0
 OUTER_SET sm_prof_rate = 0
 OUTER_SET sm_clswpbon_cols = 0
 OUTER_SET sm_monk_clswpbon_matches = 0
+OUTER_SET sm_thiefscl_cols = 0
+OUTER_SET sm_thiefscl_monk_col = (0 - 1)
+OUTER_SET sm_thiefscl_rows = 0
+OUTER_SET sm_thiefscl_invalid = 0
+OUTER_SET sm_thiefskl_cols = 0
+OUTER_SET sm_monk_thiefskl_matches = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
@@ -125,6 +131,8 @@ OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
 OUTER_SPRINT sm_alignmnt_row ~1 1 1 0 0 0 0 0 0~
 OUTER_SPRINT sm_profs_row ~2 4~
 OUTER_SPRINT sm_clswpbon_row ~1 3 2~
+OUTER_SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
+OUTER_SPRINT sm_thiefskl_row ~0 10~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -610,6 +618,68 @@ ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
   END
 END
 
+// Current GemRB splits the old SKILLS table into a skill-availability map and
+// a points-per-level table. The multiclass intentionally follows Monk skill
+// behavior, so copy the live Monk definitions and preserve mod-added skill rows.
+ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
+  ACTION_IF NOT FILE_EXISTS_IN_GAME ~thiefskl.2da~ THEN BEGIN
+    FAIL @29
+  END
+
+  COPY_EXISTING ~thiefscl.2da~ ~override~
+    COUNT_2DA_COLS sm_thiefscl_cols
+    READ_2DA_ENTRIES_NOW ~sm_thiefscl~ 1
+    FOR (sm_i = 0; (sm_i < (sm_thiefscl_cols - 1)) AND (sm_thiefscl_monk_col < 0); ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_thiefscl~ 2 sm_i sm_thiefscl_header
+      PATCH_IF (~%sm_thiefscl_header%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        SET sm_thiefscl_monk_col = sm_i + 1
+      END
+    END
+    PATCH_IF sm_thiefscl_monk_col >= 0 BEGIN
+      SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK~
+      FOR (sm_i = 3; VARIABLE_IS_SET $sm_thiefscl(~%sm_i%~ ~%sm_thiefscl_monk_col%~); ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_thiefscl~ sm_i sm_thiefscl_monk_col sm_thiefscl_value
+        PATCH_IF NOT (IS_AN_INT ~%sm_thiefscl_value%~) BEGIN
+          SET sm_thiefscl_invalid = 1
+        END ELSE PATCH_IF (sm_thiefscl_value < 0) OR (sm_thiefscl_value > 1) BEGIN
+          SET sm_thiefscl_invalid = 1
+        END
+        SPRINT sm_thiefscl_column ~%sm_thiefscl_column% %sm_thiefscl_value%~
+        SET sm_thiefscl_rows += 1
+      END
+    END
+  BUT_ONLY
+
+  COPY_EXISTING ~thiefskl.2da~ ~override~
+    COUNT_2DA_COLS sm_thiefskl_cols
+    PATCH_IF sm_thiefskl_cols = 3 BEGIN
+      READ_2DA_ENTRIES_NOW ~sm_thiefskl~ sm_thiefskl_cols
+      FOR (sm_i = 0; sm_i < sm_thiefskl; ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 0 sm_thiefskl_class
+        PATCH_IF (~%sm_thiefskl_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 1 sm_thiefskl_start
+          READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 2 sm_thiefskl_level
+          PATCH_IF (IS_AN_INT ~%sm_thiefskl_start%~)
+              AND (IS_AN_INT ~%sm_thiefskl_level%~)
+              AND (sm_thiefskl_start >= 0)
+              AND (sm_thiefskl_level >= 0) BEGIN
+            SET sm_monk_thiefskl_matches += 1
+            SPRINT sm_thiefskl_row ~%sm_thiefskl_start% %sm_thiefskl_level%~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF (sm_thiefscl_monk_col < 0)
+      OR (sm_thiefscl_rows < 1)
+      OR (sm_thiefscl_invalid != 0)
+      OR (sm_thiefskl_cols != 3)
+      OR (sm_monk_thiefskl_matches != 1) THEN BEGIN
+    FAIL @29
+  END
+END
+
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
 // fixed column order: both are read by column name at runtime, so a game whose
 // table is ordered differently would otherwise get the values transposed.
@@ -957,11 +1027,13 @@ APPEND ~qslots.2da~ ~SORCERER_MONK 3 2 22 0 8 9 11 12 13~
 
 // Newer GemRB builds split the old SKILLS.2DA data into THIEFSCL/THIEFSKL.
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
-  APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
+  APPEND_COL ~thiefscl.2da~ ~%sm_thiefscl_column%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
-  APPEND ~thiefskl.2da~ ~SORCERER_MONK 0 10~
+  APPEND ~thiefskl.2da~ ~SORCERER_MONK %sm_thiefskl_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
+  // Keep the historical format unchanged: current GemRB no longer ships this
+  // combined table, so there is no authoritative modern schema to reinterpret.
   APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 10 -1 -1 1 1 1 -1 -1~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
