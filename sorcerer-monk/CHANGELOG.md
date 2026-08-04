@@ -20,6 +20,7 @@
 - Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.
 - Derived `ABCLASRQ.2DA` minimum ability requirements from the live Sorcerer and Monk rows by taking the per-stat maximum, preserving stat-overhaul mods instead of freezing the stock `0 9 9 9 9 9` row.
 - Rejected malformed or incomplete `ABCLASRQ.2DA` component data before table mutation.
+- Derived `ALIGNMNT.2DA` restrictions from the live Sorcerer/Monk intersection and rejected missing, duplicate or non-binary component rows before mutation.
 - Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned; these are class/kit-specific maximum-stat adjustments and stock true multiclasses define no component-composition rule.
 - Corrected the legacy non-proficiency penalty to follow Monk instead of Sorcerer.
 - Changed saving throws and hit points to multiclass-derived values.
@@ -31,7 +32,7 @@
 - Corrected newer split `THIEFSKL.2DA` Monk skill progression to 0 starting points and 10 points per Monk level.
 - Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
 - Corrected the legacy `SKILLS.2DA` availability mask so Find Traps is enabled alongside Move Silently and Hide in Shadows, matching the Monk column.
-- Corrected proficiency progression to the Monk/fastest-component rate of one point every four levels.
+- Derived `PROFS.2DA` progression from the live component rows, using the larger starting allotment and faster gain rate instead of freezing Sorcerer/Monk at `2 4`.
 - Inherited the live Monk `WEAPPROF.2DA` column when available instead of freezing a 50-row ToB-era proficiency mask, so proficiency-overhaul mods and extended tables propagate to Sorcerer/Monk; retained the stock Monk mask only as a compatibility fallback.
 - Validated the exact 20-row `25STWEAP.2DA` slot order before adding ToB starter equipment, matching GemRB's fixed positional `RealSlots` map and rejecting reordered or extended tables before mutation.
 - Copied the starting-gold formula and the avatar prefix out of the live Monk rows instead of hardcoding them, since both are read by column name at runtime.
