@@ -30,7 +30,23 @@ The initial implementation grants a fixed pair of powers at each tier. A power-s
 
 ## Installation
 
-Install `cipher/setup-cipher.tp2` with WeiDU against a BG-family game configured for GemRB. After the WeiDU component is installed, patch the GemRB GUI scripts:
+Cipher now uses the repository's shared GemRB runtime infrastructure. A distributable/install tree must therefore contain both `cipher/` and its sibling `common/` directory:
+
+```text
+game/
+├── common/
+└── cipher/
+```
+
+Copy both directories from the same release/repository revision into the game directory. Installing only `cipher/` is not supported because the WeiDU helper and GUI installer are shared from `common/`.
+
+Install the WeiDU component:
+
+```bash
+weidu cipher/setup-cipher.tp2
+```
+
+Then patch the GemRB GUI scripts:
 
 ```bash
 python cipher/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts
@@ -38,7 +54,7 @@ python cipher/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts
 
 The GUI hook is required. It makes Cipher innate powers reusable, enforces Focus costs with reserve/commit semantics, restores 20 Focus on rest, and routes Cipher quickslots through the same transaction path.
 
-If the Psion GUI patch is also used, install the Psion GUI patch first and the Cipher GUI patch second. Uninstall them in reverse order so each patcher's byte-for-byte backup restores the expected previous layer.
+Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in either order. Removing one handler leaves the shared GUI layer active for the other; the original GemRB scripts and shared runtime files are restored only after the last active handler is removed.
 
 ## Class rules
 
@@ -74,4 +90,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, and WeiDU rollback of patched items and IDS resources.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, and WeiDU rollback of patched items and IDS resources.
