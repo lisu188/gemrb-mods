@@ -21,6 +21,7 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --gemrb-root "$gemrb_root" \
   --output "$game" \
   --layout "$layout"
+cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/psion" "$game/psion"
 
 # Snapshot every pre-existing table and synthetic ITM that the installer edits.
