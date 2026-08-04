@@ -1,0 +1,14 @@
+COPY_EXISTING ~thac0.2da~ ~override~
+  COUNT_2DA_COLS ci_thac0_fix_cols
+  COUNT_2DA_ROWS ci_thac0_fix_cols ci_thac0_fix_rows
+  FOR (ci_thac0_fix_row = 0; ci_thac0_fix_row < ci_thac0_fix_rows; ++ci_thac0_fix_row) BEGIN
+    READ_2DA_ENTRY ci_thac0_fix_row 0 ci_thac0_fix_cols ci_thac0_fix_name
+    PATCH_IF ~%ci_thac0_fix_name%~ STRING_EQUAL_CASE ~CIPHER~ BEGIN
+      FOR (ci_thac0_fix_col = 1; ci_thac0_fix_col < ci_thac0_fix_cols; ++ci_thac0_fix_col) BEGIN
+        SET ci_thac0_fix_value = 20 - ((ci_thac0_fix_col - 1) / 2)
+        PATCH_IF ci_thac0_fix_value < 0 BEGIN SET ci_thac0_fix_value = 0 END
+        SET_2DA_ENTRY ci_thac0_fix_row ci_thac0_fix_col ci_thac0_fix_cols ~%ci_thac0_fix_value%~
+      END
+    END
+  END
+BUT_ONLY
