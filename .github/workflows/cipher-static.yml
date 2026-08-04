@@ -1,4 +1,4 @@
-name: Cipher static validation
+name: Cipher validation
 
 on:
   push:
@@ -10,12 +10,41 @@ on:
       - 'cipher/**'
       - '.github/workflows/cipher-static.yml'
 
+env:
+  WEIDU_VERSION: '251.00'
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python cipher/tests/validate.py
+      - name: Validate Cipher sources and runtime
+        run: python cipher/tests/validate.py
+      - name: Install official WeiDU release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive_dir="$RUNNER_TEMP/weidu-archive"
+          bin_dir="$RUNNER_TEMP/weidu-bin"
+          mkdir -p "$archive_dir" "$bin_dir"
+          gh release download "v${WEIDU_VERSION}" \
+            --repo WeiDUorg/weidu \
+            --pattern '*Linux*' \
+            --dir "$RUNNER_TEMP"
+          archive="$(find "$RUNNER_TEMP" -maxdepth 1 -type f -iname '*linux*' -print -quit)"
+          test -n "$archive"
+          unzip -q "$archive" -d "$archive_dir"
+          executable="$(find "$archive_dir" -type f -iname weidu -print -quit)"
+          test -n "$executable"
+          cp "$executable" "$bin_dir/weidu"
+          chmod +x "$bin_dir/weidu"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+      - name: Parse complete WeiDU installer
+        run: bash cipher/tests/validate_weidu.sh
