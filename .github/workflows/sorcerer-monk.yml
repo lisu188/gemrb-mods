@@ -61,6 +61,8 @@ jobs:
         run: python sorcerer-monk/tests/weidu_ability_requirements_smoke.py weidu
       - name: Real WeiDU live alignment smoke tests
         run: python sorcerer-monk/tests/weidu_alignment_smoke.py weidu
+      - name: Real WeiDU live proficiency progression smoke tests
+        run: python sorcerer-monk/tests/weidu_profs_smoke.py weidu
       - name: Real WeiDU sibling exclusion smoke tests
         run: python sorcerer-monk/tests/weidu_sibling_exclusion_smoke.py weidu
       - name: Real WeiDU Sorcerer Monk Cleric layout smoke tests
