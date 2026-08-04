@@ -22,10 +22,12 @@ COPY_EXISTING ~splprot.2da~ ~override~
 BUT_ONLY
 
 OUTER_SET ci_class_splprot = ci_splprot_rows
+OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 APPEND ~splprot.2da~ ~CIPHER_CLASS 0x10d %ci_class_id% 1~
+APPEND ~splprot.2da~ ~CIPHER_HOSTILE 0x108 2 1~
 
 OUTER_FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
-  OUTER_SET ci_row = ci_splprot_rows + 1 + ci_unit
+  OUTER_SET ci_row = ci_splprot_rows + 2 + ci_unit
   APPEND ~splprot.2da~ ~CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1~
 END
 
@@ -54,7 +56,7 @@ END
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTEP~ END
 COPY_EXISTING ~CIFSTEP.spl~ ~override~
   FOR (ci_unit = 33; ci_unit >= 0; --ci_unit) BEGIN
-    SET ci_row = ci_splprot_rows + 1 + ci_unit
+    SET ci_row = ci_splprot_rows + 2 + ci_unit
     SET ci_next = ci_unit + 1
     SPRINT ci_setter ~CIFS%ci_next%~
     LPF ADD_SPELL_EFFECT
@@ -95,9 +97,14 @@ BEGIN
           SET ci_new_effect = ci_effect_offset + (ci_new_index * 0x30)
           INSERT_BYTES ci_new_effect 0x30
 
-          WRITE_SHORT ci_new_effect 146
-          WRITE_BYTE (ci_new_effect + 0x02) 9
-          WRITE_LONG (ci_new_effect + 0x08) 1
+          // ApplyEffectsList checks the struck target against the caster using
+          // CIPHER_HOSTILE. When it matches, CIFGAIN is applied with the weapon
+          // user as the spell caster; CIFGAIN's self-targeted effects therefore
+          // advance Focus on the attacker rather than on the victim.
+          WRITE_SHORT ci_new_effect 326
+          WRITE_BYTE (ci_new_effect + 0x02) 2
+          WRITE_LONG (ci_new_effect + 0x04) 0
+          WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot
           WRITE_BYTE (ci_new_effect + 0x0c) 1
           WRITE_ASCIIE (ci_new_effect + 0x14) ~CIFGAIN~ #8
           WRITE_SHORT (ci_header + 0x1e) (ci_effect_count + 1)
