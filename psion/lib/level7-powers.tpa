@@ -1,0 +1,176 @@
+// Purpose-built level-7 Psion discipline powers.
+
+DEFINE_ACTION_FUNCTION psion_create_level7_power
+INT_VAR
+  ps_target = 5
+  ps_range = 0x7fff
+  ps_speed = 8
+  ps_projectile = 1
+  ps_flags = (BIT14 BOR BIT25)
+STR_VAR
+  ps_resref = ~~
+  ps_name = ~~
+  ps_description = ~~
+  ps_icon = ~spwi703~
+BEGIN
+  CREATE ~spl~ ~%ps_resref%~
+  COPY_EXISTING ~%ps_resref%.spl~ ~override~
+    SAY NAME1 ~%ps_name%~
+    WRITE_LONG NAME2 0xffffffff
+    SAY UNIDENTIFIED_DESC ~%ps_description%~
+    WRITE_LONG DESC 0xffffffff
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 ps_flags
+    WRITE_LONG 0x34 7
+    WRITE_ASCII 0x3a ~%ps_icon%C~ #8
+    LPF ADD_SPELL_HEADER
+      INT_VAR
+        target = ps_target
+        range = ps_range
+        speed = ps_speed
+        projectile = ps_projectile
+      STR_VAR
+        icon = ~%ps_icon%B~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET psion_level7_hostile_flags = (BIT9 BOR BIT10 BOR BIT14 BOR BIT25)
+OUTER_SET psion_level7_save_penalty = (psion_key_ability_save_penalty - 6)
+
+// Fate of One is another one-roll reroll power. The portable form gives a very
+// short, stronger insight window rather than inventing a hidden reroll engine.
+LAF psion_create_level7_power
+  STR_VAR
+    ps_resref = ~PS7FATE~
+    ps_name = ~Fate of One~
+    ps_description = ~For one round the Seer gains +6 to attack rolls, Armor Class, and all saving throws. Tabletop Fate of One rerolls a failed roll; the engine has no generic reroll callback, so the benefit is expressed as a short insight window.~
+    ps_icon = ~sppr707~
+END
+COPY_EXISTING ~PS7FATE.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS7FATE~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 6) timing = 0 duration = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 6 timing = 0 duration = 6 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 6) timing = 0 duration = 6 END
+  END
+BUT_ONLY
+
+// Mass Ectoplasmic Cocoon uses the existing fireball-style burst projectile and
+// the same held-state approximation as the level-3 single-target version. The
+// SRD explicitly gives this mass form Power Resistance: No, so MR is bypassed.
+LAF psion_create_level7_power
+  INT_VAR
+    ps_target = 4
+    ps_range = 40
+    ps_projectile = IDS_OF_SYMBOL (~missile~ ~Fireball_Just_Projectile~)
+    ps_flags = psion_level7_hostile_flags
+  STR_VAR
+    ps_resref = ~PS7MCOC~
+    ps_name = ~Ectoplasmic Cocoon, Mass~
+    ps_description = ~A burst of ectoplasm holds creatures in the area helpless for five rounds unless they succeed on a save vs breath. Power resistance does not apply. As with Ectoplasmic Cocoon, the portable form cannot create a destructible shell with its own hardness and hit points.~
+    ps_icon = ~spwi708~
+END
+COPY_EXISTING ~PS7MCOC.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 30 savingthrow = BIT1 savebonus = psion_level7_save_penalty END
+BUT_ONLY
+
+// Reddopsi reflects targeted powers. GemRB opcode 199 is the non-decrementing
+// Bounce:SpellLevel form; one timed effect is installed for each power level
+// 1-9. The shared SPL helper mirrors every generated power's spell level into
+// its effect Power byte, so these bounce levels can match Psion effects as well
+// as ordinary transparent spell effects. Full psionics-only discrimination is
+// unavailable, so magic is reflected too under transparency.
+LAF psion_create_level7_power
+  STR_VAR
+    ps_resref = ~PS7RDOP~
+    ps_name = ~Reddopsi~
+    ps_description = ~For one turn targeted magical and psionic effects of power levels 1 through 9 rebound on their source without consuming a finite reflection pool. Tabletop Reddopsi reflects powers targeting the manifester; under psionics-magic transparency the engine cannot distinguish them reliably, so the reflection is broader.~
+    ps_icon = ~spwi707~
+END
+COPY_EXISTING ~PS7RDOP.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS7RDOP~ END
+  FOR (ps_bounce_level = 1; ps_bounce_level <= 9; ++ps_bounce_level) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 199 target = 1 resist_dispel = BIT1 parameter1 = ps_bounce_level timing = 0 duration = 60 END
+  END
+BUT_ONLY
+
+// A second independent actor body cannot be created safely from the selected
+// PC without duplicating scripts, inventory and plot identity. Combat benefits
+// approximate the duplicate acting in concert.
+LAF psion_create_level7_power
+  STR_VAR
+    ps_resref = ~PS7FISS~
+    ps_name = ~Fission~
+    ps_description = ~For five rounds the Egoist gains one extra attack per round, +2 to attack rolls, +2 Armor Class, and +2 to all saving throws. Tabletop Fission creates a temporary duplicate; the engine cannot safely clone a player CRE with inventory and plot identity, so this represents the two bodies acting together.~
+    ps_icon = ~spwi716~
+END
+COPY_EXISTING ~PS7FISS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS7FISS~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 1 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 2 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 30 END
+  FOR (ps_save_opcode = 33; ps_save_opcode <= 37; ++ps_save_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+// True ethereal collision and wall traversal are not portable on 2D IE maps.
+// The defensive and mobility consequences are represented directly.
+LAF psion_create_level7_power
+  STR_VAR
+    ps_resref = ~PS7EJNT~
+    ps_name = ~Ethereal Jaunt (Psionic)~
+    ps_description = ~For five rounds the Nomad moves 50 percent faster, gains +4 Armor Class, cannot be backstabbed, and gains 50 percent resistance to physical damage. The engine cannot safely move a party actor through arbitrary unwalkable geometry, so this models the defensive and mobility consequences rather than literal ethereal travel.~
+    ps_icon = ~spwi705~
+END
+COPY_EXISTING ~PS7EJNT.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PS7EJNT~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 126 target = 1 resist_dispel = BIT1 parameter1 = 150 parameter2 = 2 timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - 4) timing = 0 duration = 30 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 292 target = 1 resist_dispel = BIT1 timing = 0 duration = 30 END
+  FOR (ps_resist_opcode = 86; ps_resist_opcode <= 89; ++ps_resist_opcode) BEGIN
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = ps_resist_opcode target = 1 resist_dispel = BIT1 parameter1 = 50 timing = 0 duration = 30 END
+  END
+BUT_ONLY
+
+// Crisis of Life is a Fortitude partial save with power resistance in tabletop.
+// A successful SRD save takes 7d6; a failed save can kill an 11-HD-or-lower
+// creature. The portable form preserves the 7d6 successful branch and replaces
+// the instant-death branch with +3d6 and one round of helplessness. Exactly one
+// PR/MR check happens on the parent, then exactly one save in the resolution
+// child: resisted = no effect, save success = 7d6, save failure = 10d6 + hold.
+LAF psion_create_level7_power
+  INT_VAR
+    ps_target = 2
+    ps_range = 30
+    ps_projectile = psion_none_projectile
+    ps_flags = psion_level7_hostile_flags
+  STR_VAR
+    ps_resref = ~PS7CLIF~
+    ps_name = ~Crisis of Life~
+    ps_description = ~The Telepath attacks the target's autonomic functions. Power resistance applies once, then a save vs death determines the result: a successful save takes 7d6 magical damage; a failed save takes 10d6 and is held helpless for one round. Tabletop Crisis of Life instead kills a failed-save target of 11 Hit Dice or less; the portable form replaces that instant-death branch with severe damage and brief collapse.~
+    ps_icon = ~spwi713~
+END
+
+// Failed-save package: +3d6 and hold, with no further PR or saving throw.
+COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIB.spl~
+  SAY NAME1 ~Crisis of Life Failure~
+  SAY UNIDENTIFIED_DESC ~Internal failed-save Crisis of Life effect package.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 3 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 175 target = 2 resist_dispel = BIT1 timing = 0 duration = 6 END
+BUT_ONLY
+
+// Resolution package after the outer PR check: the SRD successful-save 7d6 is
+// automatic, then one save gates the failed-save package. Children bypass PR.
+COPY_EXISTING ~PS7CLIF.spl~ ~override/PS7CLIR.spl~
+  SAY NAME1 ~Crisis of Life Resolution~
+  SAY UNIDENTIFIED_DESC ~Internal post-resistance Crisis of Life resolution package.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT1 parameter2 = IDS_OF_SYMBOL (~dmgtype~ ~MAGIC~) dicenumber = 7 dicesize = 6 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT1 parameter1 = 0 parameter2 = 1 savingthrow = BIT2 savebonus = psion_level7_save_penalty STR_VAR resource = ~PS7CLIB~ END
+BUT_ONLY
+
+// The learnable parent does only the one tabletop PR/MR check.
+COPY_EXISTING ~PS7CLIF.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 146 target = 2 resist_dispel = BIT0 parameter1 = 0 parameter2 = 1 STR_VAR resource = ~PS7CLIR~ END
+BUT_ONLY

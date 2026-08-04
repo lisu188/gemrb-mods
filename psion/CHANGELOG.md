@@ -2,124 +2,82 @@
 
 ## Unreleased
 
-- Renamed four powers to their Expanded Psionics Handbook names: Spatial Step
-  to Dimension Slide, Spatial Disruption to Baleful Teleport, Compulsion to
-  Dominate (Psionic) and Psionic Flight to Fly (Psionic). Resrefs are
-  unchanged; `PS5BALT` already read as Baleful Teleport.
-- Settled Psionic Repair Damage on one name. `PS2RPRD` was called
-  `REPAIR_CONSTRUCT` in `psionpowers.2da`, `Repair Construct` in
-  `power-data.tpa` and `Psionic Repair Damage` in its builder.
-- Deleted the `psion_power_name`, `psion_power_template` and
-  `psion_power_level` arrays from `power-data.tpa`. Nothing in the repository
-  read them; they were prototype scaffolding duplicating `psionpowers.2da`, and
-  that duplication is how the `PS2RPRD` naming drifted unnoticed.
-- Added a `validate_core.py` invariant that pins `psionpowers.2da`'s `NAME`
-  column to the builders' `ps_name`. The column is never read at runtime, so it
-  could previously drift without symptom. The walk covers every module under
-  `lib/`, which is what catches the three augment parents that are built twice.
-- Moved Energy Push to its correct 2nd level as `PS2EPUS`, at 3 PP and 2d6.
-- Added Matter Agitation (`PS1MAGI`) as the Kineticist's level-1 exclusive.
-  Energy Push held that slot, and the progression invariant requires exactly
-  one discipline exclusive per odd character level at the tier maximum, so
-  moving Energy Push had to be paired with a replacement rather than a reslot.
-- Replaced Mental Stasis with Crisis of Breath (`PS3CBRE`) and Cognitive
-  Overload with Psychic Crush (`PS5PCRU`). Neither replaced power was an EPH
-  power; Mental Stasis's own comment admitted its name came from the prototype
-  catalogue, and no CLAB table granted Cognitive Overload, so no character
-  could learn it.
-- The power catalogue grows from 60 to 61 entries.
-- Kept Energy Push learnable after its level change. It moved out of the
-  Kineticist's level-1 row, and levels 1-9 are count-pinned and full, so it
-  takes the Kineticist's level-4 slot from Detect Hostile Intent, which five
-  other disciplines still grant.
-- Added a `validate_core.py` invariant pinning the set of powers no CLAB table
-  grants. Sixteen powers are built but unreachable while CLAB rows 10-20 stay
-  empty; pinning the set means stranding a further power fails CI instead of
-  shipping unnoticed, and the README now lists them.
-- Corrected all four new powers against the SRD, which turned out to be
-  readable from a GitHub mirror after every conventional mirror was refused by
-  this environment's network policy. Each had been written from search snippets
-  and each was wrong:
-  - Psychic Crush dealt an invented 8d6; the tabletop figure is 3d6, and it
-    lands regardless of the save rather than being halved by it.
-  - Matter Agitation allows no saving throw and ramps 1 point, then 1d4, then
-    1d6 over three rounds. It had a save for half, a flat 1d6 and an Armor
-    Class penalty with no basis in the power at all.
-  - Crisis of Breath is "Will negates", so its save negates outright rather
-    than halving.
-  - Energy Push is "Reflex half" on the damage with the knockback gated on a
-    Strength check. The build had the saves the other way round: damage
-    unavoidable, knockback avoidable.
-- Added assertions pinning the corrected figures, so the invented 8d6 and a
-  halving save on Crisis of Breath both fail CI if reintroduced.
+- Extended the fixed Psion progression from the BG1-accessible level-1–9 class
+  rows to the complete class-level 1–20 powers-known table, ending at 36 unique
+  known powers per discipline.
+- Added 24 D&D 3.5e discipline powers at power levels 6–9: one Seer, Shaper,
+  Kineticist, Egoist, Nomad and Telepath power at each new tier.
+- Expanded `psionpowers.2da` to 85 catalogue powers with the complete base-cost
+  ladder of 1, 3, 5, 7, 9, 11, 13, 15 and 17 PP.
+- Filled all six CLAB tables through level 20. Each newly unlocked tier still
+  grants exactly one matching discipline power at class levels 1, 3, 5, 7, 9,
+  11, 13, 15 and 17.
+- Assigned the previously installed-but-unreachable lower-tier resources across
+  levels 10–20. CI now requires zero catalogue powers without a progression
+  route instead of pinning a known stranded set.
+- Added explicit portable Infinity Engine approximations for high-tier mechanics
+  that require body swaps, persistent rebirth, movable force spheres, actor
+  identity rewriting, arbitrary CRE merging, off-map information queries or
+  persistent teleport destinations.
+- Reworked Telekinetic Sphere, Crisis of Life and Tornado Blast so each coupled
+  outcome is controlled by exactly one saving throw. Failed-save child SPLs
+  contain the dependent control/protection/damage effects with no secondary
+  saves.
+- Added `validate_high_tier.py` to assert those parent/child contracts directly:
+  one save on the parent, zero saves in the child, correct resource routing and
+  exact 5+5 and 8+9 damage splits for Crisis of Life and Tornado Blast.
+- Extended core validation through power level 9: exact catalogue membership,
+  base PP costs, per-level powers-known totals, discipline unlocks, zero
+  unreachable powers, builder ownership, save penalties and display-name/table
+  consistency.
+- Rewrote the README around the current 85-power catalogue and complete 1–20
+  progression, including the high-tier power list and every documented engine
+  approximation.
 
-- Extended every augmentation ladder to the manifester-level cap of 20 power
-  points. The cap was already enforced correctly, but each ladder stopped at
-  9 PP, so a Psion above level 9 could never reach it. Energy Ray now runs
-  1-20 PP per energy type, Mind Thrust and Vigor 1-20, and Swarm of Crystals
-  3-20. Generated augment children go from 57 to 142.
-- Added the missing Swarm of Crystals augmentation (+1d4 per additional power
-  point). It is now an opcode-214 selector built by `swarm-augment.tpa`, and
-  the dead direct build has been removed from `level2-powers.tpa` rather than
-  left to be deleted and rebuilt during install.
-- Fixed Animal Affinity so its augment line is reachable. Each child now strips
-  only its own resource instead of all its siblings, so boosting a second
-  ability no longer cancels the first, and Charisma joins Strength, Dexterity
-  and Constitution as a legal choice.
-- Extended the Vigor refresh strip to the whole ladder. It covered only the
-  first nine tiers, so a 10 PP or higher Vigor would have stacked on top of a
-  lower one instead of replacing it.
-- Replaced the hand-written augmentation arrays with loops bounded by a single
-  `psion_max_augment_cost` constant in `power-data.tpa`, and added
-  `psion/tools/generate_augment_tables.py` as the sole producer of the checked-in
-  table data. The ladder was previously written out three times -- the augment
-  table, the selector tables and the WeiDU arrays -- which does not scale to 142
-  rows. CI now runs the generator's `--check` mode so the committed tables
-  cannot drift from the constant.
-- Removed the `AUGMENT_STEP` column from `psionpowers.2da` and `Psionics.py`.
-  It was read into the runtime dictionary and never used.
+- Renamed four lower-tier powers to their Expanded Psionics Handbook names:
+  Spatial Step to Dimension Slide, Spatial Disruption to Baleful Teleport,
+  Compulsion to Dominate (Psionic) and Psionic Flight to Fly (Psionic).
+- Settled `PS2RPRD` on the single name Psionic Repair Damage and removed obsolete
+  prototype name/template/level arrays that duplicated `psionpowers.2da`.
+- Moved Energy Push to its correct 2nd level as `PS2EPUS`, added Matter Agitation
+  (`PS1MAGI`) as the Kineticist level-1 exclusive, replaced Mental Stasis with
+  Crisis of Breath (`PS3CBRE`) and replaced Cognitive Overload with Psychic
+  Crush (`PS5PCRU`).
+- Corrected those SRD powers: Psychic Crush uses 3d6 rather than invented 8d6;
+  Matter Agitation has no save and ramps 1 point/1d4/1d6; Crisis of Breath is
+  Will-negates; Energy Push uses Reflex-half damage with separately approximated
+  knockback semantics.
 
-- Added saving-throw difficulty scaled by power level. Previously every
-  generated effect left `savebonus = 0`, so neither a power's level nor the
-  manifester's Intelligence had any bearing on whether it landed — Intelligence
-  bought power points and nothing else. Each save-bearing effect now carries a
-  `savebonus` combining a power-level term of `-(level - 1)` with the `+2`
-  key-ability modifier guaranteed by the Intelligence 15 chargen minimum.
-- Documented why Intelligence above 15 cannot improve save difficulty: GemRB
-  exposes no way to vary an installed SPL's `savebonus` by the caster's runtime
-  stats. `ModifyEffect` only moves an effect's target coordinates, and
-  `PrepareSpontaneousCast`, the one substitution hook, would require a separate
-  resource per Intelligence bracket across all sixty-one powers.
-- Added a `validate_core.py` invariant that pins the per-level constants and
-  fails if any save-bearing effect is left without its penalty.
+- Extended augmentation ladders to the manifester-level ceiling of 20 PP:
+  Energy Ray runs 1–20 PP per energy type, Mind Thrust and Vigor 1–20, and Swarm
+  of Crystals 3–20.
+- Added Swarm of Crystals augmentation, added Charisma to Animal Affinity, fixed
+  Animal Affinity sibling cancellation, and extended Vigor refresh stripping to
+  the entire ladder.
+- Replaced hand-written augmentation arrays with loops bounded by one
+  `psion_max_augment_cost` constant plus `generate_augment_tables.py`; CI checks
+  generated tables for drift.
+- Removed the unused `AUGMENT_STEP` metadata from `psionpowers.2da` and runtime
+  dictionaries.
 
-Rules-fidelity corrections from a review against the D&D 3.5 Expanded Psionics
-Handbook. The core economy (power-point table, powers known, `(2 x level) - 1`
-base costs, the manifester-level spending cap and the `Int >= 10 + power level`
-requirement) was already correct and is unchanged.
+- Added power-level save-difficulty scaling. Save-bearing effects encode the
+  tier term plus the +2 key-ability modifier guaranteed by the Intelligence 15
+  chargen minimum.
+- Documented the remaining save-DC limitation: Intelligence above 15 increases
+  PP but cannot yet dynamically alter an installed SPL's save bonus without a
+  dedicated GemRB substitution/effect mechanism.
+- Added validation requiring every save-bearing effect to carry the expected
+  save penalty.
 
-- Relabelled the component, README, changelog and source comments as D&D 3.5e.
-  The implemented tables were always the 3.5 Expanded Psionics Handbook ones;
-  only the label said 3e.
-- Corrected Force Screen to the tabletop +4 shield bonus, up from +2.
-- Corrected Power Resistance to `12 + manifester level` (21 at the first legal
-  manifestation level), down from an incorrect `20 + manifester level`.
-- Corrected Body Adjustment to heal a flat 1d12, removing a +5 rider that the
-  tabletop power does not have.
-- Removed the damage resistance Ectoplasmic Cocoon granted to its own victim.
-  The shell's hardness belongs to the cocoon, not the trapped creature, so the
-  power was making held targets harder to kill.
-- Removed the extra attack from Hustle. The tabletop power grants an extra move
-  action, which the existing doubled movement already approximates.
-- Normalised energy-area saving throws to save vs breath, the mod's Reflex
-  proxy: Energy Missile, Energy Ball and Energy Current now match Swarm of
-  Crystals, Energy Bolt and Energy Cone.
-- Changed Baleful Teleport (`PS5BALT`) to save vs death, the mod's Fortitude
-  proxy, matching the tabletop power's Fortitude save.
-- Added the missing hostile spell flags to Dispel Psionics, which every other
-  offensive level-3 power already set.
-- Extended the validation suites to lock in each correction, including negative
-  assertions against the previous values.
+- Relabelled the implementation as D&D 3.5e, matching the Expanded Psionics
+  Handbook tables it has always used.
+- Corrected Force Screen to +4 AC, Power Resistance to `12 + manifester level`,
+  Body Adjustment to flat 1d12 healing, and removed victim resistance from
+  Ectoplasmic Cocoon.
+- Removed the extra attack from Hustle, normalized energy-area saving throws to
+  save vs breath, changed Baleful Teleport to save vs death, and added the
+  missing hostile flags to Dispel Psionics.
+- Extended validation with negative assertions against the corrected old values.
 
 ## 1.0.0
 

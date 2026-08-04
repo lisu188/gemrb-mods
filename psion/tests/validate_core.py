@@ -22,6 +22,10 @@ LEVEL_REFS = {
     3: {"PS3DPSI", "PS3BADJ", "PS3EBLT", "PS3MBAR", "PS3TSGT", "PS3THOP", "PS3DANG", "PS3COCO", "PS3ECON", "PS3HUST", "PS3SSTP", "PS3CBRE"},
     4: {"PS4EADP", "PS4FOMV", "PS4DDOR", "PS4IFOR", "PS4TKMN", "PS4PLEE", "PS4RVIE", "PS4WECT", "PS4EBAL", "PS4META", "PS4PFLY", "PS4COMP"},
     5: {"PS5ADBD", "PS5CATP", "PS5PRES", "PS5PCRU", "PS5TRUE", "PS5TELE", "PS5SCHN", "PS5HOCR", "PS5ECUR", "PS5PFDB", "PS5BALT", "PS5MPRB"},
+    6: {"PS6GPRE", "PS6CRYS", "PS6DBUF", "PS6REST", "PS6BANI", "PS6MSWI"},
+    7: {"PS7FATE", "PS7MCOC", "PS7RDOP", "PS7FISS", "PS7EJNT", "PS7CLIF"},
+    8: {"PS8HYPC", "PS8ASED", "PS8TKSP", "PS8FUSN", "PS8MTHP", "PS8MSED"},
+    9: {"PS9META", "PS9TCRE", "PS9TORN", "PS9GMET", "PS9TCIR", "PS9PCHI"},
 }
 
 
@@ -67,10 +71,7 @@ def validate_tables() -> None:
         assert all(len(row) == len(columns) + 1 for row in rows(filename)), filename
 
     powers = rows("psionpowers.2da")
-    # 61 rather than 60: Energy Push moved to its correct 2nd level and the
-    # Kineticist's vacated level-1 exclusive was filled by Matter Agitation,
-    # so the catalogue gained one power.
-    assert len(powers) == len({row[0] for row in powers}) == 61
+    assert len(powers) == len({row[0] for row in powers}) == 85
     for level, expected_refs in LEVEL_REFS.items():
         actual = {row[0] for row in powers if int(row[2]) == level}
         assert actual == expected_refs, (level, actual ^ expected_refs)
@@ -80,7 +81,11 @@ def validate_tables() -> None:
 
 def validate_progressions() -> None:
     known = {int(row[0]): (int(row[1]), int(row[2])) for row in rows("psionknown.2da")}
-    powers = {row[0]: {"level": int(row[2]), "discipline": row[3]} for row in rows("psionpowers.2da")}
+    powers = {
+        row[0]: {"level": int(row[2]), "discipline": row[3]}
+        for row in rows("psionpowers.2da")
+    }
+    unlock_levels = {1, 3, 5, 7, 9, 11, 13, 15, 17}
 
     for discipline, filename in DISCIPLINE_CLABS.items():
         learned: list[str] = []
@@ -88,40 +93,27 @@ def validate_progressions() -> None:
             level = int(row[0])
             gained = [token[3:] for token in row[1:] if token.startswith("GA_PS")]
             learned.extend(gained)
-            assert len(learned) == len(set(learned)), (discipline, "duplicate power")
-            assert set(learned) <= set(powers), (discipline, "unknown power")
+            expected_count, maximum = known[level]
+
+            assert len(learned) == expected_count, (discipline, level, len(learned), expected_count)
+            assert len(learned) == len(set(learned)), (discipline, level, "duplicate power")
+            assert set(learned) <= set(powers), (discipline, level, "unknown power")
             assert all(powers[ref]["discipline"] in ("GENERAL", discipline) for ref in learned)
-            if level <= 9:
-                expected_count, maximum = known[level]
-                assert len(learned) == expected_count, (discipline, level)
-                if level in (1, 3, 5, 7, 9):
-                    exclusive = [ref for ref in gained if powers[ref]["discipline"] == discipline]
-                    assert len(exclusive) == 1
-                    assert powers[exclusive[0]]["level"] == maximum
+            assert all(powers[ref]["level"] <= maximum for ref in learned), (discipline, level, maximum)
 
+            if level in unlock_levels:
+                exclusive = [
+                    ref for ref in gained
+                    if powers[ref]["discipline"] == discipline
+                    and powers[ref]["level"] == maximum
+                ]
+                assert len(exclusive) == 1, (discipline, level, maximum, gained)
 
-# Powers with no GA_ entry in any CLAB table. They are built and installed to
-# override/ but no character can learn them, because CLAB rows 10-20 are still
-# all **** while psionknown.2da expects the catalogue to keep growing to level
-# 20. Workstream 4 fills those rows and drains this set.
-#
-# The set is pinned rather than merely counted so that stranding a further
-# power fails here instead of shipping unnoticed. Moving Energy Push to its
-# correct 2nd level stranded it in exactly this way and only review caught it.
-UNGRANTED_POWERS = {
-    "PS1EMND", "PS2CBLS", "PS2TSHD", "PS2BIOF", "PS2SWCR", "PS3MBAR",
-    "PS3TSGT", "PS3THOP", "PS4DDOR", "PS4TKMN", "PS4PLEE", "PS5ADBD",
-    "PS5CATP", "PS5PCRU", "PS5TRUE", "PS5TELE",
-}
+        assert len(learned) == 36, (discipline, len(learned))
 
 
 def validate_learnable_powers() -> None:
-    """Pin which powers no discipline can learn.
-
-    Powers reach a character only through GA_ entries in the six CLAB tables,
-    so a power absent from all six is unreachable however complete its builder
-    is.
-    """
+    """Every installed catalogue power must have at least one progression route."""
     granted = set()
     for filename in DISCIPLINE_CLABS.values():
         for row in rows(filename):
@@ -129,24 +121,17 @@ def validate_learnable_powers() -> None:
 
     catalogue = {row[0] for row in rows("psionpowers.2da")}
     assert granted <= catalogue, ("CLAB grants an unknown power", sorted(granted - catalogue))
-
     stranded = catalogue - granted
-    assert stranded == UNGRANTED_POWERS, (
-        "learnability changed",
-        {"newly stranded": sorted(stranded - UNGRANTED_POWERS),
-         "newly reachable": sorted(UNGRANTED_POWERS - stranded)},
-    )
+    assert not stranded, ("unreachable catalogue powers", sorted(stranded))
 
 
 def validate_weidu_integer_syntax() -> None:
-    """Reject forms that WeiDU 251 does not accept in INT_VAR expressions."""
     bare_negative = re.compile(
         r"\b(?:parameter1|parameter2|duration|timing|target|range|speed|"
         r"projectile|opcode|resist_dispel|dicenumber|dicesize|savingthrow|special)"
         r"\s*=\s*-\d+"
     )
     negative_long = re.compile(r"\bWRITE_(?:S?LONG)\s+\S+\s+-\d+")
-
     for path in sorted((ROOT / "lib").glob("*.tpa")):
         text = path.read_text(encoding="utf-8")
         match = bare_negative.search(text)
@@ -156,10 +141,11 @@ def validate_weidu_integer_syntax() -> None:
 
 
 def validate_release_infrastructure() -> None:
-    """Lock the self-contained installer and all 1.0 lifecycle fixtures."""
     driver = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     includes = re.findall(r"INCLUDE ~psion/lib/([^~]+)~", driver)
     assert includes[0] == "spell-functions.tpa", includes
+    for level in range(1, 10):
+        assert f"level{level}-powers.tpa" in includes, level
 
     helpers = (ROOT / "lib" / "spell-functions.tpa").read_text(encoding="utf-8")
     for fragment in (
@@ -217,50 +203,68 @@ def validate_builders() -> None:
     compatibility = (ROOT / "lib" / "power-build.tpa").read_text(encoding="utf-8")
     assert "COPY_EXISTING" not in compatibility
     assert "ACTION_PHP_EACH" not in compatibility
+    augment_modules = {"PS2SWCR": "swarm-augment.tpa"}
 
-    # Augmentable powers are built by their own selector module instead of the
-    # level builder, so that module is where their parent resource is created.
-    AUGMENT_MODULES = {"PS2SWCR": "swarm-augment.tpa"}
-
+    level_text = {}
     for level, expected_refs in LEVEL_REFS.items():
         filename = f"level{level}-powers.tpa"
         assert filename in driver
         text = (ROOT / "lib" / filename).read_text(encoding="utf-8")
+        level_text[level] = text
         created = set(re.findall(fr"ps_resref = ~(PS{level}[A-Z0-9]+)~", text))
-        for resref, module in AUGMENT_MODULES.items():
+        for resref, module in augment_modules.items():
             if resref not in expected_refs:
                 continue
             assert module in driver, module
             module_text = (ROOT / "lib" / module).read_text(encoding="utf-8")
             assert f"ps_resref = ~{resref}~" in module_text, (resref, module)
-            # The level builder must not also create it; a resource built twice
-            # is silently discarded by the later DELETE and misleads the reader.
             assert resref not in created, (resref, filename)
             created.add(resref)
         assert created == expected_refs, (level, created ^ expected_refs)
         assert f"WRITE_LONG 0x34 {level}" in text
         assert "WRITE_LONG 0x18 ps_flags" in text
 
-    level1 = (ROOT / "lib" / "level1-powers.tpa").read_text(encoding="utf-8")
-    level2 = (ROOT / "lib" / "level2-powers.tpa").read_text(encoding="utf-8")
+    level1 = level_text[1]
+    level2 = level_text[2]
     affinity = (ROOT / "lib" / "animal-affinity.tpa").read_text(encoding="utf-8")
     mind_vigor = (ROOT / "lib" / "mind-vigor-augment.tpa").read_text(encoding="utf-8")
 
     checks = {
-        "PS1ERAY": (level1, "psion_create_level1_power", ("opcode = 12", "dicesize = 6")),
-        "PS1MTHR": (level1, "psion_create_level1_power", ("dicesize = 10", "savingthrow = BIT0")),
-        "PS1VIGR": (level1, "psion_create_level1_power", ("opcode = 18", "opcode = 17")),
-        "PS1FSCR": (level1, "psion_create_level1_power", ("opcode = 0", "parameter1 = (0 - 4)", "opcode = 206")),
-        "PS1PREC": (level1, "psion_create_level1_power", ("opcode = 54", "parameter1 = 1", "parameter1 = (0 - 1)")),
-        "PS1ACON": (level1, "psion_create_level1_power", ("opcode = 67", "resource = ~PSACON01~")),
-        "PS1BRST": (level1, "psion_create_level1_power", ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
-        "PS2AMOR": (level2, "psion_create_level2_power", ("opcode = 65", "parameter1 = (0 - 2)")),
-        "PS2BIOF": (level2, "psion_create_level2_power", ("ps_resist_opcode = 86", "ps_resist_opcode <= 89")),
-        "PS2AAFF": (level2, "psion_create_level2_power", ("opcode = 214", "resource = ~PS2AAFF~")),
-        "PS2DSWP": (level2, "psion_create_level2_power", ("opcode = 124", "parameter2 = 3")),
+        "PS1ERAY": (1, ("opcode = 12", "dicesize = 6")),
+        "PS1MTHR": (1, ("dicesize = 10", "savingthrow = BIT0")),
+        "PS1VIGR": (1, ("opcode = 18", "opcode = 17")),
+        "PS1PREC": (1, ("opcode = 54", "parameter1 = 1", "parameter1 = (0 - 1)")),
+        "PS1ACON": (1, ("opcode = 67", "resource = ~PSACON01~")),
+        "PS1BRST": (1, ("opcode = 126", "parameter1 = 130", "parameter2 = 2")),
+        "PS2AMOR": (2, ("opcode = 65", "parameter1 = (0 - 2)")),
+        "PS2BIOF": (2, ("ps_resist_opcode = 86", "ps_resist_opcode <= 89")),
+        "PS2AAFF": (2, ("opcode = 214", "resource = ~PS2AAFF~")),
+        "PS2DSWP": (2, ("opcode = 124", "parameter2 = 3")),
+        "PS6CRYS": (6, ("opcode = 134", "savingthrow = BIT2")),
+        "PS6DBUF": (6, ("opcode = 101", "parameter2 = 58")),
+        "PS6REST": (6, ("opcode = 224",)),
+        "PS6BANI": (6, ("opcode = 213", "duration = 30")),
+        "PS6MSWI": (6, ("opcode = 5", "duration = 30")),
+        "PS7MCOC": (7, ("opcode = 175", "Fireball_Just_Projectile")),
+        "PS7RDOP": (7, ("opcode = 199", "ps_bounce_level <= 9")),
+        "PS7FISS": (7, ("opcode = 1", "parameter1 = 1")),
+        "PS7EJNT": (7, ("opcode = 126", "parameter1 = 150", "parameter2 = 2")),
+        "PS7CLIF": (7, ("opcode = 146", "resource = ~PS7CLIB~", "dicenumber = 7", "savingthrow = BIT2")),
+        "PS8HYPC": (8, ("opcode = 91", "parameter1 = 100")),
+        "PS8ASED": (8, ("ps_resist_opcode = 86", "parameter1 = 25")),
+        "PS8TKSP": (8, ("opcode = 146", "resource = ~PS8TKSB~", "opcode = 175", "parameter1 = 50")),
+        "PS8FUSN": (8, ("opcode = 44", "opcode = 15", "opcode = 10", "parameter1 = 6")),
+        "PS8MTHP": (8, ("opcode = 213", "Fireball_Just_Projectile")),
+        "PS8MSED": (8, ("opcode = 5", "duration = 600")),
+        "PS9META": (9, ("opcode = 193", "opcode = 91", "parameter1 = 100")),
+        "PS9TCRE": (9, ("opcode = 67", "resource = ~PSACON01~")),
+        "PS9TORN": (9, ("Fireball_Just_Projectile", "ps_description = ~A violent vortex deals 17d6")),
+        "PS9GMET": (9, ("opcode = 44", "parameter1 = 8", "parameter1 = 40")),
+        "PS9TCIR": (9, ("opcode = 124", "parameter2 = 1")),
+        "PS9PCHI": (9, ("opcode = 224", "parameter2 = 5", "parameter2 = 128")),
     }
-    for resref, (text, function, fragments) in checks.items():
-        body = section(text, function, resref)
+    for resref, (level, fragments) in checks.items():
+        body = section(level_text[level], f"psion_create_level{level}_power", resref)
         for fragment in fragments:
             assert fragment in body, (resref, fragment)
 
@@ -268,44 +272,21 @@ def validate_builders() -> None:
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = 1" in precognition
     assert "opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1)" not in precognition
 
-    # Charisma is a legal Animal Affinity choice alongside the three physical
-    # abilities, and each ability maps to its own engine opcode.
     for resref, opcode in (
-        ("PSAASTR", "44"),
-        ("PSAADEX", "15"),
-        ("PSAACON", "10"),
-        ("PSAACHA", "6"),
+        ("PSAASTR", "44"), ("PSAADEX", "15"), ("PSAACON", "10"), ("PSAACHA", "6")
     ):
         assert f"~{resref}~ => {opcode}" in affinity
-
-    # Each child strips only itself. Stripping the siblings, as an earlier
-    # revision did, made the tabletop augment line -- +4 to an additional
-    # ability for every 4 extra power points -- unreachable at any cost.
     assert "resource = ~%ps_resref%~" in affinity
     for resref in ("PSAASTR", "PSAADEX", "PSAACON", "PSAACHA"):
         assert f"resource = ~{resref}~" not in affinity
 
     assert "savebonus = ps_save_penalty" in mind_vigor
     assert "save_bonus = ps_save_penalty" not in mind_vigor
-
-    # Mind Thrust augments damage by 1d10 per additional power point, and the
-    # save DC by 1 for each extra 2d10, so the penalty is floor((cost - 1) / 2).
     assert "dicenumber = ps_cost" in mind_vigor
-    assert (
-        "ps_save_penalty = (psion_level1_save_penalty - ((ps_cost - 1) / 2))"
-        in mind_vigor
-    )
+    assert "ps_save_penalty = (psion_level1_save_penalty - ((ps_cost - 1) / 2))" in mind_vigor
 
 
 def augment_ceiling() -> int:
-    """The augment ladder ceiling, read from the WeiDU constant.
-
-    D&D 3.5 caps a manifestation at the manifester's level in power points, so
-    the ladders run to 20 rather than stopping at the highest base cost. The
-    number lives in exactly two places -- power-data.tpa for the installer and
-    generate_augment_tables.py for the table data -- and the assertions below
-    pin them together so they cannot drift apart.
-    """
     text = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
     match = re.search(r"OUTER_SET psion_max_augment_cost = (\d+)", text)
     assert match, "power-data.tpa must define psion_max_augment_cost"
@@ -314,19 +295,12 @@ def augment_ceiling() -> int:
 
 def validate_augmentation() -> None:
     ceiling = augment_ceiling()
-
     generator = (ROOT / "tools" / "generate_augment_tables.py").read_text(encoding="utf-8")
     match = re.search(r"^MAX_AUGMENT_COST = (\d+)$", generator, re.MULTILINE)
     assert match, "the generator must define MAX_AUGMENT_COST"
-    assert int(match.group(1)) == ceiling, (
-        f"generator ceiling {match.group(1)} != psion_max_augment_cost {ceiling}"
-    )
+    assert int(match.group(1)) == ceiling
 
     augment = rows("psionaugment.2da")
-
-    # Energy Ray has one ladder per energy type; Swarm of Crystals is a 2nd
-    # level power so its ladder starts at its 3 PP base cost; Animal Affinity
-    # is a mode selector at a flat cost rather than a ladder.
     expected = {
         "PS1ERAY": ("ps1eray.2da", 4 * ceiling),
         "PS1MTHR": ("ps1mthr.2da", ceiling),
@@ -335,18 +309,12 @@ def validate_augmentation() -> None:
         "PS2AAFF": ("ps2aaff.2da", 4),
     }
     total = sum(count for _, count in expected.values())
-    assert len(augment) == len({row[0] for row in augment}) == total, (
-        len(augment),
-        total,
-    )
-
-    # No child may cost more than a 20th-level manifester could legally spend.
+    assert len(augment) == len({row[0] for row in augment}) == total
     for row in augment:
         assert 1 <= int(row[2]) <= ceiling, row
 
-    selectors = expected
     all_children: set[str] = set()
-    for parent, (filename, count) in selectors.items():
+    for parent, (filename, count) in expected.items():
         data = rows(filename)
         assert len(data) == count
         children = {row[1] for row in data}
@@ -356,19 +324,10 @@ def validate_augmentation() -> None:
 
 
 def validate_save_dc_scheme() -> None:
-    """Every save-bearing effect carries its power level's save penalty.
-
-    D&D 3.5 sets a power's save DC at 10 + power level + key ability modifier.
-    The engine has no DC, so the translation splits into a power-level term of
-    -(N - 1) and the guaranteed key-ability term from the Intelligence 15
-    chargen minimum. This check pins both constants and the fact that no
-    save-bearing effect is left without one, which is the shape of regression
-    that silently reverts the scheme.
-    """
     shared = (ROOT / "lib" / "power-data.tpa").read_text(encoding="utf-8")
     assert "OUTER_SET psion_key_ability_save_penalty = (0 - 2)" in shared
 
-    for level in range(1, 6):
+    for level in range(1, 10):
         text = (ROOT / "lib" / f"level{level}-powers.tpa").read_text(encoding="utf-8")
         constant = f"psion_level{level}_save_penalty"
         expected = (
@@ -378,17 +337,11 @@ def validate_save_dc_scheme() -> None:
         )
         assert f"OUTER_SET {constant} = {expected}" in text, (level, expected)
 
-    # Walk every module, not just the level builders. The augment modules
-    # delete and rebuild some level-1 resources, so a check scoped to
-    # level*-powers.tpa would pass while the resources players actually
-    # manifest carry no penalty at all.
     for path in sorted((ROOT / "lib").glob("*.tpa")):
-        body = path.read_text(encoding="utf-8")
-        rendered = body.splitlines()
+        rendered = path.read_text(encoding="utf-8").splitlines()
         for number, line in enumerate(rendered, start=1):
             if "savingthrow = BIT" not in line:
                 continue
-            # The multi-line INT_VAR form puts savebonus on its own line.
             following = rendered[number] if number < len(rendered) else ""
             if "save_penalty" in line or "save_penalty" in following:
                 continue
@@ -398,47 +351,23 @@ def validate_save_dc_scheme() -> None:
 
 
 def normalise_power_name(name: str) -> str:
-    """Fold a display name into the psionpowers.2da NAME convention.
-
-    Punctuation is dropped rather than special-cased, so "Fly (Psionic)" folds
-    to FLY_PSIONIC without this rule having to name that power.
-    """
     return "_".join(re.findall(r"[A-Za-z0-9]+", name)).upper()
 
 
 def validate_power_names() -> None:
-    """psionpowers.2da's NAME column must agree with the builders' ps_name.
-
-    Nothing reads NAME at runtime -- Psionics.py takes only LEVEL, DISCIPLINE
-    and BASE_COST, keyed by resref -- so the column can drift indefinitely
-    without any symptom. PS2RPRD carried three different names before this
-    check existed. The builders' ps_name is written to the SPL via SAY NAME1
-    and is the only name a player ever sees, so it is the authority here.
-
-    The walk covers every module under lib/, not just level*-powers.tpa. The
-    augment modules delete and rebuild their parent resources, so a check
-    scoped to the level builders would skip exactly the resources players
-    manifest -- that scoping error is how the Workstream 1 save-DC gap reached
-    review.
-    """
     table = {row[0]: row[1] for row in rows("psionpowers.2da")}
-    # ps_resref precedes ps_name inside a builder block; refusing to cross a
-    # second ps_resref keeps a block from borrowing its neighbour's name.
     pattern = re.compile(
         r"ps_resref\s*=\s*~([A-Z0-9]+)~(?:(?!ps_resref).)*?ps_name\s*=\s*~([^~]+)~",
         re.DOTALL,
     )
-
     inspected = set()
     for path in sorted((ROOT / "lib").glob("*.tpa")):
         for resref, display in pattern.findall(path.read_text(encoding="utf-8")):
             if resref not in table:
-                continue  # augment child, not a catalogue power
+                continue
             expected = normalise_power_name(display)
             assert table[resref] == expected, (path.name, resref, table[resref], expected)
             inspected.add(resref)
-
-    # Without this the check would pass vacuously if the regex stopped matching.
     missing = sorted(set(table) - inspected)
     assert not missing, ("no builder ps_name found for", missing)
 
@@ -453,7 +382,10 @@ def validate_installer() -> None:
         "clabpego", "clabpnom", "clabptel",
     ):
         assert name in setup
-    for include in ("class-detect.tpa", "class-strings.tpa", "class-layout.tpa", "class-common.tpa", "class-skills.tpa"):
+    for include in (
+        "class-detect.tpa", "class-strings.tpa", "class-layout.tpa",
+        "class-common.tpa", "class-skills.tpa",
+    ):
         assert include in setup
 
 

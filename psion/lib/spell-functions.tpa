@@ -78,7 +78,10 @@ DEFINE_PATCH_FUNCTION ~ADD_SPELL_EFFECT~
     timing = 0
     parameter1 = 0
     parameter2 = 0
-    power = 0
+    // 255 is a local sentinel meaning "inherit the owning SPL's level". None
+    // of the Psion resources explicitly requests effect power 255, while power
+    // levels are 1-9, so callers can still override this with any real byte.
+    power = 255
     resist_dispel = 0
     duration = 0
     probability1 = 100
@@ -108,6 +111,18 @@ BEGIN
     PATCH_FAIL ~ADD_SPELL_EFFECT received an invalid header number.~
   END
 
+  SET ps_effect_power = power
+  PATCH_IF (ps_effect_power = 255) BEGIN
+    // The generated resources write their actual power level at SPL offset
+    // 0x34 before adding effects. Mirroring that value into each feature's
+    // Power byte makes spell-level bounce/deflection/globe mechanics see Psion
+    // effects at their real level instead of the helper's former default 0.
+    READ_LONG 0x34 ps_effect_power
+  END
+  PATCH_IF (ps_effect_power < 0) OR (ps_effect_power > 255) BEGIN
+    PATCH_FAIL ~ADD_SPELL_EFFECT received an invalid effect power.~
+  END
+
   // Header 0 follows the conventional WeiDU helper meaning: apply the effect
   // to every ability. A positive value is one-based (header 1 is index 0).
   FOR (ps_header_index = 0; ps_header_index < ps_header_count; ++ps_header_index) BEGIN
@@ -121,7 +136,7 @@ BEGIN
       INSERT_BYTES ps_new_effect 0x30
       WRITE_SHORT ps_new_effect opcode
       WRITE_BYTE (ps_new_effect + 0x02) target
-      WRITE_BYTE (ps_new_effect + 0x03) power
+      WRITE_BYTE (ps_new_effect + 0x03) ps_effect_power
       WRITE_LONG (ps_new_effect + 0x04) parameter1
       WRITE_LONG (ps_new_effect + 0x08) parameter2
       WRITE_BYTE (ps_new_effect + 0x0c) timing
