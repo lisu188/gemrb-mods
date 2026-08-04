@@ -19,3 +19,4 @@ INCLUDE ~cipher/lib/class.tpa~
 INCLUDE ~cipher/lib/class-skills-fix.tpa~
 INCLUDE ~cipher/lib/powers.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
+INCLUDE ~cipher/lib/focus-core.tpa~
