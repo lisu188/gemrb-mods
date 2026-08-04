@@ -9,9 +9,8 @@ case "$layout" in normalized|native|legacy) ;; *) exit 2 ;; esac
 
 game="$RUNNER_TEMP/cipher-weidu-game-$layout"
 python3 "$repo_root/psion/tests/make_weidu_fixture.py" --gemrb-root "$gemrb_root" --output "$game" --layout "$layout"
+cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/cipher" "$game/cipher"
-mkdir -p "$game/psion/lib"
-cp "$repo_root/psion/lib/spell-functions.tpa" "$game/psion/lib/spell-functions.tpa"
 python3 "$repo_root/cipher/tests/seed_weidu_fixture.py" "$game"
 
 hit_baseline="$(sha256sum "$game/override/CIFHIT.ITM" | cut -d' ' -f1)"
