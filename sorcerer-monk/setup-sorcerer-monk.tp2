@@ -144,8 +144,6 @@ OUTER_SPRINT sm_avatar ~ 0x500~
 OUTER_SPRINT sm_fist_row ~ MFIST1 MFIST1 MFIST2 MFIST2 MFIST2 MFIST3 MFIST3 MFIST3 MFIST4 MFIST4 MFIST4 MFIST5 MFIST5 MFIST5 MFIST6 MFIST6 MFIST6 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST7 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8 MFIST8~
 OUTER_SPRINT sm_weapprof_column ~$ $ SORCERER_MONK 0 1 0 0 1 0 0 1 0 1 1 0 0 1 1 1 0 1 0 0 0 0 0 0 0 0 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0~
 
-INCLUDE ~sorcerer-monk/lib/source-row-preflight.tpa~
-
 // GemRB indexes several class-specific arrays directly with IE_CLASS and also
 // tracks class categories in a 32-bit mask. A custom class ID therefore has to
 // match its CLSKILLS row index and stay below 32; an arbitrary free 8-bit ID is
@@ -327,6 +325,8 @@ END
 ACTION_IF sm_ids_numeric_conflict = 1 THEN BEGIN
   FAIL @17
 END
+
+INCLUDE ~sorcerer-monk/lib/source-row-preflight.tpa~
 
 // FISTWEAP rows are keyed only by numeric class ID. An existing row for the
 // class slot therefore has ambiguous ownership and cannot safely be preserved
