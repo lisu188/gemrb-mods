@@ -15,6 +15,7 @@ BEGIN
       SET ci_power_effect = ci_power_effect_offset + ((ci_power_first_effect + ci_power_effect_index) * 0x30)
       READ_SHORT ci_power_effect ci_power_opcode
       READ_BYTE (ci_power_effect + 0x02) ci_power_target
+      READ_LONG (ci_power_effect + 0x08) ci_power_parameter2
       PATCH_IF ci_power_opcode = 54 BEGIN
         PATCH_IF ~%ci_power_resref%~ STRING_EQUAL_CASE ~CI5BINS~ BEGIN
           PATCH_IF ci_power_target = 2 BEGIN
@@ -31,6 +32,11 @@ BEGIN
             WRITE_LONG (ci_power_effect + 0x04) (0 - 2)
           END
         END
+      END ELSE PATCH_IF (~%ci_power_resref%~ STRING_EQUAL_CASE ~CI8RKNI~)
+        AND (ci_power_opcode = 332)
+        AND (ci_power_target = 2)
+        AND (ci_power_parameter2 = 0) BEGIN
+        WRITE_LONG (ci_power_effect + 0x04) 3
       END
     END
   END
@@ -45,5 +51,6 @@ COPY_EXISTING ~CI7TPAR.spl~ ~override~
 BUT_ONLY
 
 COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~An ally's attacks gain +2 to hit and +3 weapon damage for five rounds. The PoE ally-to-Cipher Focus transfer remains a runtime extension. Costs 50 Focus.~
   LPF CIPHER_FIX_THAC0_EFFECTS STR_VAR ci_power_resref = ~CI8RKNI~ END
 BUT_ONLY
