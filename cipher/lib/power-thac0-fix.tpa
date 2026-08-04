@@ -26,6 +26,10 @@ BEGIN
           PATCH_IF ci_power_target = 9 BEGIN
             WRITE_LONG (ci_power_effect + 0x04) (0 - 4)
           END
+        END ELSE PATCH_IF ~%ci_power_resref%~ STRING_EQUAL_CASE ~CI8RKNI~ BEGIN
+          PATCH_IF ci_power_target = 2 BEGIN
+            WRITE_LONG (ci_power_effect + 0x04) (0 - 2)
+          END
         END
       END
     END
@@ -38,4 +42,8 @@ BUT_ONLY
 
 COPY_EXISTING ~CI7TPAR.spl~ ~override~
   LPF CIPHER_FIX_THAC0_EFFECTS STR_VAR ci_power_resref = ~CI7TPAR~ END
+BUT_ONLY
+
+COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  LPF CIPHER_FIX_THAC0_EFFECTS STR_VAR ci_power_resref = ~CI8RKNI~ END
 BUT_ONLY
