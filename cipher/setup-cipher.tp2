@@ -12,9 +12,10 @@ REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 
 COPY ~cipher/tables/cipherpowers.2da~ ~override/cipherpowers.2da~
 COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
-COPY ~cipher/tables/mxcipher.2da~ ~override/mxpsion.2da~
+COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 
 INCLUDE ~psion/lib/spell-functions.tpa~
 INCLUDE ~cipher/lib/class.tpa~
+INCLUDE ~cipher/lib/class-skills-fix.tpa~
 INCLUDE ~cipher/lib/powers.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
