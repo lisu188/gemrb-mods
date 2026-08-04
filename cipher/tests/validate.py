@@ -51,7 +51,11 @@ def test_sources():
     assert "override/mxpsion.2da" not in setup
 
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
-    assert "WRITE_SHORT ci_new_effect 146" in focus
+    assert "CIPHER_HOSTILE 0x108 2 1" in focus
+    assert "ci_hostile_splprot" in focus
+    assert "WRITE_SHORT ci_new_effect 326" in focus
+    assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus
+    assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
