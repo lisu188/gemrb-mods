@@ -1,0 +1,100 @@
+DEFINE_ACTION_FUNCTION cipher_create_internal_spell
+STR_VAR
+  ci_resref = ~~
+BEGIN
+  CREATE ~spl~ ~%ci_resref%~
+  COPY_EXISTING ~%ci_resref%.spl~ ~override~
+    WRITE_SHORT 0x1c 4
+    WRITE_LONG 0x18 (BIT14 BOR BIT25)
+    WRITE_LONG 0x34 1
+    LPF ADD_SPELL_HEADER
+      INT_VAR target = 5 range = 0x7fff speed = 0 projectile = 1
+      STR_VAR icon = ~~
+    END
+  BUT_ONLY
+END
+
+OUTER_SET ci_splprot_rows = 0
+COPY_EXISTING ~splprot.2da~ ~override~
+  COUNT_2DA_COLS ci_splprot_cols
+  COUNT_2DA_ROWS ci_splprot_cols ci_splprot_count
+  INNER_ACTION BEGIN OUTER_SET ci_splprot_rows = ci_splprot_count END
+BUT_ONLY
+
+OUTER_SET ci_class_splprot = ci_splprot_rows
+APPEND ~splprot.2da~ ~CIPHER_CLASS 0x10d %ci_class_id% 1~
+
+OUTER_FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
+  OUTER_SET ci_row = ci_splprot_rows + 1 + ci_unit
+  APPEND ~splprot.2da~ ~CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1~
+END
+
+OUTER_FOR (ci_unit = 1; ci_unit <= 34; ++ci_unit) BEGIN
+  OUTER_SPRINT ci_setter ~CIFS%ci_unit%~
+  LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_setter%~ END
+  COPY_EXISTING ~%ci_setter%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 282 target = 1 timing = 1 parameter1 = ci_unit parameter2 = 9 END
+  BUT_ONLY
+END
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTEP~ END
+COPY_EXISTING ~CIFSTEP.spl~ ~override~
+  FOR (ci_unit = 33; ci_unit >= 0; --ci_unit) BEGIN
+    SET ci_row = ci_splprot_rows + 1 + ci_unit
+    SET ci_next = ci_unit + 1
+    SPRINT ci_setter ~CIFS%ci_next%~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_row
+      STR_VAR resource = ~%ci_setter%~
+    END
+  END
+BUT_ONLY
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFGAIN~ END
+COPY_EXISTING ~CIFGAIN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_class_splprot
+    STR_VAR resource = ~CIFSTEP~
+  END
+BUT_ONLY
+
+DEFINE_PATCH_FUNCTION CIPHER_ADD_FOCUS_HIT_EFFECT
+BEGIN
+  PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
+    READ_ASCII 0 ci_signature (8)
+    PATCH_IF ~%ci_signature%~ STRING_EQUAL_CASE ~ITM V1  ~ BEGIN
+      READ_LONG 0x64 ci_header_offset
+      READ_SHORT 0x68 ci_header_count
+      READ_LONG 0x6a ci_effect_offset
+
+      FOR (ci_header_index = 0; ci_header_index < ci_header_count; ++ci_header_index) BEGIN
+        SET ci_header = ci_header_offset + (ci_header_index * 0x38)
+        READ_BYTE ci_header ci_attack_type
+        PATCH_IF (ci_attack_type = 1) OR (ci_attack_type = 2) BEGIN
+          READ_SHORT (ci_header + 0x1e) ci_effect_count
+          READ_SHORT (ci_header + 0x20) ci_first_effect
+          SET ci_new_index = ci_first_effect + ci_effect_count
+          SET ci_new_effect = ci_effect_offset + (ci_new_index * 0x30)
+          INSERT_BYTES ci_new_effect 0x30
+
+          WRITE_SHORT ci_new_effect 146
+          WRITE_BYTE (ci_new_effect + 0x02) 9
+          WRITE_LONG (ci_new_effect + 0x08) 1
+          WRITE_BYTE (ci_new_effect + 0x0c) 1
+          WRITE_ASCIIE (ci_new_effect + 0x14) ~CIFGAIN~ #8
+          WRITE_SHORT (ci_header + 0x1e) (ci_effect_count + 1)
+
+          FOR (ci_other = ci_header_index + 1; ci_other < ci_header_count; ++ci_other) BEGIN
+            SET ci_other_header = ci_header_offset + (ci_other * 0x38)
+            READ_SHORT (ci_other_header + 0x20) ci_other_first
+            WRITE_SHORT (ci_other_header + 0x20) (ci_other_first + 1)
+          END
+        END
+      END
+    END
+  END
+END
+
+COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
+  LPF CIPHER_ADD_FOCUS_HIT_EFFECT END
+BUT_ONLY
