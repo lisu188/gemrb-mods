@@ -7,6 +7,8 @@ import types
 
 ROOT = Path(__file__).resolve().parents[2]
 CIPHER = ROOT / "cipher"
+COMMON = ROOT / "common" / "guiscripts"
+sys.path.insert(0, str(COMMON))
 
 
 def read_2da(path: Path):
@@ -37,6 +39,7 @@ def test_tables():
 def test_sources():
     setup = (CIPHER / "setup-cipher.tp2").read_text(encoding="utf-8")
     for required in (
+        "common/weidu/spell-functions.tpa",
         "cipher/lib/class.tpa",
         "cipher/lib/class-skills-fix.tpa",
         "cipher/lib/class-thac0-fix.tpa",
@@ -48,8 +51,15 @@ def test_sources():
         "cipher/lib/critical-focus.tpa",
     ):
         assert required in setup
+    assert "psion/lib/spell-functions.tpa" not in setup
     assert "override/mxcipher.2da" in setup
     assert "override/mxpsion.2da" not in setup
+
+    runtime = (CIPHER / "guiscripts" / "Cipher.py").read_text(encoding="utf-8")
+    assert "import Transactions" in runtime
+    assert "import InnateCharges" in runtime
+    assert "Transactions.begin" in runtime
+    assert "InnateCharges.refresh" in runtime
 
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
     assert "CIPHER_HOSTILE 0x108 2 1" in focus
@@ -120,7 +130,7 @@ def load_runtime():
             state[165] = int(resref[4:])
 
     gemrb = types.ModuleType("GemRB")
-    gemrb.GetPlayerStat = lambda actor, stat: state.get(stat, 0)
+    gemrb.GetPlayerStat = lambda actor, stat, *args: state.get(stat, 0)
     gemrb.ApplySpell = apply_spell
     gemrb.LoadTable = lambda name, *args: Table()
     gemrb.DisplayString = lambda *args: None
@@ -133,6 +143,7 @@ def load_runtime():
     gui_common.GetClassRowName = lambda actor: "CIPHER"
     sys.modules["GUICommon"] = gui_common
 
+    sys.modules.pop("InnateCharges", None)
     spec = importlib.util.spec_from_file_location("cipher_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -141,6 +152,7 @@ def load_runtime():
 
 def test_runtime():
     runtime, state, applied = load_runtime()
+    runtime.cancel_pending()
     assert runtime.maximum_focus(1) == 70
     assert runtime.current_focus(1) == 20
     runtime.set_focus(1, 200)
@@ -164,24 +176,17 @@ def test_runtime():
 def test_python_syntax():
     py_compile.compile(str(CIPHER / "guiscripts" / "Cipher.py"), doraise=True)
     py_compile.compile(str(CIPHER / "tools" / "install_guiscripts.py"), doraise=True)
+    for path in COMMON.glob("*.py"):
+        py_compile.compile(str(path), doraise=True)
+    py_compile.compile(str(ROOT / "common" / "tools" / "install_guiscripts.py"), doraise=True)
 
 
-def test_patcher():
-    spec = importlib.util.spec_from_file_location("cipher_patcher", CIPHER / "tools" / "install_guiscripts.py")
-    patcher = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(patcher)
-    actions = '''import GemRB\nimport Spellbook\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n'''
-    path = Path("ActionsWindow.py")
-    patched = patcher.render_patch(actions, "actions", path)
-    assert patched.count(patcher.MARK_BEGIN) == 3
-    assert "import Cipher" in patched
-    assert 'if GemRB.GetVar("SettingButtons"):' in patched
-    assert "Cipher.cancel_pending(pc)" in patched
-    assert patcher.render_patch(patched, "actions", path) is None
-
-    rest = "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0, 0)\n"
-    patched_rest = patcher.render_patch(rest, "rest", Path("MenuWindow.py"))
-    assert "Cipher.restore_party()" in patched_rest
+def test_shared_gui_lifecycle():
+    path = ROOT / "common" / "tests" / "validate.py"
+    spec = importlib.util.spec_from_file_location("shared_gui_validation_cipher", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.test_gui_lifecycle()
 
 
 def main():
@@ -189,7 +194,7 @@ def main():
     test_sources()
     test_runtime()
     test_python_syntax()
-    test_patcher()
+    test_shared_gui_lifecycle()
     print("Cipher validation passed")
 
 
