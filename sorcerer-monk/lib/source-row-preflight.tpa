@@ -1,6 +1,7 @@
 // Reject ambiguous component metadata before deriving Sorcerer/Monk policy.
 // Count row/header identity independently of value validity so a malformed
-// duplicate cannot be hidden by a later valid row.
+// duplicate cannot be hidden by a later valid row. Missing/single malformed
+// sources remain the responsibility of the table-specific validation below.
 OUTER_SET sm_pre_sorcerer = 0
 OUTER_SET sm_pre_monk = 0
 
@@ -17,7 +18,7 @@ COPY_EXISTING ~clskills.2da~ ~override~
     END
   END
 BUT_ONLY
-ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~xpcap.2da~ THEN BEGIN
   OUTER_SET sm_pre_sorcerer = 0
@@ -31,7 +32,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~xpcap.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
@@ -46,7 +47,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 END
 
 OUTER_SET sm_pre_sorcerer = 0
@@ -60,7 +61,7 @@ COPY_EXISTING ~alignmnt.2da~ ~override~
     PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
   END
 BUT_ONLY
-ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 
 OUTER_SET sm_pre_sorcerer = 0
 OUTER_SET sm_pre_monk = 0
@@ -73,7 +74,7 @@ COPY_EXISTING ~profs.2da~ ~override~
     PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
   END
 BUT_ONLY
-ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
   OUTER_SET sm_pre_monk = 0
@@ -85,7 +86,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF sm_pre_monk != 1 THEN BEGIN FAIL @31 END
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
@@ -98,7 +99,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF sm_pre_monk != 1 THEN BEGIN FAIL @31 END
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
 
   OUTER_SET sm_pre_monk = 0
   COPY_EXISTING ~thiefskl.2da~ ~override~
@@ -109,7 +110,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF sm_pre_monk != 1 THEN BEGIN FAIL @31 END
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~weapprof.2da~ THEN BEGIN
@@ -122,7 +123,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~weapprof.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF sm_pre_monk != 1 THEN BEGIN FAIL @31 END
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
 END
 
 ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
@@ -137,5 +138,5 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
       PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
     END
   BUT_ONLY
-  ACTION_IF (sm_pre_sorcerer != 1) OR (sm_pre_monk != 1) THEN BEGIN FAIL @31 END
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
 END
