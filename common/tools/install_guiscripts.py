@@ -185,6 +185,29 @@ def _owned_paths(target, owner):
     return target.with_suffix(target.suffix + f".gemrbmodcore.{tag}.bak"), target.with_suffix(target.suffix + f".gemrbmodcore.{tag}.created")
 
 
+def _legacy_runtime_paths(target, owner):
+    tag = owner.lower()
+    legacy_tag = "psion" if tag == "psionics" else tag
+    return target.with_suffix(target.suffix + f".{legacy_tag}.bak"), target.with_suffix(target.suffix + f".{legacy_tag}.created")
+
+
+def _migrate_legacy_runtime_ownership(target, owner):
+    legacy_backup, legacy_created = _legacy_runtime_paths(target, owner)
+    if not legacy_backup.exists() and not legacy_created.exists():
+        return False
+    if legacy_backup.exists() and legacy_created.exists():
+        raise RuntimeError(f"{target.name} has conflicting legacy ownership markers")
+
+    backup, created = _owned_paths(target, owner)
+    if backup.exists() or created.exists():
+        raise RuntimeError(f"{target.name} has both legacy and shared ownership markers")
+
+    source = legacy_backup if legacy_backup.exists() else legacy_created
+    destination = backup if legacy_backup.exists() else created
+    shutil.move(str(source), str(destination))
+    return True
+
+
 def install_owned_file(source, target, owner):
     backup, created = _owned_paths(target, owner)
     source_bytes = source.read_bytes()
@@ -236,10 +259,13 @@ def install_handler(guiscripts, handler, runtime_source):
         _legacy_clean(path)
     prepared = [(path, render_patch(path.read_text(encoding="utf-8"), kind, path)) for path, kind in targets]
 
+    runtime_target = guiscripts / (handler + ".py")
+    _migrate_legacy_runtime_ownership(runtime_target, handler)
+
     common_source = Path(__file__).resolve().parents[1] / "guiscripts"
     for name in COMMON_MODULES:
         install_owned_file(common_source / name, guiscripts / name, "core")
-    install_owned_file(runtime_source, guiscripts / (handler + ".py"), handler)
+    install_owned_file(runtime_source, runtime_target, handler)
     for path, rendered in prepared:
         apply_patch(path, rendered)
     _marker(guiscripts, handler).write_text("active\n", encoding="utf-8")
