@@ -4,11 +4,11 @@ A Pillars of Eternity-inspired single class for BG-family games running under Ge
 
 ## Combat loop
 
-Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful melee or projectile weapon hits add 5 Focus, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
+Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits add 5 Focus, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
 
-Soul Whip increases all damage by 10% at level 1, 15% at level 10, and 20% at level 20.
+Soul Whip adds +1 weapon damage at level 1, +2 at level 10, and +3 at level 20. This is the portable BG-family approximation of PoE's percentage weapon-damage scaling: GemRB's common weapon damage bonus is applied only during weapon damage calculation, while percentage damage opcodes are damage-type based rather than weapon-source based.
 
-Focus is stored in scripting state stat 165 in five-point units. Weapon abilities trigger an internal spell on successful impact; opcode 326 gates that spell to the Cipher class, and a descending state dispatch advances the Focus state by exactly one unit without cascading multiple increments in the same hit.
+Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities trigger an internal spell on successful impact; opcode 326 gates that spell to the Cipher class, and a descending state dispatch advances Focus by exactly one unit without cascading multiple increments in the same hit. Rest and power spending use the same state-transition spells.
 
 ## Power progression
 
@@ -42,7 +42,7 @@ If the Psion GUI patch is also used, install the Psion GUI patch first and the C
 
 - d8 hit points through `HPPRS`
 - Mage XP progression and saving-throw table
-- rogue-rate THAC0 progression
+- rogue-rate THAC0 progression (`20, 20, 19, 19, ...`)
 - Intelligence 13 minimum
 - two starting weapon proficiency points, one pip maximum in the configured Cipher weapon list
 - any alignment and race allowed by the active GemRB class layout
@@ -50,7 +50,8 @@ If the Psion GUI patch is also used, install the Psion GUI patch first and the C
 
 ## Deliberate approximations in 0.1
 
-- Critical hits currently generate the same +5 Focus as other successful hits; the proposed +10 critical-hit rule needs a reliable engine-level critical discriminator.
+- Soul Whip uses +1/+2/+3 weapon damage rather than PoE-style percentage weapon scaling because the supported BG-family effect model does not expose a portable weapon-source-only percentage modifier.
+- Critical hits currently generate the same +5 Focus as other successful hits; the proposed +10 critical-hit rule needs a reliable effect-level critical discriminator.
 - Reaping Knives grants its ally attack/damage enhancement but does not yet transfer Focus from that ally's attacks.
 - Amplified Wave represents knockdown with a one-round hold.
 - Detonate implements the direct psychic damage but not the on-death secondary explosion.
@@ -61,10 +62,16 @@ If the Psion GUI patch is also used, install the Psion GUI patch first and the C
 
 ## Validation
 
-Run:
+Static/runtime checks:
 
 ```bash
 python cipher/tests/validate.py
 ```
 
-The validator checks the tier/cost table against CLAB grants, verifies the Focus opcode chain and installer wiring, exercises reserve/commit Focus spending with a mocked GemRB runtime, compiles both Python modules, and tests GUI patch idempotence.
+WeiDU parser checks, with WeiDU in `PATH`:
+
+```bash
+bash cipher/tests/validate_weidu.sh
+```
+
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, weapon-only Focus injection, and WeiDU rollback of patched items.
