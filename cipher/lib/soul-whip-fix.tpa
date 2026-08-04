@@ -1,0 +1,47 @@
+DEFINE_PATCH_FUNCTION CIPHER_FIX_SOUL_WHIP
+INT_VAR
+  ci_whip_bonus = 1
+STR_VAR
+  ci_whip_description = ~~
+BEGIN
+  SAY UNIDENTIFIED_DESC ~%ci_whip_description%~
+  READ_LONG 0x64 ci_whip_header_offset
+  READ_SHORT 0x68 ci_whip_header_count
+  READ_LONG 0x6a ci_whip_effect_offset
+
+  FOR (ci_whip_header_index = 0; ci_whip_header_index < ci_whip_header_count; ++ci_whip_header_index) BEGIN
+    SET ci_whip_header = ci_whip_header_offset + (ci_whip_header_index * 0x28)
+    READ_SHORT (ci_whip_header + 0x1e) ci_whip_effect_count
+    READ_SHORT (ci_whip_header + 0x20) ci_whip_first_effect
+
+    FOR (ci_whip_effect_index = 0; ci_whip_effect_index < ci_whip_effect_count; ++ci_whip_effect_index) BEGIN
+      SET ci_whip_effect = ci_whip_effect_offset + ((ci_whip_first_effect + ci_whip_effect_index) * 0x30)
+      READ_SHORT ci_whip_effect ci_whip_opcode
+      READ_LONG (ci_whip_effect + 0x08) ci_whip_parameter2
+      PATCH_IF (ci_whip_opcode = 332) AND (ci_whip_parameter2 = 0) BEGIN
+        WRITE_LONG (ci_whip_effect + 0x04) ci_whip_bonus
+      END
+    END
+  END
+END
+
+COPY_EXISTING ~CIFCORE.spl~ ~override~
+  LPF CIPHER_FIX_SOUL_WHIP
+    INT_VAR ci_whip_bonus = 1
+    STR_VAR ci_whip_description = ~The Cipher begins combat with 20 Focus, gains 5 Focus on each successful weapon hit, and deals +1 weapon damage with Soul Whip.~
+  END
+BUT_ONLY
+
+COPY_EXISTING ~CIFSW15.spl~ ~override~
+  LPF CIPHER_FIX_SOUL_WHIP
+    INT_VAR ci_whip_bonus = 2
+    STR_VAR ci_whip_description = ~Soul Whip now deals +2 weapon damage.~
+  END
+BUT_ONLY
+
+COPY_EXISTING ~CIFSW20.spl~ ~override~
+  LPF CIPHER_FIX_SOUL_WHIP
+    INT_VAR ci_whip_bonus = 3
+    STR_VAR ci_whip_description = ~Soul Whip now deals +3 weapon damage.~
+  END
+BUT_ONLY

@@ -1,0 +1,10 @@
+COPY_EXISTING ~clskills.2da~ ~override~
+  COUNT_2DA_COLS ci_skill_fix_cols
+  COUNT_2DA_ROWS ci_skill_fix_cols ci_skill_fix_rows
+  FOR (ci_skill_fix_row = 0; ci_skill_fix_row < ci_skill_fix_rows; ++ci_skill_fix_row) BEGIN
+    READ_2DA_ENTRY ci_skill_fix_row 0 ci_skill_fix_cols ci_skill_fix_name
+    PATCH_IF ~%ci_skill_fix_name%~ STRING_EQUAL_CASE ~CIPHER~ BEGIN
+      SET_2DA_ENTRY ci_skill_fix_row 3 ci_skill_fix_cols ~MXCIPHER~
+    END
+  END
+BUT_ONLY

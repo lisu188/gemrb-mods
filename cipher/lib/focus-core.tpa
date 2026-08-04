@@ -1,0 +1,29 @@
+// CIFCORE is generated with a placeholder scripting-state effect in powers.tpa.
+// Replace that effect with an instant cast of CIFS4 so the initial 20 Focus uses
+// the same serialized state-transition mechanism as weapon gain and GUI spend.
+COPY_EXISTING ~CIFCORE.spl~ ~override~
+  READ_LONG 0x64 ci_core_header_offset
+  READ_SHORT 0x68 ci_core_header_count
+  READ_LONG 0x6a ci_core_effect_offset
+
+  FOR (ci_core_header_index = 0; ci_core_header_index < ci_core_header_count; ++ci_core_header_index) BEGIN
+    SET ci_core_header = ci_core_header_offset + (ci_core_header_index * 0x28)
+    READ_SHORT (ci_core_header + 0x1e) ci_core_effect_count
+    READ_SHORT (ci_core_header + 0x20) ci_core_first_effect
+
+    FOR (ci_core_effect_index = 0; ci_core_effect_index < ci_core_effect_count; ++ci_core_effect_index) BEGIN
+      SET ci_core_effect = ci_core_effect_offset + ((ci_core_first_effect + ci_core_effect_index) * 0x30)
+      READ_SHORT ci_core_effect ci_core_opcode
+      READ_LONG (ci_core_effect + 0x08) ci_core_parameter2
+      PATCH_IF (ci_core_opcode = 282) AND (ci_core_parameter2 = 9) BEGIN
+        WRITE_SHORT ci_core_effect 146
+        WRITE_BYTE (ci_core_effect + 0x02) 1
+        WRITE_LONG (ci_core_effect + 0x04) 1
+        WRITE_LONG (ci_core_effect + 0x08) 1
+        WRITE_BYTE (ci_core_effect + 0x0c) 1
+        WRITE_LONG (ci_core_effect + 0x0e) 0
+        WRITE_ASCIIE (ci_core_effect + 0x14) ~CIFS4~ #8
+      END
+    END
+  END
+BUT_ONLY

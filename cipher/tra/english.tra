@@ -1,0 +1,10 @@
+@0 = ~Pillars-inspired Cipher class for GemRB~
+@1 = ~Run GemRB against this game before installing; gemrb_path.txt is missing.~
+@2 = ~This component supports Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE and EET.~
+@3 = ~Could not determine the active GemRB class identifier range.~
+@4 = ~Unsupported CLASTEXT.2DA layout.~
+@5 = ~Unsupported CLSKILLS.2DA layout.~
+@6 = ~No free one-byte class identifier is available for Cipher.~
+@100 = ~cipher~
+@101 = ~CIPHER:~
+@102 = ~Ciphers are weapon-driven psychic combatants inspired by Pillars of Eternity. Successful weapon hits generate Focus, which is spent on reusable soul and mind powers instead of spell slots. Ciphers use d8 hit points, rogue-rate THAC0, Mage saving throws, Intelligence 13 minimum, broad one-handed and missile weapon proficiency, and any alignment. Soul Whip adds 1 weapon damage at level 1, 2 at level 10, and 3 at level 20. Focus starts at 20 after resting and has a maximum of 20 + 5 per Cipher level.~
