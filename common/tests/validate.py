@@ -121,6 +121,34 @@ def test_dispatcher():
                 sys.modules[name] = previous
 
 
+def test_dispatcher_import_errors():
+    core = load("core_import_test", GUI / "GemRBModCore.py")
+    original_names = core._HANDLER_NAMES
+    original_import = core.importlib.import_module
+    try:
+        core._HANDLER_NAMES = ("MissingHandler",)
+
+        def missing_handler(name):
+            raise ImportError("handler is not installed", name=name)
+
+        core.importlib.import_module = missing_handler
+        assert core._handlers() == []
+
+        def broken_handler(name):
+            raise ImportError("installed handler dependency is missing", name="SharedDependency")
+
+        core.importlib.import_module = broken_handler
+        try:
+            core._handlers()
+        except ImportError as exc:
+            assert exc.name == "SharedDependency"
+        else:
+            raise AssertionError("dependency ImportError from an installed handler was swallowed")
+    finally:
+        core._HANDLER_NAMES = original_names
+        core.importlib.import_module = original_import
+
+
 def fixture_texts():
     return {
         "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n''',
@@ -227,6 +255,7 @@ def main():
     test_transactions()
     test_state_and_charges()
     test_dispatcher()
+    test_dispatcher_import_errors()
     test_gui_lifecycle()
     print("Shared GemRB runtime and GUI lifecycle validation passed")
 
