@@ -10,8 +10,13 @@ def _handlers():
     for name in _HANDLER_NAMES:
         try:
             result.append(importlib.import_module(name))
-        except ImportError:
-            pass
+        except ImportError as exc:
+            # A handler that is not installed is optional. Import failures raised
+            # *by* an installed handler are configuration/runtime errors and must
+            # remain visible instead of silently disabling that class runtime.
+            if getattr(exc, "name", None) == name:
+                continue
+            raise
     return result
 
 
