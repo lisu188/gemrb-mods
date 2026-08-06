@@ -18,8 +18,9 @@
 - Derived the class XP cap from the active game's Sorcerer and Monk `XPCAP.2DA` rows instead of forcing the BG2/ToB 8,000,000 cap.
 - Required valid `XPCAP.2DA` entries for both Sorcerer and Monk before deriving the multiclass cap.
 - Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.
-- Added standard combined class prerequisites: DEX 9, CON 9, INT 9, WIS 9 and CHA 9, with no STR minimum.
-- Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned.
+- Derived `ABCLASRQ.2DA` minimum ability requirements from the live Sorcerer and Monk rows by taking the per-stat maximum, preserving stat-overhaul mods instead of freezing the stock `0 9 9 9 9 9` row.
+- Rejected malformed or incomplete `ABCLASRQ.2DA` component data before table mutation.
+- Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned; these are class/kit-specific maximum-stat adjustments and stock true multiclasses define no component-composition rule.
 - Corrected the legacy non-proficiency penalty to follow Monk instead of Sorcerer.
 - Changed saving throws and hit points to multiclass-derived values.
 - Changed race restrictions to human-only.
