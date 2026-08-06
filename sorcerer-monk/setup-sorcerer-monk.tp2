@@ -74,6 +74,36 @@ OUTER_SET sm_abclasrq_con = 0
 OUTER_SET sm_abclasrq_int = 0
 OUTER_SET sm_abclasrq_wis = 0
 OUTER_SET sm_abclasrq_cha = 0
+OUTER_SET sm_alignmnt_cols = 0
+OUTER_SET sm_found_sorcerer_alignmnt = 0
+OUTER_SET sm_found_monk_alignmnt = 0
+OUTER_SET sm_sorcerer_align_lg = 0
+OUTER_SET sm_sorcerer_align_ln = 0
+OUTER_SET sm_sorcerer_align_le = 0
+OUTER_SET sm_sorcerer_align_ng = 0
+OUTER_SET sm_sorcerer_align_tn = 0
+OUTER_SET sm_sorcerer_align_ne = 0
+OUTER_SET sm_sorcerer_align_cg = 0
+OUTER_SET sm_sorcerer_align_cn = 0
+OUTER_SET sm_sorcerer_align_ce = 0
+OUTER_SET sm_monk_align_lg = 0
+OUTER_SET sm_monk_align_ln = 0
+OUTER_SET sm_monk_align_le = 0
+OUTER_SET sm_monk_align_ng = 0
+OUTER_SET sm_monk_align_tn = 0
+OUTER_SET sm_monk_align_ne = 0
+OUTER_SET sm_monk_align_cg = 0
+OUTER_SET sm_monk_align_cn = 0
+OUTER_SET sm_monk_align_ce = 0
+OUTER_SET sm_align_lg = 0
+OUTER_SET sm_align_ln = 0
+OUTER_SET sm_align_le = 0
+OUTER_SET sm_align_ng = 0
+OUTER_SET sm_align_tn = 0
+OUTER_SET sm_align_ne = 0
+OUTER_SET sm_align_cg = 0
+OUTER_SET sm_align_cn = 0
+OUTER_SET sm_align_ce = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
@@ -81,6 +111,7 @@ OUTER_SPRINT sm_no_prof ~-3~
 OUTER_SPRINT sm_25stweap_actual ~~
 OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
 OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
+OUTER_SPRINT sm_alignmnt_row ~1 1 1 0 0 0 0 0 0~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -401,6 +432,90 @@ ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
   OUTER_SPRINT sm_abclasrq_row ~%sm_abclasrq_str% %sm_abclasrq_dex% %sm_abclasrq_con% %sm_abclasrq_int% %sm_abclasrq_wis% %sm_abclasrq_cha%~
 END
 
+// ALIGNMNT is another direct chargen restriction table. A true multiclass can
+// only use alignments allowed by both components, so take the binary
+// intersection of the live Sorcerer and Monk rows and reject ambiguous data.
+COPY_EXISTING ~alignmnt.2da~ ~override~
+  COUNT_2DA_COLS sm_alignmnt_cols
+  PATCH_IF sm_alignmnt_cols = 10 BEGIN
+    READ_2DA_ENTRIES_NOW ~sm_alignmnt~ sm_alignmnt_cols
+    FOR (sm_i = 0; sm_i < sm_alignmnt; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 0 sm_align_class
+      PATCH_IF (~%sm_align_class%~ STRING_EQUAL_CASE ~SORCERER~)
+          OR (~%sm_align_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 1 sm_req_lg
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 2 sm_req_ln
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 3 sm_req_le
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 4 sm_req_ng
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 5 sm_req_tn
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 6 sm_req_ne
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 7 sm_req_cg
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 8 sm_req_cn
+        READ_2DA_ENTRY_FORMER ~sm_alignmnt~ sm_i 9 sm_req_ce
+        PATCH_IF (IS_AN_INT ~%sm_req_lg%~)
+            AND (IS_AN_INT ~%sm_req_ln%~)
+            AND (IS_AN_INT ~%sm_req_le%~)
+            AND (IS_AN_INT ~%sm_req_ng%~)
+            AND (IS_AN_INT ~%sm_req_tn%~)
+            AND (IS_AN_INT ~%sm_req_ne%~)
+            AND (IS_AN_INT ~%sm_req_cg%~)
+            AND (IS_AN_INT ~%sm_req_cn%~)
+            AND (IS_AN_INT ~%sm_req_ce%~) BEGIN
+          PATCH_IF (sm_req_lg >= 0) AND (sm_req_lg <= 1)
+              AND (sm_req_ln >= 0) AND (sm_req_ln <= 1)
+              AND (sm_req_le >= 0) AND (sm_req_le <= 1)
+              AND (sm_req_ng >= 0) AND (sm_req_ng <= 1)
+              AND (sm_req_tn >= 0) AND (sm_req_tn <= 1)
+              AND (sm_req_ne >= 0) AND (sm_req_ne <= 1)
+              AND (sm_req_cg >= 0) AND (sm_req_cg <= 1)
+              AND (sm_req_cn >= 0) AND (sm_req_cn <= 1)
+              AND (sm_req_ce >= 0) AND (sm_req_ce <= 1) BEGIN
+            PATCH_IF (~%sm_align_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+              SET sm_found_sorcerer_alignmnt += 1
+              SET sm_sorcerer_align_lg = sm_req_lg
+              SET sm_sorcerer_align_ln = sm_req_ln
+              SET sm_sorcerer_align_le = sm_req_le
+              SET sm_sorcerer_align_ng = sm_req_ng
+              SET sm_sorcerer_align_tn = sm_req_tn
+              SET sm_sorcerer_align_ne = sm_req_ne
+              SET sm_sorcerer_align_cg = sm_req_cg
+              SET sm_sorcerer_align_cn = sm_req_cn
+              SET sm_sorcerer_align_ce = sm_req_ce
+            END ELSE BEGIN
+              SET sm_found_monk_alignmnt += 1
+              SET sm_monk_align_lg = sm_req_lg
+              SET sm_monk_align_ln = sm_req_ln
+              SET sm_monk_align_le = sm_req_le
+              SET sm_monk_align_ng = sm_req_ng
+              SET sm_monk_align_tn = sm_req_tn
+              SET sm_monk_align_ne = sm_req_ne
+              SET sm_monk_align_cg = sm_req_cg
+              SET sm_monk_align_cn = sm_req_cn
+              SET sm_monk_align_ce = sm_req_ce
+            END
+          END
+        END
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF (sm_alignmnt_cols != 10)
+    OR (sm_found_sorcerer_alignmnt != 1)
+    OR (sm_found_monk_alignmnt != 1) THEN BEGIN
+  FAIL @26
+END
+OUTER_SET sm_align_lg = sm_sorcerer_align_lg * sm_monk_align_lg
+OUTER_SET sm_align_ln = sm_sorcerer_align_ln * sm_monk_align_ln
+OUTER_SET sm_align_le = sm_sorcerer_align_le * sm_monk_align_le
+OUTER_SET sm_align_ng = sm_sorcerer_align_ng * sm_monk_align_ng
+OUTER_SET sm_align_tn = sm_sorcerer_align_tn * sm_monk_align_tn
+OUTER_SET sm_align_ne = sm_sorcerer_align_ne * sm_monk_align_ne
+OUTER_SET sm_align_cg = sm_sorcerer_align_cg * sm_monk_align_cg
+OUTER_SET sm_align_cn = sm_sorcerer_align_cn * sm_monk_align_cn
+OUTER_SET sm_align_ce = sm_sorcerer_align_ce * sm_monk_align_ce
+OUTER_SPRINT sm_alignmnt_row ~%sm_align_lg% %sm_align_ln% %sm_align_le% %sm_align_ng% %sm_align_tn% %sm_align_ne% %sm_align_cg% %sm_align_cn% %sm_align_ce%~
+
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
 // fixed column order: both are read by column name at runtime, so a game whose
 // table is ordered differently would otherwise get the values transposed.
@@ -498,7 +613,7 @@ APPEND ~class.ids~ ~%sm_class_id% SORCERER_MONK~
 // ******************************************
 // Game table changes
 
-APPEND ~alignmnt.2da~ ~SORCERER_MONK 1 1 1 0 0 0 0 0 0~
+APPEND ~alignmnt.2da~ ~SORCERER_MONK %sm_alignmnt_row%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Standard multiclass rows combine the component minimum ability scores. The
