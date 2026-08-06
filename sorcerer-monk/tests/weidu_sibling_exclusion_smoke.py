@@ -9,6 +9,11 @@ from weidu_smc_layout_smoke import add_cleric_identity
 
 
 SMC = ROOT / "sorcerer-monk-cleric"
+STARTER_SLOTS = [
+    "ARMOR", "SHIELD", "HELM", "BAG", "RING1", "RING2", "CLOAK", "BOOTS",
+    "AMULET", "BRACERS", "BELT", "AMMO1", "AMMO2", "AMMO3", "MISC1", "MISC2",
+    "MISC3", "MISC4", "MISC5", "WEAPON1",
+]
 
 
 def snapshot(override):
@@ -29,8 +34,8 @@ def prepare_both(game):
     add_cleric_identity(override)
     write_2da(
         override / "25stweap.2da",
-        ["MAGE"],
-        [(f"SLOT{i}", ["*"]) for i in range(20)],
+        ["ID", "NAME_REF", "DESC_REF", "MAGE"],
+        [(slot, [i, 1000 + i, 2000 + i, "*"]) for i, slot in enumerate(STARTER_SLOTS)],
     )
     write_2da(override / "luabbr.2da", ["ABBREV"], [("SORCERER", ["SOR"]), ("MONK", ["MON"])])
     write_2da(
