@@ -8,6 +8,7 @@ from weidu_smoke import build_fixture, find_row, run_weidu, write_2da
 
 
 ERROR = "Could not derive Sorcerer/Monk modern Monk-skill metadata"
+AMBIGUOUS_ERROR = "Ambiguous Sorcerer or Monk source metadata"
 
 
 def snapshot(override):
@@ -140,6 +141,24 @@ def exercise_missing_monk_points(weidu):
         assert_snapshot(override, originals, "missing Monk THIEFSKL rejection")
 
 
+def exercise_malformed_duplicate_points(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-modern-skills-duplicate-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        write_2da(
+            override / "thiefskl.2da",
+            ["START_POINTS", "LEVEL_POINTS"],
+            [("MONK", [7, 13]), ("MONK", ["bad", -1])],
+            default="0",
+        )
+        originals = snapshot(override)
+        result = run_rejected(weidu, game)
+        print(result.stdout, flush=True)
+        assert AMBIGUOUS_ERROR.casefold() in result.stdout.casefold(), result.stdout
+        assert_snapshot(override, originals, "malformed duplicate Monk THIEFSKL rejection")
+
+
 def main():
     weidu = shutil.which(sys.argv[1] if len(sys.argv) > 1 else "weidu")
     if not weidu:
@@ -149,6 +168,7 @@ def main():
     exercise_missing_monk_column(weidu)
     exercise_invalid_availability(weidu)
     exercise_missing_monk_points(weidu)
+    exercise_malformed_duplicate_points(weidu)
 
 
 if __name__ == "__main__":

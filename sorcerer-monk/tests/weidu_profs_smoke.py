@@ -8,6 +8,7 @@ from weidu_smoke import build_fixture, find_row, run_weidu, write_2da
 
 
 ERROR = "Could not derive Sorcerer/Monk proficiency progression from PROFS.2DA"
+AMBIGUOUS_ERROR = "Ambiguous Sorcerer or Monk source metadata"
 
 
 def snapshot(override):
@@ -93,6 +94,23 @@ def exercise_invalid_rate(weidu):
         assert_snapshot(override, originals, "invalid Monk PROFS rate rejection")
 
 
+def exercise_malformed_duplicate(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-profs-duplicate-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        write_2da(
+            override / "profs.2da",
+            ["FIRST_LEVEL", "RATE"],
+            [("SORCERER", [1, 6]), ("MONK", [2, 4]), ("MONK", ["bad", 0])],
+        )
+        originals = snapshot(override)
+        result = run_rejected(weidu, game)
+        print(result.stdout, flush=True)
+        assert AMBIGUOUS_ERROR.casefold() in result.stdout.casefold(), result.stdout
+        assert_snapshot(override, originals, "malformed duplicate Monk PROFS rejection")
+
+
 def main():
     weidu = shutil.which(sys.argv[1] if len(sys.argv) > 1 else "weidu")
     if not weidu:
@@ -101,6 +119,7 @@ def main():
     exercise_live_progression(weidu)
     exercise_missing_component(weidu)
     exercise_invalid_rate(weidu)
+    exercise_malformed_duplicate(weidu)
 
 
 if __name__ == "__main__":

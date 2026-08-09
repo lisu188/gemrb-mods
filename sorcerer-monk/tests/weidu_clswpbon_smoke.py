@@ -7,7 +7,8 @@ import tempfile
 from weidu_smoke import build_fixture, find_row, run_weidu, write_2da
 
 
-ERROR = "Unsupported CLSWPBON.2DA layout or duplicate Monk combat rows"
+ERROR = "Unsupported CLSWPBON.2DA layout or ambiguous Monk combat metadata"
+AMBIGUOUS_ERROR = "Ambiguous Sorcerer or Monk source metadata"
 
 
 def snapshot(override):
@@ -98,7 +99,7 @@ def exercise_duplicate_monk_rows(weidu):
         originals = snapshot(override)
         result = run_rejected(weidu, game)
         print(result.stdout, flush=True)
-        assert ERROR.casefold() in result.stdout.casefold(), result.stdout
+        assert AMBIGUOUS_ERROR.casefold() in result.stdout.casefold(), result.stdout
         assert_snapshot(override, originals, "duplicate Monk CLSWPBON rejection")
 
 
