@@ -49,6 +49,8 @@ OUTER_SET sm_classes_cols = 0
 OUTER_SET sm_clastext_cols = 0
 OUTER_SET sm_clskills_cols = 0
 OUTER_SET sm_clskills_rows = 0
+OUTER_SET sm_found_sorcerer_spell_metadata = 0
+OUTER_SET sm_booktype = (0 - 1)
 OUTER_SET sm_xpcap = (0 - 2)
 OUTER_SET sm_xpcap_cols = 0
 OUTER_SET sm_sm0_taken = 0
@@ -104,14 +106,36 @@ OUTER_SET sm_align_ne = 0
 OUTER_SET sm_align_cg = 0
 OUTER_SET sm_align_cn = 0
 OUTER_SET sm_align_ce = 0
+OUTER_SET sm_profs_cols = 0
+OUTER_SET sm_found_sorcerer_profs = 0
+OUTER_SET sm_found_monk_profs = 0
+OUTER_SET sm_sorcerer_prof_first = 0
+OUTER_SET sm_sorcerer_prof_rate = 0
+OUTER_SET sm_monk_prof_first = 0
+OUTER_SET sm_monk_prof_rate = 0
+OUTER_SET sm_prof_first = 0
+OUTER_SET sm_prof_rate = 0
+OUTER_SET sm_clswpbon_cols = 0
+OUTER_SET sm_monk_clswpbon_matches = 0
+OUTER_SET sm_thiefscl_cols = 0
+OUTER_SET sm_thiefscl_monk_col = (0 - 1)
+OUTER_SET sm_thiefscl_rows = 0
+OUTER_SET sm_thiefscl_invalid = 0
+OUTER_SET sm_thiefskl_cols = 0
+OUTER_SET sm_monk_thiefskl_matches = 0
 OUTER_SPRINT sm_ids_class_symbol ~~
 OUTER_SPRINT sm_startxp ~*~
 OUTER_SPRINT sm_startxp2 ~*~
 OUTER_SPRINT sm_no_prof ~-3~
+OUTER_SPRINT sm_magespell ~~
 OUTER_SPRINT sm_25stweap_actual ~~
 OUTER_SPRINT sm_25stweap_expected ~ARMOR SHIELD HELM BAG RING1 RING2 CLOAK BOOTS AMULET BRACERS BELT AMMO1 AMMO2 AMMO3 MISC1 MISC2 MISC3 MISC4 MISC5 WEAPON1~
 OUTER_SPRINT sm_abclasrq_row ~0 9 9 9 9 9~
 OUTER_SPRINT sm_alignmnt_row ~1 1 1 0 0 0 0 0 0~
+OUTER_SPRINT sm_profs_row ~2 4~
+OUTER_SPRINT sm_clswpbon_row ~1 3 2~
+OUTER_SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
+OUTER_SPRINT sm_thiefskl_row ~0 10~
 // Leading separators are intentional: these are appended straight after the
 // row name. The literals are the stock BG2 Monk values and only survive when
 // the active tables do not provide a Monk row or column to copy.
@@ -136,6 +160,16 @@ COPY_EXISTING ~clskills.2da~ ~override~
     END
     PATCH_IF (~%sm_skill_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
       SET sm_sorcerer_clskills_id = sm_i
+      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 3 sm_magespell_candidate
+      READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 9 sm_booktype_candidate
+      PATCH_IF (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~*~)
+          AND (~%sm_magespell_candidate%~ STRING_COMPARE_CASE ~~)
+          AND (IS_AN_INT ~%sm_booktype_candidate%~)
+          AND (sm_booktype_candidate >= 0) BEGIN
+        SPRINT sm_magespell ~%sm_magespell_candidate%~
+        SET sm_booktype = sm_booktype_candidate
+        SET sm_found_sorcerer_spell_metadata = 1
+      END
       READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 4 sm_startxp
       PATCH_IF sm_clskills_cols = 17 BEGIN
         READ_2DA_ENTRY_FORMER ~sm_clskills~ sm_i 13 sm_startxp2
@@ -159,6 +193,9 @@ ACTION_IF (sm_clskills_cols != 16) AND (sm_clskills_cols != 17) THEN BEGIN
 END
 ACTION_IF sm_clskills_matches > 1 THEN BEGIN
   FAIL @20
+END
+ACTION_IF sm_found_sorcerer_spell_metadata != 1 THEN BEGIN
+  FAIL @30
 END
 
 // The custom MULTI mask below is the standard Sorcerer/Monk mask: class ID 19
@@ -288,6 +325,8 @@ END
 ACTION_IF sm_ids_numeric_conflict = 1 THEN BEGIN
   FAIL @17
 END
+
+INCLUDE ~sorcerer-monk/lib/source-row-preflight.tpa~
 
 // FISTWEAP rows are keyed only by numeric class ID. An existing row for the
 // class slot therefore has ambiguous ownership and cannot safely be preserved
@@ -516,6 +555,149 @@ OUTER_SET sm_align_cn = sm_sorcerer_align_cn * sm_monk_align_cn
 OUTER_SET sm_align_ce = sm_sorcerer_align_ce * sm_monk_align_ce
 OUTER_SPRINT sm_alignmnt_row ~%sm_align_lg% %sm_align_ln% %sm_align_le% %sm_align_ng% %sm_align_tn% %sm_align_ne% %sm_align_cg% %sm_align_cn% %sm_align_ce%~
 
+// GemRB reads FIRST_LEVEL and RATE from the combined class's own PROFS row.
+// For a true multiclass, use the most generous starting allotment and the
+// fastest component progression so level-up logic stays aligned with whichever
+// component gains proficiency points fastest.
+COPY_EXISTING ~profs.2da~ ~override~
+  COUNT_2DA_COLS sm_profs_cols
+  PATCH_IF sm_profs_cols = 3 BEGIN
+    READ_2DA_ENTRIES_NOW ~sm_profs~ sm_profs_cols
+    FOR (sm_i = 0; sm_i < sm_profs; ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 0 sm_prof_class
+      PATCH_IF (~%sm_prof_class%~ STRING_EQUAL_CASE ~SORCERER~)
+          OR (~%sm_prof_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 1 sm_prof_first
+        READ_2DA_ENTRY_FORMER ~sm_profs~ sm_i 2 sm_prof_rate
+        PATCH_IF (IS_AN_INT ~%sm_prof_first%~)
+            AND (IS_AN_INT ~%sm_prof_rate%~)
+            AND (sm_prof_first >= 0)
+            AND (sm_prof_rate > 0) BEGIN
+          PATCH_IF (~%sm_prof_class%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+            SET sm_found_sorcerer_profs += 1
+            SET sm_sorcerer_prof_first = sm_prof_first
+            SET sm_sorcerer_prof_rate = sm_prof_rate
+          END ELSE BEGIN
+            SET sm_found_monk_profs += 1
+            SET sm_monk_prof_first = sm_prof_first
+            SET sm_monk_prof_rate = sm_prof_rate
+          END
+        END
+      END
+    END
+  END
+BUT_ONLY
+
+ACTION_IF (sm_profs_cols != 3)
+    OR (sm_found_sorcerer_profs != 1)
+    OR (sm_found_monk_profs != 1) THEN BEGIN
+  FAIL @27
+END
+OUTER_SET sm_prof_first = sm_sorcerer_prof_first
+ACTION_IF sm_monk_prof_first > sm_prof_first THEN BEGIN
+  OUTER_SET sm_prof_first = sm_monk_prof_first
+END
+OUTER_SET sm_prof_rate = sm_sorcerer_prof_rate
+ACTION_IF sm_monk_prof_rate < sm_prof_rate THEN BEGIN
+  OUTER_SET sm_prof_rate = sm_monk_prof_rate
+END
+OUTER_SPRINT sm_profs_row ~%sm_prof_first% %sm_prof_rate%~
+
+// CLSWPBON controls proficiency APR, unarmed APR, and the zero-proficiency
+// THAC0 penalty. Sorcerer/Monk deliberately follows Monk combat behavior, so
+// copy a single valid live Monk row instead of freezing the stock 1/3/2 values.
+ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
+  COPY_EXISTING ~clswpbon.2da~ ~override~
+    COUNT_2DA_COLS sm_clswpbon_cols
+    PATCH_IF sm_clswpbon_cols = 4 BEGIN
+      READ_2DA_ENTRIES_NOW ~sm_clswpbon~ sm_clswpbon_cols
+      FOR (sm_i = 0; sm_i < sm_clswpbon; ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_clswpbon~ sm_i 0 sm_clswpbon_class
+        PATCH_IF (~%sm_clswpbon_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_clswpbon~ sm_i 1 sm_clswpbon_apr
+          READ_2DA_ENTRY_FORMER ~sm_clswpbon~ sm_i 2 sm_clswpbon_unarmed
+          READ_2DA_ENTRY_FORMER ~sm_clswpbon~ sm_i 3 sm_clswpbon_thac0
+          PATCH_IF (IS_AN_INT ~%sm_clswpbon_apr%~)
+              AND (IS_AN_INT ~%sm_clswpbon_unarmed%~)
+              AND (IS_AN_INT ~%sm_clswpbon_thac0%~)
+              AND (sm_clswpbon_apr >= 0)
+              AND (sm_clswpbon_unarmed >= 0)
+              AND (sm_clswpbon_thac0 >= 0) BEGIN
+            SET sm_monk_clswpbon_matches += 1
+            SPRINT sm_clswpbon_row ~%sm_clswpbon_apr% %sm_clswpbon_unarmed% %sm_clswpbon_thac0%~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF (sm_clswpbon_cols != 4) OR (sm_monk_clswpbon_matches > 1) THEN BEGIN
+    FAIL @28
+  END
+END
+
+// Current GemRB splits the old SKILLS table into a skill-availability map and
+// a points-per-level table. The multiclass intentionally follows Monk skill
+// behavior, so copy the live Monk definitions and preserve mod-added skill rows.
+ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
+  ACTION_IF NOT FILE_EXISTS_IN_GAME ~thiefskl.2da~ THEN BEGIN
+    FAIL @29
+  END
+
+  COPY_EXISTING ~thiefscl.2da~ ~override~
+    COUNT_2DA_COLS sm_thiefscl_cols
+    READ_2DA_ENTRIES_NOW ~sm_thiefscl~ 1
+    FOR (sm_i = 0; (sm_i < (sm_thiefscl_cols - 1)) AND (sm_thiefscl_monk_col < 0); ++sm_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_thiefscl~ 2 sm_i sm_thiefscl_header
+      PATCH_IF (~%sm_thiefscl_header%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        SET sm_thiefscl_monk_col = sm_i + 1
+      END
+    END
+    PATCH_IF sm_thiefscl_monk_col >= 0 BEGIN
+      SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK~
+      FOR (sm_i = 3; VARIABLE_IS_SET $sm_thiefscl(~%sm_i%~ ~%sm_thiefscl_monk_col%~); ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_thiefscl~ sm_i sm_thiefscl_monk_col sm_thiefscl_value
+        PATCH_IF !(IS_AN_INT ~%sm_thiefscl_value%~) BEGIN
+          SET sm_thiefscl_invalid = 1
+        END ELSE PATCH_IF (sm_thiefscl_value < 0) OR (sm_thiefscl_value > 1) BEGIN
+          SET sm_thiefscl_invalid = 1
+        END
+        SPRINT sm_thiefscl_column ~%sm_thiefscl_column% %sm_thiefscl_value%~
+        SET sm_thiefscl_rows += 1
+      END
+    END
+  BUT_ONLY
+
+  COPY_EXISTING ~thiefskl.2da~ ~override~
+    COUNT_2DA_COLS sm_thiefskl_cols
+    PATCH_IF sm_thiefskl_cols = 3 BEGIN
+      READ_2DA_ENTRIES_NOW ~sm_thiefskl~ sm_thiefskl_cols
+      FOR (sm_i = 0; sm_i < sm_thiefskl; ++sm_i) BEGIN
+        READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 0 sm_thiefskl_class
+        PATCH_IF (~%sm_thiefskl_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 1 sm_thiefskl_start
+          READ_2DA_ENTRY_FORMER ~sm_thiefskl~ sm_i 2 sm_thiefskl_level
+          PATCH_IF (IS_AN_INT ~%sm_thiefskl_start%~)
+              AND (IS_AN_INT ~%sm_thiefskl_level%~)
+              AND (sm_thiefskl_start >= 0)
+              AND (sm_thiefskl_level >= 0) BEGIN
+            SET sm_monk_thiefskl_matches += 1
+            SPRINT sm_thiefskl_row ~%sm_thiefskl_start% %sm_thiefskl_level%~
+          END
+        END
+      END
+    END
+  BUT_ONLY
+
+  ACTION_IF (sm_thiefscl_monk_col < 0)
+      OR (sm_thiefscl_rows < 1)
+      OR (sm_thiefscl_invalid != 0)
+      OR (sm_thiefskl_cols != 3)
+      OR (sm_monk_thiefskl_matches != 1) THEN BEGIN
+    FAIL @29
+  END
+END
+
 // Copy the Monk starting-gold formula and avatar prefix instead of assuming a
 // fixed column order: both are read by column name at runtime, so a game whose
 // table is ordered differently would otherwise get the values transposed.
@@ -659,9 +841,9 @@ BUT_ONLY
 APPEND_COL ~weapprof.2da~ ~%sm_weapprof_column%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-// Match the fastest component proficiency progression (Monk: one point every
-// four levels) while retaining the Monk starting allotment of two points.
-APPEND ~profs.2da~ ~SORCERER_MONK 2 4~
+// Use the live multiclass progression derived above. GemRB reads RATE from this
+// row even when it selects the fastest component level during level-up.
+APPEND ~profs.2da~ ~SORCERER_MONK %sm_profs_row%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 APPEND ~xpcap.2da~ ~SORCERER_MONK %sm_xpcap%~
@@ -683,10 +865,10 @@ END
 APPEND ~numwslot.2da~ ~SORCERER_MONK 2~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
-// Preserve Monk fist APR and the better component non-proficiency penalty on
-// engines that externalize these combat bonuses.
+// Preserve Monk fist APR and proficiency behavior, but inherit any live Monk
+// combat-table overrides instead of freezing the stock values.
 ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
-  APPEND ~clswpbon.2da~ ~SORCERER_MONK 1 3 2~
+  APPEND ~clswpbon.2da~ ~SORCERER_MONK %sm_clswpbon_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
@@ -771,7 +953,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
       END
       // LUSM0.2DA is written as a new file, so another class already using the
       // SM0 abbreviation would have its HLA list replaced by this merge.
-      PATCH_IF NOT (~%sm_luabbr_class%~ STRING_EQUAL_CASE ~SORCERER_MONK~) BEGIN
+      PATCH_IF !(~%sm_luabbr_class%~ STRING_EQUAL_CASE ~SORCERER_MONK~) BEGIN
         READ_2DA_ENTRY_FORMER ~sm_luabbr~ sm_i 1 sm_other_abbr
         PATCH_IF (~%sm_other_abbr%~ STRING_EQUAL_CASE ~SM0~) BEGIN
           SET sm_sm0_taken = 1
@@ -838,13 +1020,13 @@ APPEND ~avprefc.2da~ ~SORCERER_MONK%sm_avatar%~
   UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 
 // Released and development GemRB tables differ only by the legacy NO_PROF
-// column. STARTXP values follow Sorcerer while the legacy non-proficiency
-// penalty follows the better Monk component value.
+// column. Sorcerer spell-table, book type and starting-XP metadata are copied
+// from the live Sorcerer row; the legacy non-proficiency penalty follows Monk.
 ACTION_IF sm_clskills_cols = 17 THEN BEGIN
-  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
+  APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_no_prof% %sm_startxp2% * 0 *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
-  APPEND ~clskills.2da~ ~SORCERER_MONK * * MXSPLSRC %sm_startxp% * SKILLS * 0 2 * CLABMO01 %sm_startxp2% * 0 *~
+  APPEND ~clskills.2da~ ~SORCERER_MONK * * %sm_magespell% %sm_startxp% * SKILLS * 0 %sm_booktype% * CLABMO01 %sm_startxp2% * 0 *~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END
 
@@ -863,11 +1045,13 @@ APPEND ~qslots.2da~ ~SORCERER_MONK 3 2 22 0 8 9 11 12 13~
 
 // Newer GemRB builds split the old SKILLS.2DA data into THIEFSCL/THIEFSKL.
 ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
-  APPEND_COL ~thiefscl.2da~ ~$ $ SORCERER_MONK 0 0 1 1 1 0 0~
+  APPEND_COL ~thiefscl.2da~ ~%sm_thiefscl_column%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
-  APPEND ~thiefskl.2da~ ~SORCERER_MONK 0 10~
+  APPEND ~thiefskl.2da~ ~SORCERER_MONK %sm_thiefskl_row%~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END ELSE BEGIN
+  // Keep the historical format unchanged: current GemRB no longer ships this
+  // combined table, so there is no authoritative modern schema to reinterpret.
   APPEND_COL ~skills.2da~ ~$ $ SORCERER_MONK 10 10 -1 -1 1 1 1 -1 -1~
     UNLESS ~\(^\|[ %TAB%]\)SORCERER_MONK\([ %TAB%]\|$\)~
 END

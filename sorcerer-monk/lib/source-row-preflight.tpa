@@ -1,0 +1,142 @@
+// Reject ambiguous component metadata before deriving Sorcerer/Monk policy.
+// Count row/header identity independently of value validity so a malformed
+// duplicate cannot be hidden by a later valid row. Missing/single malformed
+// sources remain the responsibility of the table-specific validation below.
+OUTER_SET sm_pre_sorcerer = 0
+OUTER_SET sm_pre_monk = 0
+
+COPY_EXISTING ~clskills.2da~ ~override~
+  COUNT_2DA_COLS sm_pre_cols
+  READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+  FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+      SET sm_pre_sorcerer += 1
+    END
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+      SET sm_pre_monk += 1
+    END
+  END
+BUT_ONLY
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~xpcap.2da~ THEN BEGIN
+  OUTER_SET sm_pre_sorcerer = 0
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~xpcap.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+    FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~abclasrq.2da~ THEN BEGIN
+  OUTER_SET sm_pre_sorcerer = 0
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~abclasrq.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+    FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+END
+
+OUTER_SET sm_pre_sorcerer = 0
+OUTER_SET sm_pre_monk = 0
+COPY_EXISTING ~alignmnt.2da~ ~override~
+  COUNT_2DA_COLS sm_pre_cols
+  READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+  FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+  END
+BUT_ONLY
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+
+OUTER_SET sm_pre_sorcerer = 0
+OUTER_SET sm_pre_monk = 0
+COPY_EXISTING ~profs.2da~ ~override~
+  COUNT_2DA_COLS sm_pre_cols
+  READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+  FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+    READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
+    PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+  END
+BUT_ONLY
+ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~clswpbon.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+    FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~thiefscl.2da~ THEN BEGIN
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~thiefscl.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ 1
+    FOR (sm_pre_i = 0; sm_pre_i < (sm_pre_cols - 1); ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ 2 sm_pre_i sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
+
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~thiefskl.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+    FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~weapprof.2da~ THEN BEGIN
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~weapprof.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ 1
+    FOR (sm_pre_i = 0; sm_pre_i < (sm_pre_cols - 1); ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ 2 sm_pre_i sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF sm_pre_monk > 1 THEN BEGIN FAIL @31 END
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
+  OUTER_SET sm_pre_sorcerer = 0
+  OUTER_SET sm_pre_monk = 0
+  COPY_EXISTING ~luabbr.2da~ ~override~
+    COUNT_2DA_COLS sm_pre_cols
+    READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
+    FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
+      READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+    END
+  BUT_ONLY
+  ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+END

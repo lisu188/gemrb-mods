@@ -74,10 +74,11 @@ class InstallerTests(unittest.TestCase):
         clskills_rows = payloads("APPEND", "clskills.2da")
         self.assertEqual(len(clskills_rows), 2)
         for row in clskills_rows:
-            self.assertIn("MXSPLSRC", row)
+            self.assertIn("%sm_magespell%", row)
+            self.assertIn("%sm_booktype%", row)
             self.assertIn("SKILLS", row)
             self.assertIn("CLABMO01", row)
-        self.assertIn("$ $ SORCERER_MONK 0 0 1 1 1 0 0", payloads("APPEND_COL", "thiefscl.2da"))
+        self.assertIn("%sm_thiefscl_column%", payloads("APPEND_COL", "thiefscl.2da"))
 
     def test_combined_ability_prerequisites(self):
         self.assertIn("SORCERER_MONK %sm_abclasrq_row%", payloads("APPEND", "abclasrq.2da"))
@@ -86,7 +87,8 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("sm_found_monk_abclasrq != 1", TP2)
 
     def test_modern_monk_skill_progression(self):
-        self.assertIn("SORCERER_MONK 0 10", payloads("APPEND", "thiefskl.2da"))
+        self.assertIn("SORCERER_MONK %sm_thiefskl_row%", payloads("APPEND", "thiefskl.2da"))
+        self.assertIn("OUTER_SPRINT sm_thiefskl_row ~0 10~", TP2)
         self.assertNotIn("SORCERER_MONK 10 5", payloads("APPEND", "thiefskl.2da"))
 
     def test_legacy_monk_skill_progression(self):
@@ -104,8 +106,10 @@ class InstallerTests(unittest.TestCase):
 
     def test_proficiency_progression_uses_fastest_component(self):
         prof_rows = payloads("APPEND", "profs.2da")
-        self.assertIn("SORCERER_MONK 2 4", prof_rows)
-        self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
+        self.assertIn("SORCERER_MONK %sm_profs_row%", prof_rows)
+        self.assertIn("sm_monk_prof_rate < sm_prof_rate", TP2)
+        self.assertIn("sm_monk_prof_first > sm_prof_first", TP2)
+        self.assertNotIn("SORCERER_MONK 2 4", prof_rows)
 
     def test_xp_cap_is_inherited_from_components(self):
         self.assertNotIn("SORCERER_MONK 8000000", TP2)
@@ -132,7 +136,10 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SORCERER_MONK 2", payloads("APPEND", "numwslot.2da"))
 
     def test_monk_combat_progression_is_preserved(self):
-        self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
+        combat_rows = payloads("APPEND", "clswpbon.2da")
+        self.assertIn("SORCERER_MONK %sm_clswpbon_row%", combat_rows)
+        self.assertIn("OUTER_SPRINT sm_clswpbon_row ~1 3 2~", TP2)
+        self.assertNotIn("SORCERER_MONK 1 3 2", combat_rows)
 
     def test_fist_progression_falls_back_to_the_stock_monk_table(self):
         # GemRB indexes FISTWEAP by the Monk component level (Actor::SetupFist),

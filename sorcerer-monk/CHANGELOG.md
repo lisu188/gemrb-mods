@@ -15,11 +15,13 @@
 - Added Tutu, Tutu_TotSC, BGEE and Classic Adventures to the supported game list.
 - Corrected `CLSKILLS.2DA` mapping for the released and development layouts.
 - Inherited `STARTXP` and `STARTXP2` values from the Sorcerer row.
+- Inherited the live Sorcerer `MAGESPELL` table and `BOOKTYPE` in the combined `CLSKILLS.2DA` row, so chargen spell-level setup and spontaneous-book detection follow Sorcerer spell-system overrides instead of frozen `MXSPLSRC` / `2` literals.
 - Derived the class XP cap from the active game's Sorcerer and Monk `XPCAP.2DA` rows instead of forcing the BG2/ToB 8,000,000 cap.
 - Required valid `XPCAP.2DA` entries for both Sorcerer and Monk before deriving the multiclass cap.
 - Preserved `XPCAP=-1` uncapped configurations while still choosing the more restrictive finite component cap when only one component is uncapped.
 - Derived `ABCLASRQ.2DA` minimum ability requirements from the live Sorcerer and Monk rows by taking the per-stat maximum, preserving stat-overhaul mods instead of freezing the stock `0 9 9 9 9 9` row.
 - Rejected malformed or incomplete `ABCLASRQ.2DA` component data before table mutation.
+- Derived `ALIGNMNT.2DA` restrictions from the live Sorcerer/Monk intersection and rejected missing, duplicate or non-binary component rows before mutation.
 - Added a matching zero `ABCLSMOD.2DA` row to keep GemRB's ability-table indices aligned; these are class/kit-specific maximum-stat adjustments and stock true multiclasses define no component-composition rule.
 - Corrected the legacy non-proficiency penalty to follow Monk instead of Sorcerer.
 - Changed saving throws and hit points to multiclass-derived values.
@@ -28,10 +30,9 @@
 - Added `CLASS.IDS` registration using the runtime-safe class ID.
 - Limited file-existence checks to genuinely optional or version-dependent tables.
 - Restored explanatory comments and the legacy `SKILLS.2DA` fallback.
-- Corrected newer split `THIEFSKL.2DA` Monk skill progression to 0 starting points and 10 points per Monk level.
-- Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
-- Corrected the legacy `SKILLS.2DA` availability mask so Find Traps is enabled alongside Move Silently and Hide in Shadows, matching the Monk column.
-- Corrected proficiency progression to the Monk/fastest-component rate of one point every four levels.
+- Inherited the live Monk `THIEFSCL.2DA` availability column and `THIEFSKL.2DA` point progression on current GemRB layouts, including mod-added skill rows; incomplete or malformed modern Monk skill metadata is rejected before mutation.
+- Kept the historical legacy `SKILLS.2DA` fallback unchanged because current GemRB no longer ships that combined schema.
+- Derived `PROFS.2DA` progression from the live component rows, using the larger starting allotment and faster gain rate instead of freezing Sorcerer/Monk at `2 4`.
 - Inherited the live Monk `WEAPPROF.2DA` column when available instead of freezing a 50-row ToB-era proficiency mask, so proficiency-overhaul mods and extended tables propagate to Sorcerer/Monk; retained the stock Monk mask only as a compatibility fallback.
 - Validated the exact 20-row `25STWEAP.2DA` slot order before adding ToB starter equipment, matching GemRB's fixed positional `RealSlots` map and rejecting reordered or extended tables before mutation.
 - Copied the starting-gold formula and the avatar prefix out of the live Monk rows instead of hardcoding them, since both are read by column name at runtime.
@@ -41,7 +42,7 @@
 - Gave the merged action bar the Monk's Search and Stealth buttons alongside the Sorcerer's spellbook and quick spell, and left out the Monk's third quick-weapon button because `NUMWSLOT.2DA` restricts the class to two weapon slots.
 - Rejected a `QSLOTS.2DA` that is out of step with `CLSKILLS.2DA` before making any changes. GemRB addresses the action bar by row index, so an appended row would otherwise be applied to a different class.
 - Rejected class tables that do not provide both a Sorcerer and a Monk row rather than silently installing a class with no starting experience.
-- Preserved Monk fist APR and combat proficiency behavior through `CLSWPBON.2DA` where available.
+- Inherited the live Monk `CLSWPBON.2DA` combat row instead of freezing `1 3 2`, while retaining that stock Monk row as a compatibility fallback when no usable Monk entry exists; unsupported schemas and duplicate valid Monk rows are rejected before mutation.
 - Prevented BGEE character generation from giving the multiclass the default quarterstaff.
 - Copied the game's own Monk `FISTWEAP.2DA` row instead of compensating for a rounded multiclass-level lookup: GemRB resolves fists by the Monk component level, so the multiclass now reaches every fist tier at the same Monk level as a single-class Monk.
 - Rejected pre-existing `FISTWEAP.2DA` rows for the allocated numeric class ID instead of silently preserving ambiguous numeric ownership or appending a duplicate row.
