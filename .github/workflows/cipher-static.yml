@@ -4,14 +4,14 @@ on:
   push:
     paths:
       - 'cipher/**'
-      - 'psion/lib/spell-functions.tpa'
+      - 'common/**'
       - 'psion/tests/make_weidu_fixture.py'
       - 'psion/tests/seed_savewiz_fixture.py'
       - '.github/workflows/cipher-static.yml'
   pull_request:
     paths:
       - 'cipher/**'
-      - 'psion/lib/spell-functions.tpa'
+      - 'common/**'
       - 'psion/tests/make_weidu_fixture.py'
       - 'psion/tests/seed_savewiz_fixture.py'
       - '.github/workflows/cipher-static.yml'
