@@ -1,0 +1,39 @@
+name: Registration regression patch
+
+on:
+  push:
+    branches:
+      - agent/review-mod-completeness
+    paths:
+      - tools/patch_registration_regressions.py
+      - .github/workflows/registration-regression-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/review-mod-completeness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Patch schema-aware regression fixtures
+        run: python tools/patch_registration_regressions.py
+      - name: Validate patched sources
+        run: |
+          python common/tests/validate_class_registration.py
+          python cipher/tests/validate.py
+          python psion/tests/validate.py
+          python -m compileall -q common/tests cipher/tests psion/tests
+          git diff --check
+      - name: Commit patched tests
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add common/tests cipher/tests psion/tests
+          git commit -m 'Make class registration tests schema-aware'
+          git push origin HEAD:agent/review-mod-completeness
