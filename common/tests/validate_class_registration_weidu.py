@@ -32,6 +32,16 @@ def write_native9(path: Path):
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
+def write_split_classes(path: Path):
+    path.write_text(
+        "2DA V1.0\n*\n        SAVE MULTI USABILITY MC_WAS_ID STREXTRA CONBONLVL\n"
+        "SORCERER SAVEWIZ 0 0x40000 -1 0 10\n"
+        "MONK SAVEMONK 0 0x20000000 -1 0 9\n"
+        "SHAMAN SAVEPRS 0 0x40000000 -1 1 9\n",
+        encoding="ascii",
+    )
+
+
 def add_combined_hp(path: Path):
     path.write_text("2DA V1.0\n*\n        HP\nMAGE HPWIZ\nSORCERER HPWIZ\nMONK HPMONK\n", encoding="ascii")
 
@@ -60,6 +70,7 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
         if scenario == "combined_hp":
             add_combined_hp(override / "hpclass.2da")
         else:
+            write_split_classes(override / "classes.2da")
             write_native9(override / "clastext.2da")
         shutil.copytree(ROOT / "common", game / "common")
         shutil.copytree(ROOT / mod, game / mod)

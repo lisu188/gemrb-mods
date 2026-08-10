@@ -189,8 +189,11 @@ def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
     return effects
 
 
+class_columns, _ = read_2da(override / "classes.2da")
+assert len(class_columns) in (6, 18), (layout, class_columns)
+split_schema = len(class_columns) == 6
 class_tables = ["classes.2da"]
-if layout != "legacy":
+if split_schema:
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
 for filename in (
     *class_tables,
@@ -200,6 +203,13 @@ for filename in (
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
+if not split_schema:
+    for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
+        path = override / filename
+        if path.is_file():
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for discipline in disciplines:
+                assert discipline not in text, (layout, filename, discipline)
 
 # A custom class cannot safely reuse the Mage/Sorcerer legacy ITM usability bit:
 # doing so would incorrectly reject legal Psion spears, crossbows, and clubs.
@@ -267,6 +277,14 @@ for discipline in disciplines:
 # CLASS.IDS-targeted opcode-319 restrictions, one per discipline.
 class_ids = read_class_ids(override / "class.ids")
 assert set(class_ids) == set(disciplines), (layout, class_ids)
+_, clskills_list = read_2da_list(override / "clskills.2da")
+_, qslots_list = read_2da_list(override / "qslots.2da")
+for discipline in disciplines:
+    cl_index = next(index for index, row in enumerate(clskills_list) if row[0] == discipline)
+    qs_index = next(index for index, row in enumerate(qslots_list) if row[0] == discipline)
+    assert class_ids[discipline] == cl_index, (layout, discipline, class_ids[discipline], cl_index)
+    assert class_ids[discipline] <= 31, (layout, discipline, class_ids[discipline])
+    assert qs_index == class_ids[discipline] - 1, (layout, discipline, qs_index, class_ids[discipline])
 psion_ids = set(class_ids.values())
 restricted_items = {
     "psmace.itm", "pssword.itm", "psarmor.itm", "psshield.itm", "psringx.itm"
