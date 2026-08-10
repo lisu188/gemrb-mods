@@ -1,0 +1,40 @@
+name: Comment-safe class detector patch
+
+on:
+  push:
+    branches:
+      - agent/review-mod-completeness
+    paths:
+      - tools/patch_comment_safe_class_detection.py
+      - .github/workflows/comment-safe-class-detector-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/review-mod-completeness
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Patch all class-table detectors
+        run: python tools/patch_comment_safe_class_detection.py
+      - name: Run fast validation
+        run: |
+          python common/tests/validate_class_registration.py
+          python psion/tests/validate.py
+          python cipher/tests/validate.py
+          python -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
+          python -m compileall -q common/tests psion/tests cipher/tests sorcerer-monk/tests
+          git diff --check
+      - name: Commit detector and regression fixes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add psion cipher common sorcerer-monk
+          git commit -m 'Detect GemRB class layouts from table headers'
+          git push origin HEAD:agent/review-mod-completeness
