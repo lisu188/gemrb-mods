@@ -134,7 +134,10 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("SORCERER_MONK 2", payloads("APPEND", "numwslot.2da"))
 
     def test_monk_combat_progression_is_preserved(self):
-        self.assertIn("SORCERER_MONK 1 3 2", payloads("APPEND", "clswpbon.2da"))
+        combat_rows = payloads("APPEND", "clswpbon.2da")
+        self.assertIn("SORCERER_MONK %sm_clswpbon_row%", combat_rows)
+        self.assertIn("OUTER_SPRINT sm_clswpbon_row ~1 3 2~", TP2)
+        self.assertNotIn("SORCERER_MONK 1 3 2", combat_rows)
 
     def test_fist_progression_falls_back_to_the_stock_monk_table(self):
         # GemRB indexes FISTWEAP by the Monk component level (Actor::SetupFist),
