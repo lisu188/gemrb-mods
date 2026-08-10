@@ -1,0 +1,54 @@
+name: Custom class registration
+
+on:
+  push:
+    paths:
+      - 'psion/**'
+      - 'cipher/**'
+      - 'common/**'
+      - '.github/workflows/class-registration.yml'
+  pull_request:
+    paths:
+      - 'psion/**'
+      - 'cipher/**'
+      - 'common/**'
+      - '.github/workflows/class-registration.yml'
+
+env:
+  WEIDU_VERSION: '251.00'
+  GEMRB_FIXTURE_COMMIT: '8c853a764ab489eee7e990a713eeb24dc8cc2d53'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate shared registration invariants
+        run: python common/tests/validate_class_registration.py
+      - name: Install official WeiDU release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "v${WEIDU_VERSION}" --repo WeiDUorg/weidu --pattern '*Linux*' --dir "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/weidu"
+          unzip -q "$(find "$RUNNER_TEMP" -maxdepth 1 -type f -iname '*linux*' -print -quit)" -d "$RUNNER_TEMP/weidu"
+          executable="$(find "$RUNNER_TEMP/weidu" -type f -iname weidu -print -quit)"
+          chmod +x "$executable"
+          echo "$(dirname "$executable")" >> "$GITHUB_PATH"
+      - name: Check out pinned GemRB fixture data
+        uses: actions/checkout@v4
+        with:
+          repository: gemrb/gemrb
+          ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
+          path: vendor/gemrb
+          fetch-depth: 1
+      - name: Seed missing Mage saving throw fixture
+        run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
+      - name: Validate native-9 and combined-plus-HPCLASS registration
+        run: python common/tests/validate_class_registration_weidu.py weidu vendor/gemrb
