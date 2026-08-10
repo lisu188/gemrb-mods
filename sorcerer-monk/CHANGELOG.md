@@ -29,9 +29,8 @@
 - Added `CLASS.IDS` registration using the runtime-safe class ID.
 - Limited file-existence checks to genuinely optional or version-dependent tables.
 - Restored explanatory comments and the legacy `SKILLS.2DA` fallback.
-- Corrected newer split `THIEFSKL.2DA` Monk skill progression to 0 starting points and 10 points per Monk level.
-- Corrected legacy `SKILLS.2DA` Monk skill progression to 10 starting points and 10 points per Monk level instead of the previous half-rate progression.
-- Corrected the legacy `SKILLS.2DA` availability mask so Find Traps is enabled alongside Move Silently and Hide in Shadows, matching the Monk column.
+- Inherited the live Monk `THIEFSCL.2DA` availability column and `THIEFSKL.2DA` point progression on current GemRB layouts, including mod-added skill rows; incomplete or malformed modern Monk skill metadata is rejected before mutation.
+- Kept the historical legacy `SKILLS.2DA` fallback unchanged because current GemRB no longer ships that combined schema.
 - Derived `PROFS.2DA` progression from the live component rows, using the larger starting allotment and faster gain rate instead of freezing Sorcerer/Monk at `2 4`.
 - Inherited the live Monk `WEAPPROF.2DA` column when available instead of freezing a 50-row ToB-era proficiency mask, so proficiency-overhaul mods and extended tables propagate to Sorcerer/Monk; retained the stock Monk mask only as a compatibility fallback.
 - Validated the exact 20-row `25STWEAP.2DA` slot order before adding ToB starter equipment, matching GemRB's fixed positional `RealSlots` map and rejecting reordered or extended tables before mutation.

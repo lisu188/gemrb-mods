@@ -77,7 +77,7 @@ class InstallerTests(unittest.TestCase):
             self.assertIn("MXSPLSRC", row)
             self.assertIn("SKILLS", row)
             self.assertIn("CLABMO01", row)
-        self.assertIn("$ $ SORCERER_MONK 0 0 1 1 1 0 0", payloads("APPEND_COL", "thiefscl.2da"))
+        self.assertIn("%sm_thiefscl_column%", payloads("APPEND_COL", "thiefscl.2da"))
 
     def test_combined_ability_prerequisites(self):
         self.assertIn("SORCERER_MONK %sm_abclasrq_row%", payloads("APPEND", "abclasrq.2da"))
@@ -86,7 +86,8 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("sm_found_monk_abclasrq != 1", TP2)
 
     def test_modern_monk_skill_progression(self):
-        self.assertIn("SORCERER_MONK 0 10", payloads("APPEND", "thiefskl.2da"))
+        self.assertIn("SORCERER_MONK %sm_thiefskl_row%", payloads("APPEND", "thiefskl.2da"))
+        self.assertIn("OUTER_SPRINT sm_thiefskl_row ~0 10~", TP2)
         self.assertNotIn("SORCERER_MONK 10 5", payloads("APPEND", "thiefskl.2da"))
 
     def test_legacy_monk_skill_progression(self):
