@@ -14,6 +14,7 @@ COPY ~psion/tables/psionpool.2da~ ~override/psionpool.2da~
 COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
 COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
+COPY ~psion/tables/psskill.2da~ ~override/psskill.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
 COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
@@ -27,8 +28,8 @@ COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
 // Fixed power selections plus level-1 utility actions. Center Mind is reusable;
-// the single bonus-feat selector is re-enabled by runtime credits earned at
-// Psion levels 1, 5, 10, 15 and 20, so canceled choices are never lost.
+// bonus-feat and skill-training selectors are re-enabled by runtime credits, so
+// canceled choices never consume class entitlements or unspent skill points.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~

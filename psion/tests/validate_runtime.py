@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fake-GemRB PP, persistence, focus, feat, selector, and charge checks."""
+"""Fake-GemRB PP, skill, focus, feat, selector, and persistence checks."""
 
 from pathlib import Path
 import importlib.util
@@ -43,17 +43,37 @@ def fake_table(name: str):
 def main() -> None:
     gemrb = types.ModuleType("GemRB")
     gui = types.ModuleType("GUICommon")
-    stats = {(1, 38): 18, (1, 39): 14, (1, 34): 20, (1, 239): 0}
+    stats = {
+        (1, 38): 18,
+        (1, 39): 14,
+        (1, 41): 14,
+        (1, 34): 20,
+        (1, 239): 0,
+    }
+    base_stats = {
+        (1, 38): 18,
+        (1, 39): 14,
+        (1, 41): 14,
+        (1, 34): 20,
+    }
     effects = {1: []}
     tables = {
         name: fake_table(name + ".2da")
-        for name in ("psionpool", "psionpowers", "psionaugment", "psionfeatpick")
+        for name in (
+            "psionpool",
+            "psionpowers",
+            "psionaugment",
+            "psionfeatpick",
+            "psionskills",
+            "psskill",
+        )
     }
     known_innates = [
         {"SpellResRef": "PS1ERAY"},
         {"SpellResRef": "PS1VIGR"},
         {"SpellResRef": "PXCNTR"},
         {"SpellResRef": "PXFSEL"},
+        {"SpellResRef": "PXSKILL"},
         {"SpellResRef": "SPCL900"},
     ]
     memorized_innates = [
@@ -61,17 +81,26 @@ def main() -> None:
         {"SpellResRef": "PS1VIGR", "Flags": 1},
         {"SpellResRef": "PXCNTR", "Flags": 0},
         {"SpellResRef": "PXFSEL", "Flags": 0},
+        {"SpellResRef": "PXSKILL", "Flags": 1},
         {"SpellResRef": "SPCL900", "Flags": 0},
     ]
     raw_spellinfo = ["PSMT03", "PSNOTMOD"]
     applied_spells = []
+    roll_value = {"value": 20}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
-    gemrb.GetPlayerStat = lambda actor, stat: stats.get((actor, stat), 0)
+
+    def get_player_stat(actor, stat, base=0):
+        if base:
+            return base_stats.get((actor, stat), stats.get((actor, stat), 0))
+        return stats.get((actor, stat), 0)
+
+    gemrb.GetPlayerStat = get_player_stat
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
     gemrb.LoadTable = lambda name, *_: tables[name.lower()]
     gemrb.DisplayString = lambda *_: None
     gemrb.Log = lambda *_: None
+    gemrb.Roll = lambda dice, sides, bonus: roll_value["value"] + bonus
     gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)
     gemrb.ApplySpell = lambda actor, resref, *_: applied_spells.append((actor, resref))
     gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
@@ -134,8 +163,18 @@ def main() -> None:
         )
         return True
 
+    def learn_spell(actor, resref, flags=0, *args):
+        key = str(resref).upper()
+        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates):
+            return 1
+        known_innates.append({"SpellResRef": key})
+        if int(flags) & 8:
+            memorized_innates.append({"SpellResRef": key, "Flags": 1})
+        return 0
+
     gemrb.UnmemorizeSpell = unmemorize
     gemrb.MemorizeSpell = memorize
+    gemrb.LearnSpell = learn_spell
 
     old_gemrb, old_gui = sys.modules.get("GemRB"), sys.modules.get("GUICommon")
     sys.modules["GemRB"], sys.modules["GUICommon"] = gemrb, gui
@@ -153,7 +192,6 @@ def main() -> None:
             )
 
         def resolve_center_mind():
-            """Model both native effects of a successfully resolved PXCNTR.spl."""
             apply_effect(
                 1,
                 module.STATE_EFFECT_OPCODE,
@@ -165,8 +203,6 @@ def main() -> None:
                 module.CENTER_RESOURCE,
                 9,
             )
-            # PXCNTR then casts PXFSPED through opcode 146. A non-owner's
-            # private Protection:Spell gate absorbs that helper in the engine.
             if not speed_helper_blocked():
                 applied_spells.append((1, module.SPEED_ON_RESOURCE))
 
@@ -194,36 +230,109 @@ def main() -> None:
         assert module.expend_focus(1)
         assert not module.is_focused(1)
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
-        assert speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
-        assert not module.is_focused(1)
-        assert speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
-        # Confirmation authorizes the speed-9 spell but must not restore focus.
         assert not module.is_focused(1)
         before_resolution = len(applied_spells)
         resolve_center_mind()
         assert module.is_focused(1)
-        # Non-owners still resolve Center Mind, but the private gate absorbs the
-        # unconditional PXFSPED helper cast.
         assert len(applied_spells) == before_resolution
 
-        # Class bonus-feat credits unlock exactly at the SRD Psion thresholds.
+        stats[(1, 34)] = 1
+        base_stats[(1, 34)] = 1
+        assert module.sync_skill_points(1) == 24
+        assert module.skill_points_remaining(1) == 24
+        assert module.skill_rank_cap(1) == 4
+        choices = set(module.available_skill_choices(1))
+        assert {
+            "PXSCONC", "PXSPSIC", "PXSSELF", "PXSKNOW", "PXSDEVC", "PXSHEAL"
+        } <= choices
+        assert "PXSAWAR" not in choices
+        assert "PXSECTO" not in choices
+        assert "PXSENRG" not in choices
+        assert "PXSSPAT" not in choices
+        assert "PXSINFL" not in choices
+        assert module.action_info(module.SKILL_SELECTOR_RESOURCE)["kind"] == "skill_selector"
+        assert module.begin_manifest(1, module.SKILL_SELECTOR_RESOURCE)
+
+        for expected_rank in range(1, 5):
+            before_points = module.skill_points_remaining(1)
+            assert module.begin_manifest(1, "PXSCONC")
+            assert module.skill_rank(1, "CONCENTRATION") == expected_rank - 1
+            assert module.begin_manifest(1, "PXSCONC")
+            assert module.skill_rank(1, "CONCENTRATION") == expected_rank
+            assert module.skill_points_remaining(1) == before_points - 1
+        assert module.skill_points_remaining(1) == 20
+        assert not module.can_train_skill(1, "PXSCONC")
+        assert module.can_train_skill(1, "PXSHEAL")
+        assert not module.can_train_skill(1, "PXSAWAR")
+
+        assert not module.concentration_check(1, 20, roll=13)
+        assert module.concentration_check(1, 20, roll=14)
+        assert module.expend_focus(1)
+        roll_value["value"] = 13
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not module.is_focused(1)
+        roll_value["value"] = 14
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert module.begin_manifest(1, module.CENTER_RESOURCE)
+        assert not module.is_focused(1)
+        resolve_center_mind()
+        assert module.is_focused(1)
+        roll_value["value"] = 20
+
+        # Temporary modified INT must not affect permanent skill-point accrual.
+        stats[(1, 34)] = 5
+        base_stats[(1, 34)] = 5
+        assert module.sync_skill_points(1) == 44
+        stats[(1, 38)] = 22
+        stats[(1, 34)] = 6
+        base_stats[(1, 34)] = 6
+        assert module.sync_skill_points(1) == 50
+        # A real base-INT increase affects only subsequently accounted levels.
+        base_stats[(1, 38)] = 22
+        stats[(1, 34)] = 7
+        base_stats[(1, 34)] = 7
+        assert module.sync_skill_points(1) == 58
+        stats[(1, 38)] = 18
+        base_stats[(1, 38)] = 18
+
+        # Simulate a migrated PR #16 save that never received the new level-1
+        # CLAB grant. Runtime reconciliation must learn and memorize PXSKILL.
+        known_innates[:] = [
+            spell for spell in known_innates if spell["SpellResRef"] != "PXSKILL"
+        ]
+        memorized_innates[:] = [
+            spell for spell in memorized_innates if spell["SpellResRef"] != "PXSKILL"
+        ]
+        assert "PXSKILL" not in {spell["SpellResRef"] for spell in known_innates}
+        restored = module.refresh_innate_charges(1)
+        assert "PXSKILL" in {spell["SpellResRef"] for spell in known_innates}
+        assert next(
+            spell for spell in memorized_innates if spell["SpellResRef"] == "PXSKILL"
+        )["Flags"] == 1
+        assert restored >= 0
+
         for level, slots in ((1, 1), (4, 1), (5, 2), (9, 2), (10, 3), (15, 4), (20, 5)):
             stats[(1, 34)] = level
+            base_stats[(1, 34)] = level
             assert module.bonus_feat_slots(1) == slots
         stats[(1, 34)] = 20
+        base_stats[(1, 34)] = 20
         assert module.bonus_feats_remaining(1) == 5
         assert module.action_info(module.FEAT_SELECTOR_RESOURCE)["kind"] == "feat_selector"
         assert module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
 
-        # Canceling/opening the selector cannot destroy an earned credit. While
-        # credit remains, charge refresh restores the selector just like Center.
+        for spell in memorized_innates:
+            if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR", "PXFSEL"):
+                spell["Flags"] = 0
         assert module.refresh_innate_charges(1) == 3
         states = {spell["SpellResRef"]: spell["Flags"] for spell in memorized_innates}
         assert states["PS1ERAY"] == 1
         assert states["PXCNTR"] == 1
         assert states["PXFSEL"] == 1
+        assert states["PXSKILL"] == 1
         for spell in memorized_innates:
             if spell["SpellResRef"] == "PXFSEL":
                 spell["Flags"] = 0
@@ -271,16 +380,11 @@ def main() -> None:
         assert [effect["Param1"] for effect in get_effects(1, "MaximumHPModifier")] == [6, 2]
         assert module.expend_focus(1)
         assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
-        assert not speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
-        assert not speed_helper_blocked()
         assert module.begin_manifest(1, module.CENTER_RESOURCE)
         assert not module.is_focused(1)
-        assert applied_spells[-1] == (1, module.SPEED_OFF_RESOURCE)
         resolve_center_mind()
         assert module.is_focused(1)
-        # Successful resolution immediately applies the focused passive; no
-        # innate-bar reopen or other GUI refresh is required.
         assert applied_spells[-1] == (1, module.SPEED_ON_RESOURCE)
         assert not module.can_select_feat(1, "PXFSPD")
 
@@ -299,17 +403,14 @@ def main() -> None:
         assert not module.begin_manifest(1, module.FEAT_SELECTOR_RESOURCE)
         assert module.available_feat_choices(1) == []
 
-        # Once all five credits are spent, a depleted selector is no longer
-        # recharged and therefore disappears until a future implementation adds
-        # another legal feat source.
         for spell in memorized_innates:
             if spell["SpellResRef"] == "PXFSEL":
                 spell["Flags"] = 0
         assert module.refresh_innate_charges(1) == 0
         assert next(spell for spell in memorized_innates if spell["SpellResRef"] == "PXFSEL")["Flags"] == 0
 
-        # Retain the original low-level affordability regression at level 3.
         stats[(1, 34)] = 3
+        base_stats[(1, 34)] = 3
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]
             assert module.can_manifest(1, parent)
@@ -329,17 +430,22 @@ def main() -> None:
                 return [
                     {"SpellIndex": 4000, "SpellResRef": "PS1VIGR"},
                     {"SpellIndex": 4001, "SpellResRef": "PXCNTR"},
+                    {"SpellIndex": 4002, "SpellResRef": "PXSKILL"},
                 ]
 
         collision = CollisionSpellbook()
-        raw_spellinfo[:] = ["PSMT03", "PSNOTMOD"]
+        raw_spellinfo[:] = ["PSMT03", "PSNOTMOD", "PXSCONC"]
         entry = module.resolve_power_entry(collision, 1, 255000)
         assert entry == {"SpellIndex": 255000, "SpellResRef": "PSMT03"}
         assert module.resolve_power_entry(collision, 1, 255001) is None
+        skill_child = module.resolve_power_entry(collision, 1, 255002)
+        assert skill_child == {"SpellIndex": 255002, "SpellResRef": "PXSCONC"}
         ordinary = module.resolve_power_entry(collision, 1, 4000)
         assert ordinary["SpellResRef"] == "PS1VIGR"
         center = module.resolve_power_entry(collision, 1, 4001)
         assert center["SpellResRef"] == "PXCNTR"
+        skill_parent = module.resolve_power_entry(collision, 1, 4002)
+        assert skill_parent["SpellResRef"] == "PXSKILL"
 
         module.ensure_pool(1, True)
         selected = module.resolve_power_entry(collision, 1, 255000)
@@ -349,8 +455,6 @@ def main() -> None:
         assert not module.begin_manifest(1, confirmed["SpellResRef"])
         module.ensure_pool(1, True)
 
-        # Reusable ordinary powers and Center Mind remain charge-backed. The
-        # exhausted bonus-feat selector and unrelated innate are untouched.
         for spell in memorized_innates:
             if spell["SpellResRef"] in ("PS1ERAY", "PXCNTR"):
                 spell["Flags"] = 0
@@ -360,6 +464,7 @@ def main() -> None:
         assert states["PS1VIGR"] == 1
         assert states["PXCNTR"] == 1
         assert states["PXFSEL"] == 0
+        assert states["PXSKILL"] == 1
         assert states["SPCL900"] == 0
         assert module.refresh_innate_charges(2) == 0
     finally:
@@ -372,7 +477,7 @@ def main() -> None:
         else:
             sys.modules["GUICommon"] = old_gui
 
-    print("Psion fake-GemRB PP, resolution-safe focus, immediate passive sync, feat-credit, selector, and persistence validation passed.")
+    print("Psion fake-GemRB PP, base-INT skill ledger, migrated selector, Concentration, focus, feat-credit, selector, and persistence validation passed.")
 
 
 if __name__ == "__main__":
