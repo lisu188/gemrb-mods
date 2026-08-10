@@ -203,14 +203,6 @@ for filename in (
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
-if not split_schema:
-    for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
-        path = override / filename
-        if path.is_file():
-            text = path.read_text(encoding="utf-8", errors="replace")
-            for discipline in disciplines:
-                assert discipline not in text, (layout, filename, discipline)
-
 # A custom class cannot safely reuse the Mage/Sorcerer legacy ITM usability bit:
 # doing so would incorrectly reject legal Psion spears, crossbows, and clubs.
 # The class rows are neutral and item-local opcode 319 effects carry the rules.

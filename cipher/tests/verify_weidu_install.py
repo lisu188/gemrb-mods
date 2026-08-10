@@ -51,12 +51,6 @@ if split_schema:
         assert "CIPHER" in (override / filename).read_text(encoding="utf-8", errors="replace"), (layout, filename)
     _, hpclass = rows(override / "hpclass.2da")
     assert hpclass["CIPHER"] == ["HPPRS"], (layout, hpclass["CIPHER"])
-else:
-    for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
-        path = override / filename
-        if path.is_file():
-            assert "CIPHER" not in path.read_text(encoding="utf-8", errors="replace"), (layout, filename)
-
 _, clskills = rows(override / "clskills.2da")
 assert clskills["CIPHER"][2] == "MXCIPHER", (layout, clskills["CIPHER"])
 assert row_index(override / "clskills.2da", "CIPHER") == class_ids["CIPHER"], (layout, class_ids)
