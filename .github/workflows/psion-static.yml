@@ -4,10 +4,12 @@ on:
   pull_request:
     paths:
       - "psion/**"
+      - "common/**"
       - ".github/workflows/psion-static.yml"
   push:
     paths:
       - "psion/**"
+      - "common/**"
       - ".github/workflows/psion-static.yml"
 
 env:
