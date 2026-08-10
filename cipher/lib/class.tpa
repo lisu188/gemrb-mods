@@ -39,26 +39,46 @@ ACTION_IF (ci_class_id < 1) OR (ci_class_id > 31) THEN BEGIN
   FAIL ~Cipher requires an available GemRB class slot below class ID 32.~
 END
 
-// Detect split vs combined tables from CLASSES.2DA itself. HPCLASS can coexist
-// with the released nineteen-column combined schema and is not a safe signal.
+// Detect split vs combined tables from the actual CLASSES.2DA header.
+// COUNT_2DA_COLS is unsafe because trailing explanatory comments in GemRB's
+// real tables can contain more tokens than the header; HPCLASS presence is also
+// not a schema discriminator.
 COPY_EXISTING ~classes.2da~ ~override~
-  COUNT_2DA_COLS ci_classes_cols
-BUT_ONLY
-ACTION_IF ci_classes_cols = 7 THEN BEGIN
-  OUTER_SET ci_split = 1
-END ELSE BEGIN
-  ACTION_IF ci_classes_cols = 19 THEN BEGIN
-    OUTER_SET ci_split = 0
-  END ELSE BEGIN
-    FAIL ~Cipher does not support this CLASSES.2DA layout.~
+  SET ci_detect_classes_cols = 7
+  SET ci_detect_split = 1
+  PATCH_IF (INDEX_BUFFER (~SAVE~) < 0) OR (INDEX_BUFFER (~USABILITY~) < 0) BEGIN
+    SET ci_detect_classes_cols = 0
+  END ELSE PATCH_IF (INDEX_BUFFER (~NAME_REF~) >= 0) AND (INDEX_BUFFER (~CAP_REF~) >= 0) BEGIN
+    SET ci_detect_classes_cols = 19
+    SET ci_detect_split = 0
   END
+  INNER_ACTION BEGIN
+    OUTER_SET ci_classes_cols = %ci_detect_classes_cols%
+    OUTER_SET ci_split = %ci_detect_split%
+  END
+BUT_ONLY
+ACTION_IF (ci_classes_cols != 7) AND (ci_classes_cols != 19) THEN BEGIN
+  FAIL ~Cipher does not support this CLASSES.2DA layout.~
 END
 
 ACTION_IF ci_split = 1 THEN BEGIN
   COPY_EXISTING ~clastext.2da~ ~override~
-    COUNT_2DA_COLS ci_text_cols
-    PATCH_IF (ci_text_cols = 6) OR (ci_text_cols = 9) OR (ci_text_cols = 10) BEGIN
-      READ_2DA_ENTRIES_NOW ~ci_active_classes~ ci_text_cols
+    SET ci_detect_text_cols = 6
+    PATCH_IF INDEX_BUFFER (~CLASSID~) < 0 BEGIN
+      SET ci_detect_text_cols = 0
+    END ELSE BEGIN
+      PATCH_IF INDEX_BUFFER (~BIOGRAPHY~) >= 0 BEGIN
+        SET ci_detect_text_cols = 9
+      END
+      PATCH_IF INDEX_BUFFER (~FALLEN_NOTICE~) >= 0 BEGIN
+        SET ci_detect_text_cols = 10
+      END
+    END
+    INNER_ACTION BEGIN
+      OUTER_SET ci_text_cols = %ci_detect_text_cols%
+    END
+    PATCH_IF (ci_detect_text_cols = 6) OR (ci_detect_text_cols = 9) OR (ci_detect_text_cols = 10) BEGIN
+      READ_2DA_ENTRIES_NOW ~ci_active_classes~ ci_detect_text_cols
       FOR (ci_i = 0; ci_i < ci_active_classes; ++ci_i) BEGIN
         READ_2DA_ENTRY_FORMER ~ci_active_classes~ ci_i 0 ci_name
         READ_2DA_ENTRY_FORMER ~ci_active_classes~ ci_i 1 ci_id

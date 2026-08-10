@@ -69,9 +69,11 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
         override = game / "override"
         if scenario == "combined_hp":
             add_combined_hp(override / "hpclass.2da")
-        else:
+        elif scenario == "native9":
             write_split_classes(override / "classes.2da")
             write_native9(override / "clastext.2da")
+        elif scenario != "commented_split":
+            raise AssertionError(scenario)
         shutil.copytree(ROOT / "common", game / "common")
         shutil.copytree(ROOT / mod, game / mod)
         if mod == "cipher":
@@ -101,9 +103,10 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
             assert not (set(names) & hp_names), (mod, scenario, hp_names)
         else:
             clastext = read_rows(override / "clastext.2da")
+            expected_len = 9 if scenario == "native9" else 6
             for name in names:
                 row = next(row for row in clastext if row[0] == name)
-                assert len(row) == 9, (mod, scenario, row)
+                assert len(row) == expected_len, (mod, scenario, row)
                 assert int(row[1], 0) == ids[name], (mod, scenario, row)
 
 
@@ -113,9 +116,9 @@ def main():
     weidu = sys.argv[1]
     gemrb = Path(sys.argv[2]).resolve()
     for mod in ("psion", "cipher"):
-        for scenario in ("combined_hp", "native9"):
+        for scenario in ("commented_split", "combined_hp", "native9"):
             install(weidu, gemrb, mod, scenario)
-    print("Psion and Cipher registration passed combined+HPCLASS and native 9-column CLASTEXT smoke tests.")
+    print("Psion and Cipher registration passed commented split, combined+HPCLASS and native 9-column CLASTEXT smoke tests.")
 
 
 if __name__ == "__main__":

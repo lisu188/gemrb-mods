@@ -166,14 +166,19 @@ def validate_release_infrastructure() -> None:
         "COUNT_2DA_COLS ps_clskills_cols",
         "OUTER_SET ps_seer_id = ps_clskills_rows",
         "ps_telepath_id > 31",
-        "COUNT_2DA_COLS ps_classes_cols",
-        "ps_classes_cols = 7",
-        "ps_classes_cols = 19",
-        "ps_text_cols = 9",
+        "INDEX_BUFFER (~NAME_REF~)",
+        "INDEX_BUFFER (~CAP_REF~)",
+        "ps_detect_classes_cols = 7",
+        "ps_detect_classes_cols = 19",
+        "INDEX_BUFFER (~BIOGRAPHY~)",
+        "INDEX_BUFFER (~FALLEN_NOTICE~)",
+        "ps_detect_text_cols = 9",
         "LOOKUP_IDS_SYMBOL_OF_INT",
     ):
         assert fragment in detector, fragment
     assert "FILE_EXISTS_IN_GAME ~hpclass.2da~" not in detector
+    assert "COUNT_2DA_COLS ps_classes_cols" not in detector
+    assert "COUNT_2DA_COLS ps_text_cols" not in detector
 
     fixture = (ROOT / "tests" / "make_weidu_fixture.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "tests" / "validate_weidu_install.sh").read_text(encoding="utf-8")

@@ -215,31 +215,50 @@ ACTION_IF (sm_expected_class_id < 1) OR (sm_expected_class_id > 31) THEN BEGIN
   FAIL @7
 END
 
-// Determine the GemRB class-table generation from CLASSES.2DA itself. Enhanced
-// Edition games can provide a native HPCLASS.2DA even when the active GemRB
-// data still uses the released combined CLASSES.2DA schema, so HPCLASS presence
-// is not a safe layout discriminator.
+// Determine the GemRB class-table generation from the real CLASSES.2DA
+// header. COUNT_2DA_COLS is unsafe here because GemRB tables can end with long
+// explanatory comment lines. HPCLASS presence is likewise not a discriminator.
 COPY_EXISTING ~classes.2da~ ~override~
-  COUNT_2DA_COLS sm_classes_cols
+  SET sm_detect_classes_cols = 7
+  SET sm_detect_split = 1
+  PATCH_IF (INDEX_BUFFER (~SAVE~) < 0) OR (INDEX_BUFFER (~USABILITY~) < 0) BEGIN
+    SET sm_detect_classes_cols = 0
+  END ELSE PATCH_IF (INDEX_BUFFER (~NAME_REF~) >= 0) AND (INDEX_BUFFER (~CAP_REF~) >= 0) BEGIN
+    SET sm_detect_classes_cols = 19
+    SET sm_detect_split = 0
+  END
+  INNER_ACTION BEGIN
+    OUTER_SET sm_classes_cols = %sm_detect_classes_cols%
+    OUTER_SET sm_split_class_tables = %sm_detect_split%
+  END
 BUT_ONLY
 
-ACTION_IF sm_classes_cols = 7 THEN BEGIN
-  OUTER_SET sm_split_class_tables = 1
-END ELSE BEGIN
-  ACTION_IF sm_classes_cols = 19 THEN BEGIN
-    OUTER_SET sm_split_class_tables = 0
-  END ELSE BEGIN
-    FAIL @15
-  END
+ACTION_IF (sm_classes_cols != 7) AND (sm_classes_cols != 19) THEN BEGIN
+  FAIL @15
 END
 
 // Released GemRB versions keep class text, IDs, hit points and race rules in
 // one combined CLASSES.2DA row. Development versions split these fields into
-// CLASTEXT.2DA, HPCLASS.2DA and CLSRCREQ.2DA.
+// CLASTEXT.2DA, HPCLASS.2DA and CLSRCREQ.2DA. Determine CLASTEXT width from
+// header markers for the same comment-safety reason.
 ACTION_IF sm_split_class_tables = 1 THEN BEGIN
   COPY_EXISTING ~clastext.2da~ ~override~
-    COUNT_2DA_COLS sm_clastext_cols
-    READ_2DA_ENTRIES_NOW ~sm_clastext~ sm_clastext_cols
+    SET sm_detect_clastext_cols = 6
+    PATCH_IF INDEX_BUFFER (~CLASSID~) < 0 BEGIN
+      SET sm_detect_clastext_cols = 0
+    END ELSE BEGIN
+      PATCH_IF INDEX_BUFFER (~BIOGRAPHY~) >= 0 BEGIN
+        SET sm_detect_clastext_cols = 9
+      END
+      PATCH_IF INDEX_BUFFER (~FALLEN_NOTICE~) >= 0 BEGIN
+        SET sm_detect_clastext_cols = 10
+      END
+    END
+    INNER_ACTION BEGIN
+      OUTER_SET sm_clastext_cols = %sm_detect_clastext_cols%
+    END
+    PATCH_IF (sm_detect_clastext_cols = 6) OR (sm_detect_clastext_cols = 9) OR (sm_detect_clastext_cols = 10) BEGIN
+      READ_2DA_ENTRIES_NOW ~sm_clastext~ sm_detect_clastext_cols
     FOR (sm_i = 0; sm_i < sm_clastext; ++sm_i) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_clastext~ sm_i 0 sm_class_name
       READ_2DA_ENTRY_FORMER ~sm_clastext~ sm_i 1 sm_existing_id
@@ -259,7 +278,11 @@ ACTION_IF sm_split_class_tables = 1 THEN BEGIN
         END
       END
     END
+    END
   BUT_ONLY
+  ACTION_IF (sm_clastext_cols != 6) AND (sm_clastext_cols != 9) AND (sm_clastext_cols != 10) THEN BEGIN
+    FAIL @15
+  END
 END ELSE BEGIN
   COPY_EXISTING ~classes.2da~ ~override~
     READ_2DA_ENTRIES_NOW ~sm_classes~ sm_classes_cols

@@ -63,27 +63,46 @@ ACTION_IF (ps_seer_id < 1) OR (ps_telepath_id > 31) THEN BEGIN
   FAIL ~The Psion mod requires six consecutive GemRB class slots below class ID 32.~
 END
 
-// Determine the active class-table generation from CLASSES.2DA itself.
-// HPCLASS.2DA can exist alongside the released combined CLASSES schema and is
-// therefore not a valid layout discriminator.
+// Determine the active class-table generation from the real CLASSES.2DA
+// header. COUNT_2DA_COLS is unsafe here because GemRB tables can end with
+// explanatory comment lines containing more tokens than the actual header.
+// HPCLASS.2DA can also coexist with the combined schema.
 COPY_EXISTING ~classes.2da~ ~override~
-  COUNT_2DA_COLS ps_classes_cols
-BUT_ONLY
-ACTION_IF ps_classes_cols = 7 THEN BEGIN
-  OUTER_SET ps_split = 1
-END ELSE BEGIN
-  ACTION_IF ps_classes_cols = 19 THEN BEGIN
-    OUTER_SET ps_split = 0
-  END ELSE BEGIN
-    FAIL ~Unsupported CLASSES.2DA layout for the Psion mod.~
+  SET ps_detect_classes_cols = 7
+  SET ps_detect_split = 1
+  PATCH_IF (INDEX_BUFFER (~SAVE~) < 0) OR (INDEX_BUFFER (~USABILITY~) < 0) BEGIN
+    SET ps_detect_classes_cols = 0
+  END ELSE PATCH_IF (INDEX_BUFFER (~NAME_REF~) >= 0) AND (INDEX_BUFFER (~CAP_REF~) >= 0) BEGIN
+    SET ps_detect_classes_cols = 19
+    SET ps_detect_split = 0
   END
+  INNER_ACTION BEGIN
+    OUTER_SET ps_classes_cols = %ps_detect_classes_cols%
+    OUTER_SET ps_split = %ps_detect_split%
+  END
+BUT_ONLY
+ACTION_IF (ps_classes_cols != 7) AND (ps_classes_cols != 19) THEN BEGIN
+  FAIL ~Unsupported CLASSES.2DA layout for the Psion mod.~
 END
 
 ACTION_IF ps_split = 1 THEN BEGIN
   COPY_EXISTING ~clastext.2da~ ~override~
-    COUNT_2DA_COLS ps_text_cols
-    PATCH_IF (ps_text_cols = 6) OR (ps_text_cols = 9) OR (ps_text_cols = 10) BEGIN
-      READ_2DA_ENTRIES_NOW ~ps_class_table~ ps_text_cols
+    SET ps_detect_text_cols = 6
+    PATCH_IF INDEX_BUFFER (~CLASSID~) < 0 BEGIN
+      SET ps_detect_text_cols = 0
+    END ELSE BEGIN
+      PATCH_IF INDEX_BUFFER (~BIOGRAPHY~) >= 0 BEGIN
+        SET ps_detect_text_cols = 9
+      END
+      PATCH_IF INDEX_BUFFER (~FALLEN_NOTICE~) >= 0 BEGIN
+        SET ps_detect_text_cols = 10
+      END
+    END
+    INNER_ACTION BEGIN
+      OUTER_SET ps_text_cols = %ps_detect_text_cols%
+    END
+    PATCH_IF (ps_detect_text_cols = 6) OR (ps_detect_text_cols = 9) OR (ps_detect_text_cols = 10) BEGIN
+      READ_2DA_ENTRIES_NOW ~ps_class_table~ ps_detect_text_cols
       FOR (ps_i = 0; ps_i < ps_class_table; ++ps_i) BEGIN
         READ_2DA_ENTRY_FORMER ~ps_class_table~ ps_i 0 ps_class_name
         READ_2DA_ENTRY_FORMER ~ps_class_table~ ps_i 1 ps_id
