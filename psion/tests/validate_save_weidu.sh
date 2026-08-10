@@ -38,6 +38,7 @@ path.write_text(
 )
 PY
 
+  cp -R "$repo_root/common" "$game/common"
   cp -R "$repo_root/psion" "$game/psion"
   before_sha="$(sha256sum "$game/override/savewiz.2da" | awk '{print $1}')"
 

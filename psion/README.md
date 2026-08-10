@@ -189,14 +189,22 @@ Lower-tier documented approximations remain in their respective source files, in
 - Item-local opcode 319 restrictions provide exact class usability without inheriting Mage's narrower legacy mask.
 - Legal Psion weapons and ammunition remain usable; armor, shields and illegal weapons are rejected.
 - The canonical Mage/Sorcerer-style action bar provides three quickspells, Cast, Use, three quick items and Innate.
-- GemRB GUI hooks are backup-safe and uninstallable.
-- A pre-existing `Psionics.py` is backed up and restored; a mod-created runtime module is removed on uninstall.
-- GUI patching performs read-only preflight before any file is changed.
+- Psion and Cipher use one shared `GemRBModCore` GUI hook layer with independent runtime handlers.
+- Shared GUI ownership is install-order independent and remains active until the last handler is removed.
+- Legacy Psion GUI/runtime ownership markers are migrated so upgrades preserve the true pre-mod files for uninstall.
 
 ## Installation
 
 1. Run GemRB against the game once so `gemrb_path.txt` exists.
-2. Copy the `psion` directory into the game directory.
+2. Copy both the `psion` directory and its sibling `common` directory from the same release/repository revision into the game directory. The layout must remain:
+
+   ```text
+   game/
+   ├── common/
+   └── psion/
+   ```
+
+   Installing only `psion/` is not supported because WeiDU spell constructors and the GUI installer are shared from `common/`.
 3. Install the WeiDU component:
 
    `weidu psion/setup-psion.tp2`
@@ -205,11 +213,11 @@ Lower-tier documented approximations remain in their respective source files, in
 
    `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts`
 
-To remove the GUI hooks and runtime module:
+To remove the Psion handler:
 
 `python psion/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts --uninstall`
 
-Uninstall the WeiDU component through WeiDU normally.
+If Cipher is still installed, the shared `GemRBModCore` hooks stay active for Cipher. The original GemRB GUI files and common runtime modules are restored only after the final active handler is removed. Uninstall the WeiDU component through WeiDU normally.
 
 ## Supported targets
 
@@ -232,7 +240,7 @@ GitHub Actions validates:
 - generated augmentation tables and the 20-PP ceiling;
 - XP, THAC0, saving throws, Lore, proficiencies, ability requirements and item usability;
 - fake-GemRB PP persistence, selectors, quickslots, transactions and reusable innate charges;
-- GUI patch install, idempotence, backup, uninstall, indentation and failure preflight;
+- shared GUI patch install, idempotence, ownership migration, uninstall, indentation and failure preflight;
 - official WeiDU parsing of the complete installer and every included TPA;
 - install, verification, uninstall and reinstall across normalized, native EE and legacy class-table layouts;
 - BG2/ToB startup-table lifecycles and semantic item restoration;
@@ -240,4 +248,4 @@ GitHub Actions validates:
 
 ## Next work
 
-The main remaining design systems are player-selected power learning, psionic focus, feats and skills, psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+The main remaining design systems are player-selected power learning, psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.

@@ -14,6 +14,7 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --gemrb-root "$gemrb_root" \
   --output "$game" \
   --layout normalized
+cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/psion" "$game/psion"
 
 python3 - "$game/override/PSOFFSET.ITM" <<'PY'

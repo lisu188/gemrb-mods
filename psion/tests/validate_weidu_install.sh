@@ -21,6 +21,7 @@ python3 "$repo_root/psion/tests/make_weidu_fixture.py" \
   --gemrb-root "$gemrb_root" \
   --output "$game" \
   --layout "$layout"
+cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/psion" "$game/psion"
 
 # Snapshot every pre-existing table and synthetic ITM that the installer edits.
@@ -175,7 +176,7 @@ def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
     equipping_count = struct.unpack_from("<H", data, 0x70)[0]
     effects = []
     for index in range(equipping_count):
-        offset = effect_offset + equipping_index + index * 0x30
+        offset = effect_offset + (equipping_index + index) * 0x30
         assert offset + 0x30 <= len(data), (layout, path.name, offset, len(data))
         effects.append((
             struct.unpack_from("<H", data, offset)[0],

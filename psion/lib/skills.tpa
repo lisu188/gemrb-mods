@@ -1,0 +1,105 @@
+// Runtime-backed Psion skill training.
+//
+// Ranks and unspent skill points are serialized by Psionics.py. These resources
+// only provide the reusable innate selector and its temporary opcode-214 choices.
+// Keeping them in the PX namespace prevents class power-progression code from
+// mistaking skill training actions for manifested powers.
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSKILL~
+    ps_name = ~Psionic Skill Training~
+    ps_description = ~Spend one available Psion skill point. Core skills are available to every Psion; each discipline also has one specialist skill. Maximum ranks are Psion level plus 3. Unspent points remain available for later training.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXSKILL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSSKILL~ END
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSCONC~
+    ps_name = ~Concentration~
+    ps_description = ~Invest one rank in Concentration, up to Psion level plus 3. Concentration governs centering and later manifestation-under-pressure checks.~
+    ps_icon = ~sppr101~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSPSIC~
+    ps_name = ~Psicraft~
+    ps_description = ~Invest one rank in Psicraft, up to Psion level plus 3. Psicraft represents identifying, understanding, and countering psionic effects.~
+    ps_icon = ~spwi326~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSSELF~
+    ps_name = ~Self-Discipline~
+    ps_description = ~Invest one rank in Self-Discipline, up to Psion level plus 3. This skill represents trained mental control against fear, confusion, charm, and similar pressure.~
+    ps_icon = ~sppr312~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSKNOW~
+    ps_name = ~Psionic Knowledge~
+    ps_description = ~Invest one rank in Psionic Knowledge, up to Psion level plus 3. It represents formal knowledge of powers, disciplines, creatures, and psionic theory.~
+    ps_icon = ~spwi110~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSDEVC~
+    ps_name = ~Device Lore~
+    ps_description = ~Invest one rank in Device Lore, up to Psion level plus 3. It will govern use of off-discipline power stones, dorjes, and other psionic devices as those item systems are added.~
+    ps_icon = ~spwi123~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSAWAR~
+    ps_name = ~Awareness~
+    ps_description = ~Seer specialist skill. Invest one rank, up to Psion level plus 3, in trained perception of danger, hidden information, and subtle psychic traces.~
+    ps_icon = ~sppr114~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSECTO~
+    ps_name = ~Ectoplasmic Craft~
+    ps_description = ~Shaper specialist skill. Invest one rank, up to Psion level plus 3, in shaping, stabilizing, and understanding ectoplasmic constructs.~
+    ps_icon = ~spwi123~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSENRG~
+    ps_name = ~Energy Lore~
+    ps_description = ~Kineticist specialist skill. Invest one rank, up to Psion level plus 3, in control and understanding of psychokinetic energy manifestations.~
+    ps_icon = ~spwi326~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSHEAL~
+    ps_name = ~Heal~
+    ps_description = ~Egoist specialist skill. Invest one rank, up to Psion level plus 3, in psychometabolic diagnosis, recovery, and bodily control.~
+    ps_icon = ~sppr103~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSSPAT~
+    ps_name = ~Spatial Navigation~
+    ps_description = ~Nomad specialist skill. Invest one rank, up to Psion level plus 3, in precise spatial awareness and psychoportive navigation.~
+    ps_icon = ~spwi502~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXSINFL~
+    ps_name = ~Influence~
+    ps_description = ~Telepath specialist skill. Invest one rank, up to Psion level plus 3, in reading social intent and exerting controlled psychic influence.~
+    ps_icon = ~spwi104~
+END

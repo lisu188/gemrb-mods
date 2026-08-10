@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMON_WEIDU = ROOT.parent / "common" / "weidu"
 
 
 def text(name: str) -> str:
@@ -38,7 +39,7 @@ def assert_single_save_gate(
 
 
 def validate_effect_power_and_reddopsi() -> None:
-    helper = text("spell-functions.tpa")
+    helper = (COMMON_WEIDU / "spell-functions.tpa").read_text(encoding="utf-8")
     assert "power = 255" in helper
     assert "READ_LONG 0x34 ps_effect_power" in helper
     assert "WRITE_BYTE (ps_new_effect + 0x03) ps_effect_power" in helper
