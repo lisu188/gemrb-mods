@@ -42,11 +42,10 @@ jobs:
           python -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
           python -m compileall -q psion cipher common sorcerer-monk
           git diff --check
-      - name: Commit reviewed changes and remove patch helpers
+      - name: Commit reviewed code and tests
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git rm .github/workflows/mod-completeness-patch.yml tools/apply_mod_completeness_patch.py tools/patch_mod_completeness_tests.py
-          git add psion cipher common .github/workflows
+          git add psion cipher common
           git commit -m 'Harden Psion and Cipher class registration'
           git push origin HEAD:agent/review-mod-completeness
