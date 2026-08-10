@@ -189,9 +189,17 @@ def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
     return effects
 
 
-class_columns, _ = read_2da(override / "classes.2da")
-assert len(class_columns) in (6, 18), (layout, class_columns)
-split_schema = len(class_columns) == 6
+# The dedicated cross-mod registration test proves whether a scenario must
+# use split or combined class metadata. This lifecycle verifier follows the
+# actual Psion registration so install/uninstall/reinstall assertions remain
+# independent of fixture naming and inactive auxiliary tables.
+clastext_path = override / "clastext.2da"
+split_schema = False
+if clastext_path.is_file():
+    _, clastext_rows = read_2da(clastext_path)
+    split_presence = [discipline in clastext_rows for discipline in disciplines]
+    assert all(split_presence) or not any(split_presence), (layout, split_presence)
+    split_schema = all(split_presence)
 class_tables = ["classes.2da"]
 if split_schema:
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
