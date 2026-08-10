@@ -7,12 +7,14 @@ on:
     paths:
       - .github/workflows/mod-completeness-patch.yml
       - tools/apply_mod_completeness_patch.py
+      - tools/patch_mod_completeness_tests.py
   pull_request:
     branches:
       - master
     paths:
       - .github/workflows/mod-completeness-patch.yml
       - tools/apply_mod_completeness_patch.py
+      - tools/patch_mod_completeness_tests.py
 
 permissions:
   contents: write
@@ -28,7 +30,9 @@ jobs:
         with:
           python-version: '3.13'
       - name: Apply reviewed completeness fixes
-        run: python tools/apply_mod_completeness_patch.py
+        run: |
+          python tools/apply_mod_completeness_patch.py
+          python tools/patch_mod_completeness_tests.py
       - name: Run fast validation
         run: |
           python common/tests/validate_class_registration.py
@@ -42,7 +46,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git rm .github/workflows/mod-completeness-patch.yml tools/apply_mod_completeness_patch.py
+          git rm .github/workflows/mod-completeness-patch.yml tools/apply_mod_completeness_patch.py tools/patch_mod_completeness_tests.py
           git add psion cipher common .github/workflows
           git commit -m 'Harden Psion and Cipher class registration'
           git push origin HEAD:agent/review-mod-completeness
