@@ -104,8 +104,10 @@ class InstallerTests(unittest.TestCase):
 
     def test_proficiency_progression_uses_fastest_component(self):
         prof_rows = payloads("APPEND", "profs.2da")
-        self.assertIn("SORCERER_MONK 2 4", prof_rows)
-        self.assertNotIn("SORCERER_MONK 2 5", prof_rows)
+        self.assertIn("SORCERER_MONK %sm_profs_row%", prof_rows)
+        self.assertIn("sm_monk_prof_rate < sm_prof_rate", TP2)
+        self.assertIn("sm_monk_prof_first > sm_prof_first", TP2)
+        self.assertNotIn("SORCERER_MONK 2 4", prof_rows)
 
     def test_xp_cap_is_inherited_from_components(self):
         self.assertNotIn("SORCERER_MONK 8000000", TP2)
