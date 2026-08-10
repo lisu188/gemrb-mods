@@ -1,3 +1,16 @@
+// QSLOTS.2DA is indexed by class ID - 1 rather than by row name. The first
+// Psion row must therefore land exactly at ps_seer_id - 1 and the six rows then
+// remain aligned with the six consecutive discipline IDs.
+OUTER_SET ps_qslots_cols = 0
+OUTER_SET ps_qslots_rows = 0
+COPY_EXISTING ~qslots.2da~ ~override~
+  COUNT_2DA_COLS ps_qslots_cols
+  COUNT_2DA_ROWS ps_qslots_cols ps_qslots_rows
+BUT_ONLY
+ACTION_IF ps_qslots_rows != (ps_seer_id - 1) THEN BEGIN
+  FAIL ~The Psion mod cannot align QSLOTS.2DA with its allocated class IDs.~
+END
+
 // Build the Psion proficiency column from WEAPPROF row names instead of a
 // positional literal. BG-family tables can be extended or reordered by other
 // mods; row-name mapping keeps the intended one-pip weapon list stable.
