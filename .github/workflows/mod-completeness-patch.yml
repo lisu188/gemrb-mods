@@ -7,6 +7,12 @@ on:
     paths:
       - .github/workflows/mod-completeness-patch.yml
       - tools/apply_mod_completeness_patch.py
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/workflows/mod-completeness-patch.yml
+      - tools/apply_mod_completeness_patch.py
 
 permissions:
   contents: write
