@@ -54,10 +54,10 @@ def exercise_live_modern_skills(weidu):
         build_fixture(game)
         override = game / "override"
         skills = [
-            ("PICK_POCKETS", 1), ("OPEN_LOCKS", 0), ("FIND_TRAPS", 1),
-            ("MOVE_SILENTLY", 0), ("HIDE_IN_SHADOWS", 1),
-            ("DETECT_ILLUSION", 1), ("SET_TRAPS", 0),
-            ("MOD_SKILL_A", 1), ("MOD_SKILL_B", 1),
+            ("PICK_POCKETS", 100), ("OPEN_LOCKS", 0), ("FIND_TRAPS", 100),
+            ("MOVE_SILENTLY", 0), ("HIDE_IN_SHADOWS", 100),
+            ("DETECT_ILLUSION", 100), ("SET_TRAPS", 0),
+            ("MOD_SKILL_A", 5), ("MOD_SKILL_B", 1),
         ]
         write_2da(
             override / "thiefscl.2da",
@@ -72,7 +72,7 @@ def exercise_live_modern_skills(weidu):
             default="0",
         )
         originals = snapshot(override)
-        expected = [str(value) for _, value in skills]
+        expected = ["1" if value else "0" for _, value in skills]
 
         run_weidu(weidu, game, "--force-install-list", "0")
         assert column_values(override / "thiefscl.2da", "SORCERER_MONK") == expected
@@ -113,14 +113,14 @@ def exercise_invalid_availability(weidu):
         write_2da(
             override / "thiefscl.2da",
             ["MONK"],
-            [("PICK_POCKETS", [0]), ("OPEN_LOCKS", [2])],
+            [("PICK_POCKETS", [0]), ("OPEN_LOCKS", ["bad"])],
             default="0",
         )
         originals = snapshot(override)
         result = run_rejected(weidu, game)
         print(result.stdout, flush=True)
         assert ERROR.casefold() in result.stdout.casefold(), result.stdout
-        assert_snapshot(override, originals, "non-binary THIEFSCL rejection")
+        assert_snapshot(override, originals, "malformed THIEFSCL rejection")
 
 
 def exercise_missing_monk_points(weidu):

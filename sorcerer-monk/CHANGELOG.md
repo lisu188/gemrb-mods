@@ -2,6 +2,9 @@
 
 ## 2.0
 
+- Ignored GemRB's trailing `CLSWPBON.2DA` documentation while scanning it,
+  normalized nonzero `THIEFSCL.2DA` availability values, and seeded GemRB's
+  shared `AVPREFC.2DA` baseline when the game KEY does not expose that resource.
 - Preserved the historical `sorcerer-monk-cleric/backup` path so existing 1.9 installations remain reinstallable and uninstallable by WeiDU.
 - Prevented simultaneous installation with Sorcerer/Monk/Cleric because the two legacy packages share the same WeiDU backup namespace and the older triple-class installer can also collide on class ID 22.
 - Replaced hardcoded class ID 21 with an ID derived from the Sorcerer/Monk `CLSKILLS.2DA` row index.

@@ -266,6 +266,7 @@ def main():
 
     verify_short_qslots_is_rejected(weidu)
     verify_taken_hla_abbreviation_is_rejected(weidu)
+    verify_missing_avprefc_uses_gemrb_baseline(weidu)
 
 
 def install_expecting_failure(weidu, game):
@@ -309,6 +310,23 @@ def verify_short_qslots_is_rejected(weidu):
 
         install_expecting_failure(weidu, game)
         print("real WeiDU short-qslots rejection: OK", flush=True)
+
+
+def verify_missing_avprefc_uses_gemrb_baseline(weidu):
+    """Fresh BGEE games rely on GemRB's shared AVPREFC instead of their KEY."""
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-avprefc-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        avprefc = game / "override" / "avprefc.2da"
+        avprefc.unlink()
+
+        run_weidu(weidu, game, "--force-install-list", "0")
+        assert find_row(avprefc, "MONK")[1:] == ["0x500"]
+        assert find_row(avprefc, "SORCERER_MONK")[1:] == ["0x500"]
+
+        run_weidu(weidu, game, "--force-uninstall", "0")
+        assert not avprefc.exists(), "fallback AVPREFC.2DA left behind"
+        print("missing AVPREFC uses GemRB baseline: OK", flush=True)
 
 
 if __name__ == "__main__":

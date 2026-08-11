@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Made Mage-progression extraction tolerant of stock BGEE's CRLF-formatted
+  `XPLEVEL.2DA`, which WeiDU 251 otherwise miscounts as a single data row.
 - Extended the fixed Psion progression from the BG1-accessible level-1–9 class
   rows to the complete class-level 1–20 powers-known table, ending at 36 unique
   known powers per discipline.

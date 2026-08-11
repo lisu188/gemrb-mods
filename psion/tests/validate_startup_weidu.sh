@@ -97,6 +97,7 @@ PY
 
 # Regenerate CHITIN.KEY after adding the optional fixture resources.
 python3 "$gemrb_root/tools/demo_key_file.py" "$game"
+cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/psion" "$game/psion"
 
 install() {

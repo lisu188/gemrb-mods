@@ -198,6 +198,14 @@ def configure_progression_tables(override: Path, layout: str) -> None:
         ),
         default="0",
     )
+    # Stock BGEE stores XPLEVEL in a BIFF with CRLF line endings. Keep the
+    # fixture byte-compatible with that parser edge case.
+    xplevel = override / "xplevel.2da"
+    xplevel.write_text(
+        xplevel.read_text(encoding="utf-8"),
+        encoding="utf-8",
+        newline="\r\n",
+    )
 
     write_2da(
         override / "thac0.2da",

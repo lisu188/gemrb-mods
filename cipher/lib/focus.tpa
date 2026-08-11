@@ -18,18 +18,24 @@ OUTER_SET ci_splprot_rows = 0
 COPY_EXISTING ~splprot.2da~ ~override~
   COUNT_2DA_COLS ci_splprot_cols
   COUNT_2DA_ROWS ci_splprot_cols ci_splprot_count
+  SPRINT ci_splprot_prefix ~~
+  READ_ASCII (BUFFER_LENGTH - 1) ci_splprot_last (1)
+  PATCH_IF NOT (~%ci_splprot_last%~ STRING_EQUAL ~%LNL%~) BEGIN
+    SPRINT ci_splprot_prefix ~%LNL%~
+  END
+  SPRINT ci_splprot_append ~%ci_splprot_prefix%CIPHER_CLASS 0x10d %ci_class_id% 1%LNL%CIPHER_HOSTILE 0x108 2 1%LNL%~
+  FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
+    SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1%LNL%~
+  END
+  SET ci_splprot_offset = BUFFER_LENGTH
+  SET ci_splprot_length = STRING_LENGTH ~%ci_splprot_append%~
+  INSERT_BYTES ci_splprot_offset ci_splprot_length
+  WRITE_ASCIIE ci_splprot_offset ~%ci_splprot_append%~
   INNER_ACTION BEGIN OUTER_SET ci_splprot_rows = ci_splprot_count END
 BUT_ONLY
 
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
-APPEND ~splprot.2da~ ~CIPHER_CLASS 0x10d %ci_class_id% 1~
-APPEND ~splprot.2da~ ~CIPHER_HOSTILE 0x108 2 1~
-
-OUTER_FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
-  OUTER_SET ci_row = ci_splprot_rows + 2 + ci_unit
-  APPEND ~splprot.2da~ ~CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1~
-END
 
 // Every setter owns one permanent ScriptingState effect. Before installing the
 // next state it removes every previous CIFS<n> parent resource. Timing mode 9

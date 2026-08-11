@@ -11,6 +11,8 @@ class ModernMonkSkillTests(unittest.TestCase):
         self.assertIn("sm_thiefscl_monk_col = sm_i + 1", TP2)
         self.assertIn("SPRINT sm_thiefscl_column ~$ $ SORCERER_MONK~", TP2)
         self.assertIn("sm_thiefscl_invalid = 1", TP2)
+        self.assertIn("SET sm_thiefscl_enabled = 1", TP2)
+        self.assertIn("%sm_thiefscl_enabled%", TP2)
 
     def test_live_monk_point_progression_is_copied(self):
         self.assertIn("READ_2DA_ENTRIES_NOW ~sm_thiefskl~ sm_thiefskl_cols", TP2)

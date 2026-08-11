@@ -55,6 +55,11 @@ def test_sources():
     assert "override/mxcipher.2da" in setup
     assert "override/mxpsion.2da" not in setup
 
+    class_rules = (CIPHER / "lib" / "class.tpa").read_text(encoding="utf-8")
+    assert "SET ci_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)" in class_rules
+    assert "READ_ASCII ci_mage_start ci_mage_row" in class_rules
+    assert "OUTER_SPRINT ci_xp_values ~ %ci_values%~" in class_rules
+
     runtime = (CIPHER / "guiscripts" / "Cipher.py").read_text(encoding="utf-8")
     assert "import Transactions" in runtime
     assert "import InnateCharges" in runtime
@@ -64,6 +69,9 @@ def test_sources():
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
     assert "CIPHER_HOSTILE 0x108 2 1" in focus
     assert "ci_hostile_splprot" in focus
+    assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
+    assert "WRITE_ASCIIE ci_splprot_offset" in focus
+    assert "APPEND ~splprot.2da~" not in focus
     assert "WRITE_SHORT ci_new_effect 326" in focus
     assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus
     assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus
@@ -90,6 +98,11 @@ def test_sources():
     assert "opcode = 341 target = 1 timing = 9" in critical
     for resref in ("CIFCORE", "CIFSW15", "CIFSW20"):
         assert resref in critical
+
+    lifecycle_verifier = (CIPHER / "tests" / "verify_weidu_install.py").read_text(encoding="utf-8")
+    assert 'if layout == "live":' in lifecycle_verifier
+    assert 'path.suffix.lower() == ".itm"' in lifecycle_verifier
+    assert "sum(verify_item_focus(path) for path in item_paths) > 0" in lifecycle_verifier
 
     thac0_fix = (CIPHER / "lib" / "class-thac0-fix.tpa").read_text(encoding="utf-8")
     assert "20 - ((ci_thac0_fix_col - 1) / 2)" in thac0_fix

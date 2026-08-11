@@ -17,17 +17,23 @@ OUTER_SPRINT ps_xp_values ~~
 
 COPY_EXISTING ~xplevel.2da~ ~override~
   COUNT_2DA_COLS ps_xp_cols
-  COUNT_2DA_ROWS ps_xp_cols ps_xp_rows
-  FOR (ps_row = 0; ps_row < ps_xp_rows; ++ps_row) BEGIN
-    READ_2DA_ENTRY ps_row 0 ps_xp_cols ps_class_name
-    PATCH_IF (~%ps_class_name%~ STRING_EQUAL_CASE ~MAGE~) BEGIN
-      SPRINT ps_values ~~
-      FOR (ps_col = 1; ps_col < ps_xp_cols; ++ps_col) BEGIN
-        READ_2DA_ENTRY ps_row ps_col ps_xp_cols ps_value
-        SPRINT ps_values ~%ps_values% %ps_value%~
-      END
+  // BGEE stores this BIFF resource with CRLF line endings. WeiDU 251 counts
+  // its columns correctly but collapses the data-row iterator, so capture the
+  // exact MAGE line directly and preserve every campaign-specific threshold.
+  SET ps_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)
+  PATCH_IF (ps_xp_cols > 1) AND (ps_mage_start >= 0) BEGIN
+    SET ps_mage_end = INDEX_BUFFER (~%LNL%~ ps_mage_start)
+    PATCH_IF ps_mage_end < 0 BEGIN
+      SET ps_mage_end = BUFFER_LENGTH
+    END
+    READ_ASCII ps_mage_start ps_mage_row (ps_mage_end - ps_mage_start)
+    INNER_PATCH_SAVE ps_values ~%ps_mage_row%~ BEGIN
+      REPLACE_TEXTUALLY ~%MNL%~ ~~
+      REPLACE_TEXTUALLY ~^MAGE[ %TAB%]+~ ~~
+    END
+    PATCH_IF STRING_LENGTH ~%ps_values%~ > 0 BEGIN
       INNER_ACTION BEGIN
-        OUTER_SPRINT ps_xp_values ~%ps_values%~
+        OUTER_SPRINT ps_xp_values ~ %ps_values%~
         OUTER_SET ps_xp_found = 1
       END
     END

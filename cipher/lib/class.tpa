@@ -199,17 +199,22 @@ OUTER_SET ci_xp_found = 0
 OUTER_SPRINT ci_xp_values ~~
 COPY_EXISTING ~xplevel.2da~ ~override~
   COUNT_2DA_COLS ci_cols
-  COUNT_2DA_ROWS ci_cols ci_rows
-  FOR (ci_i = 0; ci_i < ci_rows; ++ci_i) BEGIN
-    READ_2DA_ENTRY ci_i 0 ci_cols ci_name
-    PATCH_IF ~%ci_name%~ STRING_EQUAL_CASE ~MAGE~ BEGIN
-      SPRINT ci_values ~~
-      FOR (ci_col = 1; ci_col < ci_cols; ++ci_col) BEGIN
-        READ_2DA_ENTRY ci_i ci_col ci_cols ci_value
-        SPRINT ci_values ~%ci_values% %ci_value%~
-      END
+  // BGEE's BIFF copy uses CRLF. WeiDU 251 counts the columns but collapses
+  // the data-row iterator, so preserve the exact live MAGE line directly.
+  SET ci_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)
+  PATCH_IF (ci_cols > 1) AND (ci_mage_start >= 0) BEGIN
+    SET ci_mage_end = INDEX_BUFFER (~%LNL%~ ci_mage_start)
+    PATCH_IF ci_mage_end < 0 BEGIN
+      SET ci_mage_end = BUFFER_LENGTH
+    END
+    READ_ASCII ci_mage_start ci_mage_row (ci_mage_end - ci_mage_start)
+    INNER_PATCH_SAVE ci_values ~%ci_mage_row%~ BEGIN
+      REPLACE_TEXTUALLY ~%MNL%~ ~~
+      REPLACE_TEXTUALLY ~^MAGE[ %TAB%]+~ ~~
+    END
+    PATCH_IF STRING_LENGTH ~%ci_values%~ > 0 BEGIN
       INNER_ACTION BEGIN
-        OUTER_SPRINT ci_xp_values ~%ci_values%~
+        OUTER_SPRINT ci_xp_values ~ %ci_values%~
         OUTER_SET ci_xp_found = 1
       END
     END
