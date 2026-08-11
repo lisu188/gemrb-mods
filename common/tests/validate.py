@@ -153,7 +153,7 @@ def fixture_texts():
     return {
         "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
-        "MenuWindow.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",
+        "MenuWindow.py": 'import GemRB\n\ndef Rest():\n\tinfo = GemRB.RestParty (15, 0, 0)\n\treturn info\n',
         "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",
     }
 
@@ -178,8 +178,13 @@ def exercise_order(first, second):
         installer.install_handler(folder, second, runtime[second])
         actions = (folder / "ActionsWindow.py").read_text(encoding="utf-8")
         spellbook = (folder / "Spellbook.py").read_text(encoding="utf-8")
+        menu = (folder / "MenuWindow.py").read_text(encoding="utf-8")
+        store = (folder / "GUISTORE.py").read_text(encoding="utf-8")
         assert actions.count(installer.MARK_BEGIN) == 4
         assert spellbook.count(installer.MARK_BEGIN) == 1
+        assert 'if not info["Error"]:' in menu
+        assert "\t\tGemRBModCore.restore_party()" in menu
+        assert "\tGemRBModCore.restore_party()" in store
         assert "import GemRBModCore" in actions
         assert "GemRBModCore.begin_spell" in actions
         assert "GemRBModCore.action_info" in actions

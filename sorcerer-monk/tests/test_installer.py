@@ -131,7 +131,8 @@ class InstallerTests(unittest.TestCase):
 
     def test_component_derived_rows_are_not_hardcoded(self):
         self.assertIn("SORCERER_MONK%sm_gold_row%", payloads("APPEND", "strtgold.2da"))
-        self.assertIn("SORCERER_MONK%sm_avatar%", payloads("APPEND", "avprefc.2da"))
+        self.assertIn("SORCERER_MONK%sm_avatar%", TP2)
+        self.assertNotIn("APPEND ~avprefc.2da~", TP2)
 
     def test_bgee_starts_unarmed(self):
         self.assertIn("SORCERER_MONK", payloads("APPEND", "stweapon.2da"))

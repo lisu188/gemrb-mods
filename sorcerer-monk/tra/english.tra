@@ -31,6 +31,6 @@ Dual-classing is not supported.~
 @26 = ~Could not derive Sorcerer/Monk alignment restrictions from ALIGNMNT.2DA. Expected nine binary alignment columns and exactly one Sorcerer row and one Monk row.~
 @27 = ~Could not derive Sorcerer/Monk proficiency progression from PROFS.2DA. Expected numeric FIRST_LEVEL and positive RATE values for exactly one Sorcerer row and one Monk row.~
 @28 = ~Unsupported CLSWPBON.2DA layout or ambiguous Monk combat metadata. Expected exactly one MONK row with non-negative GETS_PROF_APR, UNARMED_DIVISOR and ZERO_SKILL_THAC0 values.~
-@29 = ~Could not derive Sorcerer/Monk modern Monk-skill metadata. Expected a binary MONK column in THIEFSCL.2DA and exactly one non-negative MONK row in THIEFSKL.2DA.~
+@29 = ~Could not derive Sorcerer/Monk modern Monk-skill metadata. Expected a non-negative numeric MONK column in THIEFSCL.2DA and exactly one non-negative MONK row in THIEFSKL.2DA.~
 @30 = ~Could not derive Sorcerer spell metadata from CLSKILLS.2DA. Expected exactly one SORCERER row with a non-empty MAGESPELL table and a non-negative numeric BOOKTYPE.~
 @31 = ~Ambiguous Sorcerer or Monk source metadata. A component table contains zero or multiple matching source rows/columns; restore exactly one canonical SORCERER and MONK source before installing.~

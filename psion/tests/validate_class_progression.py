@@ -29,9 +29,10 @@ def main() -> None:
     for fragment in (
         "COPY_EXISTING ~xplevel.2da~ ~override~",
         "COUNT_2DA_COLS ps_xp_cols",
-        "COUNT_2DA_ROWS ps_xp_cols ps_xp_rows",
-        "STRING_EQUAL_CASE ~MAGE~",
-        "FOR (ps_col = 1; ps_col < ps_xp_cols; ++ps_col)",
+        "SET ps_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)",
+        "READ_ASCII ps_mage_start ps_mage_row",
+        "REPLACE_TEXTUALLY ~^MAGE[ %TAB%]+~ ~~",
+        "OUTER_SPRINT ps_xp_values ~ %ps_values%~",
     ):
         assert fragment in progression, fragment
 
@@ -142,6 +143,7 @@ def main() -> None:
         '"native": 41',
         '"legacy": 40',
         'override / "xplevel.2da"',
+        'newline="\\r\\n"',
         'override / "thac0.2da"',
         'override / "lore.2da"',
         'override / "profs.2da"',

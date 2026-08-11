@@ -119,11 +119,21 @@ def _patch_spellinfo(text):
 
 
 def _patch_rest(text, path):
-    match = re.search(r"(?m)^([ \t]*)(GemRB\.RestParty\([^\n]*\)\n)", text)
+    match = re.search(
+        r"(?m)^([ \t]*)(?:([A-Za-z_]\w*)[ \t]*=[ \t]*)?GemRB\.RestParty[ \t]*\([^\n]*\)\n",
+        text,
+    )
     if not match:
         raise RuntimeError(f"{path.name} rest call not found")
     indent = match.group(1)
-    hook = indent + match.group(2) + indent + MARK_BEGIN + "\n" + indent + "GemRBModCore.restore_party()\n" + indent + MARK_END + "\n"
+    result = match.group(2)
+    hook = match.group(0) + indent + MARK_BEGIN + "\n"
+    if result:
+        hook += indent + f'if not {result}["Error"]:\n'
+        hook += indent + "\tGemRBModCore.restore_party()\n"
+    else:
+        hook += indent + "GemRBModCore.restore_party()\n"
+    hook += indent + MARK_END + "\n"
     return text[:match.start()] + hook + text[match.end():]
 
 

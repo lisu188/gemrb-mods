@@ -180,13 +180,36 @@ def header_effects(path):
     return result
 
 
-hit = header_effects(override / "CIFHIT.ITM")
-assert len(hit) == 2, (layout, hit)
-for attack_type, location, effects in hit:
-    assert attack_type in (1, 2)
-    assert location == 1
-    assert effects == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, attack_type, effects)
+expected_focus_hit = (326, 2, 0, hostile_row, 1, "CIFGAIN")
 
-assert header_effects(override / "CIFBOW.ITM") == [(4, 1, [])], layout
-assert header_effects(override / "CIFMWEAP.ITM") == [(3, 1, [(326, 2, 0, hostile_row, 1, "CIFGAIN")])]
-assert header_effects(override / "CIFMAGIC.ITM") == [(3, 3, [])]
+
+def verify_item_focus(path):
+    eligible_headers = 0
+    for attack_type, location, effects in header_effects(path):
+        focus_hits = [
+            effect
+            for effect in effects
+            if effect[0] == 326 and effect[5] == "CIFGAIN"
+        ]
+        if location == 1 and attack_type in (1, 2, 3):
+            eligible_headers += 1
+            assert focus_hits == [expected_focus_hit], (layout, path.name, focus_hits)
+        else:
+            assert not focus_hits, (layout, path.name, attack_type, location, focus_hits)
+    return eligible_headers
+
+
+if layout == "live":
+    # Real games do not contain the CIF*.ITM sentinels used by the synthetic
+    # lifecycle fixtures. Validate every item WeiDU materialized in override
+    # instead, which also catches missed or duplicate Focus-on-hit effects.
+    item_paths = [path for path in override.iterdir() if path.suffix.lower() == ".itm"]
+    assert item_paths, (layout, "no override items")
+    assert sum(verify_item_focus(path) for path in item_paths) > 0, (layout, "no eligible weapon headers")
+else:
+    hit = header_effects(override / "CIFHIT.ITM")
+    assert len(hit) == 2, (layout, hit)
+    assert verify_item_focus(override / "CIFHIT.ITM") == 2, layout
+    assert header_effects(override / "CIFBOW.ITM") == [(4, 1, [])], layout
+    assert verify_item_focus(override / "CIFMWEAP.ITM") == 1, layout
+    assert header_effects(override / "CIFMAGIC.ITM") == [(3, 3, [])], layout
