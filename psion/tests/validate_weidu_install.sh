@@ -189,8 +189,19 @@ def equipping_effects(path: Path) -> list[tuple[int, int, int, int, int, int]]:
     return effects
 
 
+# The dedicated cross-mod registration test proves whether a scenario must
+# use split or combined class metadata. This lifecycle verifier follows the
+# actual Psion registration so install/uninstall/reinstall assertions remain
+# independent of fixture naming and inactive auxiliary tables.
+clastext_path = override / "clastext.2da"
+split_schema = False
+if clastext_path.is_file():
+    _, clastext_rows = read_2da(clastext_path)
+    split_presence = [discipline in clastext_rows for discipline in disciplines]
+    assert all(split_presence) or not any(split_presence), (layout, split_presence)
+    split_schema = all(split_presence)
 class_tables = ["classes.2da"]
-if layout != "legacy":
+if split_schema:
     class_tables.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
 for filename in (
     *class_tables,
@@ -200,7 +211,6 @@ for filename in (
     text = (override / filename).read_text(encoding="utf-8", errors="replace")
     for discipline in disciplines:
         assert discipline in text, (layout, filename, discipline)
-
 # A custom class cannot safely reuse the Mage/Sorcerer legacy ITM usability bit:
 # doing so would incorrectly reject legal Psion spears, crossbows, and clubs.
 # The class rows are neutral and item-local opcode 319 effects carry the rules.
@@ -267,6 +277,14 @@ for discipline in disciplines:
 # CLASS.IDS-targeted opcode-319 restrictions, one per discipline.
 class_ids = read_class_ids(override / "class.ids")
 assert set(class_ids) == set(disciplines), (layout, class_ids)
+_, clskills_list = read_2da_list(override / "clskills.2da")
+_, qslots_list = read_2da_list(override / "qslots.2da")
+for discipline in disciplines:
+    cl_index = next(index for index, row in enumerate(clskills_list) if row[0] == discipline)
+    qs_index = next(index for index, row in enumerate(qslots_list) if row[0] == discipline)
+    assert class_ids[discipline] == cl_index, (layout, discipline, class_ids[discipline], cl_index)
+    assert class_ids[discipline] <= 31, (layout, discipline, class_ids[discipline])
+    assert qs_index == class_ids[discipline] - 1, (layout, discipline, qs_index, class_ids[discipline])
 psion_ids = set(class_ids.values())
 restricted_items = {
     "psmace.itm", "pssword.itm", "psarmor.itm", "psshield.itm", "psringx.itm"

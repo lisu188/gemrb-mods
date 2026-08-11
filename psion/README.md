@@ -192,6 +192,7 @@ Lower-tier documented approximations remain in their respective source files, in
 - Psion and Cipher use one shared `GemRBModCore` GUI hook layer with independent runtime handlers.
 - Shared GUI ownership is install-order independent and remains active until the last handler is removed.
 - Legacy Psion GUI/runtime ownership markers are migrated so upgrades preserve the true pre-mod files for uninstall.
+- Discipline class IDs are allocated from their exact `CLSKILLS.2DA` row indexes, must remain below 32, and are cross-checked against the active class table, `CLASS.IDS`, and positional `QSLOTS.2DA` data. Split class tables support normalized 6-column and native EE 9/10-column `CLASTEXT.2DA`; combined `CLASSES.2DA` is detected from its schema even when `HPCLASS.2DA` is also present.
 
 ## Installation
 

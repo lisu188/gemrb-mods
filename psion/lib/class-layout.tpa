@@ -1,37 +1,43 @@
 ACTION_IF ps_split=1 THEN BEGIN
-  ACTION_IF (ps_text_cols != 6) AND (ps_text_cols != 10) THEN BEGIN FAIL @4 END
+  ACTION_IF (ps_text_cols != 6) AND (ps_text_cols != 9) AND (ps_text_cols != 10) THEN BEGIN FAIL @4 END
   OUTER_SPRINT ps_row ~PSION_SEER %ps_seer_id% * %ps_seer_lower% %ps_seer_desc% %ps_seer_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_seer_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_seer_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_seer_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_SEER~
   APPEND ~classes.2da~ ~PSION_SEER SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_SEER~
   APPEND ~clsrcreq.2da~ ~PSION_SEER 1 1 1 1 1 1 1~ UNLESS ~PSION_SEER~
   APPEND ~hpclass.2da~ ~PSION_SEER HPWIZ~ UNLESS ~PSION_SEER~
   OUTER_SPRINT ps_row ~PSION_SHAPER %ps_shaper_id% * %ps_shaper_lower% %ps_shaper_desc% %ps_shaper_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_shaper_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_shaper_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_shaper_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_SHAPER~
   APPEND ~classes.2da~ ~PSION_SHAPER SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_SHAPER~
   APPEND ~clsrcreq.2da~ ~PSION_SHAPER 1 1 1 1 1 1 1~ UNLESS ~PSION_SHAPER~
   APPEND ~hpclass.2da~ ~PSION_SHAPER HPWIZ~ UNLESS ~PSION_SHAPER~
   OUTER_SPRINT ps_row ~PSION_KINETICIST %ps_kineticist_id% * %ps_kineticist_lower% %ps_kineticist_desc% %ps_kineticist_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_kineticist_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_kineticist_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_kineticist_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_KINETICIST~
   APPEND ~classes.2da~ ~PSION_KINETICIST SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_KINETICIST~
   APPEND ~clsrcreq.2da~ ~PSION_KINETICIST 1 1 1 1 1 1 1~ UNLESS ~PSION_KINETICIST~
   APPEND ~hpclass.2da~ ~PSION_KINETICIST HPWIZ~ UNLESS ~PSION_KINETICIST~
   OUTER_SPRINT ps_row ~PSION_EGOIST %ps_egoist_id% * %ps_egoist_lower% %ps_egoist_desc% %ps_egoist_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_egoist_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_egoist_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_egoist_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_EGOIST~
   APPEND ~classes.2da~ ~PSION_EGOIST SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_EGOIST~
   APPEND ~clsrcreq.2da~ ~PSION_EGOIST 1 1 1 1 1 1 1~ UNLESS ~PSION_EGOIST~
   APPEND ~hpclass.2da~ ~PSION_EGOIST HPWIZ~ UNLESS ~PSION_EGOIST~
   OUTER_SPRINT ps_row ~PSION_NOMAD %ps_nomad_id% * %ps_nomad_lower% %ps_nomad_desc% %ps_nomad_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_nomad_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_nomad_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_nomad_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_NOMAD~
   APPEND ~classes.2da~ ~PSION_NOMAD SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_NOMAD~
   APPEND ~clsrcreq.2da~ ~PSION_NOMAD 1 1 1 1 1 1 1~ UNLESS ~PSION_NOMAD~
   APPEND ~hpclass.2da~ ~PSION_NOMAD HPWIZ~ UNLESS ~PSION_NOMAD~
   OUTER_SPRINT ps_row ~PSION_TELEPATH %ps_telepath_id% * %ps_telepath_lower% %ps_telepath_desc% %ps_telepath_title%~
-  ACTION_IF ps_text_cols=10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_telepath_title% -1~ END
+  ACTION_IF ps_text_cols = 9 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_telepath_title%~ END
+  ACTION_IF ps_text_cols = 10 THEN BEGIN OUTER_SPRINT ps_row ~%ps_row% -1 0 %ps_telepath_title% -1~ END
   APPEND ~clastext.2da~ ~%ps_row%~ UNLESS ~PSION_TELEPATH~
   APPEND ~classes.2da~ ~PSION_TELEPATH SAVEPSI 0 0 -1 0 10~ UNLESS ~PSION_TELEPATH~
   APPEND ~clsrcreq.2da~ ~PSION_TELEPATH 1 1 1 1 1 1 1~ UNLESS ~PSION_TELEPATH~
@@ -44,4 +50,3 @@ END ELSE BEGIN
   APPEND ~classes.2da~ ~PSION_NOMAD %ps_nomad_lower% %ps_nomad_desc% %ps_nomad_title% SAVEPSI 0 %ps_nomad_id% HPWIZ 0 -1 1 1 1 1 1 1 1 0 10~ UNLESS ~PSION_NOMAD~
   APPEND ~classes.2da~ ~PSION_TELEPATH %ps_telepath_lower% %ps_telepath_desc% %ps_telepath_title% SAVEPSI 0 %ps_telepath_id% HPWIZ 0 -1 1 1 1 1 1 1 1 0 10~ UNLESS ~PSION_TELEPATH~
 END
-

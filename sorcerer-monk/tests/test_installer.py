@@ -24,6 +24,10 @@ class InstallerTests(unittest.TestCase):
 
     def test_native_ee_clastext_variants(self):
         self.assertIn("ACTION_IF sm_clastext_cols = 9", TP2)
+        self.assertIn("INDEX_BUFFER (~BIOGRAPHY~)", TP2)
+        self.assertIn("INDEX_BUFFER (~FALLEN_NOTICE~)", TP2)
+        self.assertNotIn("COUNT_2DA_COLS sm_classes_cols", TP2)
+        self.assertNotIn("COUNT_2DA_COLS sm_clastext_cols", TP2)
         self.assertIn("ACTION_IF sm_clastext_cols = 10", TP2)
         self.assertIn(
             "SORCERER_MONK %sm_class_id% 16384 %sm_lower% %sm_desc% %sm_mixed% -1 0 %sm_brief%",

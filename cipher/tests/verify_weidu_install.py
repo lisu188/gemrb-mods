@@ -37,19 +37,29 @@ for line in (override / "class.ids").read_text(encoding="utf-8").splitlines():
     if len(fields) >= 2 and fields[1] == "CIPHER":
         class_ids[fields[1]] = int(fields[0], 0)
 assert set(class_ids) == {"CIPHER"}, (layout, class_ids)
-assert 0 <= class_ids["CIPHER"] <= 255
+assert 1 <= class_ids["CIPHER"] <= 31, (layout, class_ids)
+
+# The dedicated class-registration matrix proves which schema should be
+# active. This lifecycle verifier only needs to follow the installer's actual
+# registration so it can validate install/uninstall/reinstall consistently.
+clastext_path = override / "clastext.2da"
+split_schema = False
+if clastext_path.is_file():
+    _, clastext_rows = rows(clastext_path)
+    split_schema = "CIPHER" in clastext_rows
 
 for filename in ("classes.2da", "alignmnt.2da", "abclasrq.2da", "profs.2da", "xplevel.2da", "thac0.2da", "lore.2da", "xpcap.2da", "clskills.2da"):
     assert "CIPHER" in (override / filename).read_text(encoding="utf-8", errors="replace"), (layout, filename)
 
-if layout != "legacy":
+if split_schema:
     for filename in ("clastext.2da", "clsrcreq.2da", "hpclass.2da"):
         assert "CIPHER" in (override / filename).read_text(encoding="utf-8", errors="replace"), (layout, filename)
     _, hpclass = rows(override / "hpclass.2da")
     assert hpclass["CIPHER"] == ["HPPRS"], (layout, hpclass["CIPHER"])
-
 _, clskills = rows(override / "clskills.2da")
 assert clskills["CIPHER"][2] == "MXCIPHER", (layout, clskills["CIPHER"])
+assert row_index(override / "clskills.2da", "CIPHER") == class_ids["CIPHER"], (layout, class_ids)
+assert row_index(override / "qslots.2da", "CIPHER") == class_ids["CIPHER"] - 1, (layout, class_ids)
 
 _, ability = rows(override / "abclasrq.2da")
 assert ability["CIPHER"] == ["0", "0", "0", "13", "0", "0"], (layout, ability["CIPHER"])

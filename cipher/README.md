@@ -65,6 +65,8 @@ Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in ei
 - two starting weapon proficiency points, one pip maximum in the configured Cipher weapon list
 - any alignment and race allowed by the active GemRB class layout
 - innate/mental power action-bar integration through `QSLOTS.2DA`
+- class ID allocation follows the exact `CLSKILLS.2DA` row index and is restricted to GemRB's sub-32 custom-class range; the installer validates class-table, `CLASS.IDS`, and positional `QSLOTS.2DA` identity before mutation
+- combined versus split class tables are detected from `CLASSES.2DA`, including native EE 9/10-column `CLASTEXT.2DA` layouts even when `HPCLASS.2DA` is present
 
 ## Deliberate approximations in 0.1
 
