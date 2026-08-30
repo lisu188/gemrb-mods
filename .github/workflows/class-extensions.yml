@@ -34,6 +34,8 @@ jobs:
           python-version: "3.12"
       - name: Validate release packaging and documentation
         run: python tools/validate_release.py
+      - name: Validate shared runtime dependency lifecycle
+        run: python common/tests/validate_dependencies.py
       - name: Validate Cipher extensions
         run: python cipher/tests/validate_extensions.py
       - name: Validate Psion extensions
