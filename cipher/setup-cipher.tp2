@@ -1,6 +1,6 @@
 BACKUP ~cipher/backup~
 AUTHOR ~lisu188~
-VERSION ~0.2.0~
+VERSION ~0.3.0~
 AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~cipher/tra/english.tra~
@@ -28,6 +28,8 @@ INCLUDE ~cipher/lib/power-thac0-fix.tpa~
 INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/high-tier-fidelity.tpa~
 INCLUDE ~cipher/lib/combat-fidelity.tpa~
+INCLUDE ~cipher/lib/focus.tpa~
+INCLUDE ~cipher/lib/reaping-knives.tpa~
 
 // Generate selector entries only after every power-specific patch has run, so
 // their name/description/icon metadata mirrors the final installed CI* resource.
@@ -36,7 +38,6 @@ AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --override "override"
 COPY ~.cipher-learn-build~ ~override~
 AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
 
-INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
 INCLUDE ~cipher/lib/item-usability.tpa~
