@@ -84,9 +84,10 @@ def test_sources():
     assert "STRING_EQUAL_CASE ~CIFGAIN~" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
-    assert "COPY_EXISTING ~CIFCRIT.spl~" in late_focus
-    assert "READ_LONG (ci_late_effect + 0x08) ci_late_hostile_value" in late_focus
-    assert "OUTER_SET ci_hostile_splprot = ci_late_hostile_value" in late_focus
+    assert "COPY_EXISTING ~splprot.2da~" in late_focus
+    assert "READ_2DA_ENTRY ci_late_splprot_row 0" in late_focus
+    assert "STRING_EQUAL_CASE ~CIPHER_HOSTILE~" in late_focus
+    assert "ci_hostile_splprot_matches != 1" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
