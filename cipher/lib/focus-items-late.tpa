@@ -6,8 +6,12 @@ OUTER_SET ci_hostile_splprot = (0 - 1)
 OUTER_SET ci_meta_version = 0
 COPY_EXISTING ~cifmeta.2da~ ~override~
   COUNT_2DA_COLS ci_meta_cols
-  READ_2DA_ENTRY 1 0 ci_meta_cols ci_hostile_splprot
-  READ_2DA_ENTRY 2 0 ci_meta_cols ci_meta_version
+  READ_2DA_ENTRY 1 0 ci_meta_cols ci_hostile_splprot_text
+  READ_2DA_ENTRY 2 0 ci_meta_cols ci_meta_version_text
+  INNER_ACTION BEGIN
+    OUTER_SET ci_hostile_splprot = %ci_hostile_splprot_text%
+    OUTER_SET ci_meta_version = %ci_meta_version_text%
+  END
 BUT_ONLY
 
 ACTION_IF ci_meta_version != 1 THEN BEGIN
