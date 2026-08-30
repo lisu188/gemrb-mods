@@ -28,10 +28,10 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed power selections through class level 20 plus level-1 utility actions.
-// Every discipline follows the 3-to-36 powers-known progression and gains its
-// discipline power whenever a new tier unlocks. Center Mind is reusable;
-// bonus-feat and skill-training selectors are re-enabled by runtime credits.
+// CLABs provide the persistent class utility actions. Actual powers are learned
+// through PXPLRN under the PSIONKNOWN.2DA allowance and maximum-tier limits.
+// Center Mind is reusable; bonus-feat and skill-training selectors are re-enabled
+// by runtime credits.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
@@ -48,10 +48,10 @@ AT_NOW ~python3 "psion/tools/generate_learning_proxies.py" --override "override"
 COPY ~.psion-learn-build~ ~override~
 AT_NOW ~python3 "psion/tools/generate_learning_proxies.py" --output ".psion-learn-build" --cleanup~
 
-// The power resources are authored against the guaranteed INT 15 minimum.
+// The public power resources are authored against the guaranteed INT 15 minimum.
 // Build internal copies for every other BG-family ability modifier that alter
-// only save-bearing effects. WeiDU then owns the copies normally, so uninstall
-// removes/restores them like any other installed resource.
+// only save-bearing effects. Psionics.py substitutes the current-INT variant at
+// cast time while keeping the canonical learned power and PP accounting intact.
 AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --override "override" --output ".psion-dc-build"~
 COPY ~.psion-dc-build~ ~override~
 AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --output ".psion-dc-build" --cleanup~
