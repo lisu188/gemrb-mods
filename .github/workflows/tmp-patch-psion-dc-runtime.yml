@@ -1,0 +1,63 @@
+name: temporary Psion exact DC runtime patch retry
+
+on:
+  push:
+    branches:
+      - feat-psion-exact-int-dc
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Route Psion casts through exact Intelligence DC variants'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat-psion-exact-int-dc
+      - name: Patch runtime and runtime test
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('psion/guiscripts/Psionics.py')
+          text = path.read_text()
+          needle = 'TEMPORARY_SPELLINFO_TYPE = 255\n'
+          insert = '''TEMPORARY_SPELLINFO_TYPE = 255\n\n# BG-family GemRB games use MaximumAbility=25. Public Psion SPLs are authored\n# for the class minimum INT 15 (+2); save-bearing internal clones cover every\n# other reachable modifier without changing known-spell or PP state.\nDC_BASELINE_MODIFIER = 2\nDC_MODIFIER_SUFFIXES = {\n    -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",\n    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",\n}\nDC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}\n'''
+          assert text.count(needle) == 1
+          text = text.replace(needle, insert, 1)
+
+          start = text.index('def power_info(resref):\n')
+          end = text.index('\ndef action_info(resref):\n', start)
+          replacement = '''def _dc_modifier(actor):\n    intelligence = max(0, min(25, int(GemRB.GetPlayerStat(actor, INT_STAT))))\n    return (intelligence - 10) // 2\n\n\ndef _dc_variant_resref(resref, modifier):\n    key = (resref or "").upper()\n    if modifier == DC_BASELINE_MODIFIER:\n        return key\n    suffix = DC_MODIFIER_SUFFIXES.get(int(modifier))\n    if not suffix or len(key) >= 8:\n        return key\n    return key + suffix\n\n\ndef _dc_canonical_resref(resref):\n    key = (resref or "").upper()\n    if len(key) < 2 or key[-1] not in DC_SUFFIX_MODIFIERS:\n        return key\n    candidate = key[:-1]\n    if augment_info(candidate) or _base_power_info(candidate):\n        return candidate\n    return key\n\n\ndef _dc_resource_exists(resref):\n    try:\n        return bool(GemRB.GetSpell(resref, 1))\n    except Exception:\n        return False\n\n\ndef power_info(resref):\n    key = (resref or "").upper()\n    if not key.startswith("PS"):\n        return None\n    augmented = augment_info(key)\n    if augmented:\n        base = _base_power_info(augmented["parent"])\n        if not base:\n            return None\n        base.update(augmented)\n        base["selector"] = False\n        base["variant"] = True\n        return base\n    base = _base_power_info(key)\n    if base:\n        if _has_variants(key):\n            base["selector"] = True\n            base["cost"] = 0\n        return base\n\n    canonical = _dc_canonical_resref(key)\n    if canonical == key:\n        return None\n    info = power_info(canonical)\n    if not info:\n        return None\n    info = dict(info)\n    info["internal_resref"] = key\n    info["dc_variant"] = True\n    return info\n'''
+          text = text[:start] + replacement + text[end:]
+
+          marker = '\ndef _meets_base_requirements(actor, info):\n'
+          prepare = '''\ndef _memorized_parent_entry(spellbook, actor, parent):\n    key = (parent or "").upper()\n    try:\n        for candidate in spellbook.GetUsableMemorizedSpells(actor, INNATE_TYPE):\n            if str(candidate.get("SpellResRef", "")).upper() == key:\n                return candidate\n    except Exception:\n        return None\n    return None\n\n\ndef prepare_action_entry(spellbook, actor, entry):\n    """Substitute an exact-INT save-DC resource before ActionsWindow casts.\n\n    Normal powers replace themselves. Temporary augmentation choices (type 255)\n    replace their memorized parent power, converting the selector result to an\n    ordinary innate SpellCast while preserving the selected child for PP cost.\n    """\n    selected = str(entry.get("SpellResRef", "")).upper()\n    canonical = _dc_canonical_resref(selected)\n    if canonical != selected:\n        return entry\n    info = power_info(canonical)\n    if not info or info.get("selector", False):\n        return entry\n\n    replacement = _dc_variant_resref(canonical, _dc_modifier(actor))\n    if replacement == canonical or not _dc_resource_exists(replacement):\n        return entry\n\n    source = entry\n    if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:\n        source = _memorized_parent_entry(spellbook, actor, info.get("parent"))\n        if not source:\n            return False\n\n    try:\n        source_ref = str(source.get("SpellResRef", "")).upper()\n        book_type = int(source["BookType"])\n        spell_level = int(source["SpellLevel"])\n        spell_index = GemRB.PrepareSpontaneousCast(\n            actor, source_ref, book_type, spell_level, replacement\n        )\n        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))\n        return entry\n    except Exception as error:\n        GemRB.Log(2, "Psionics", "exact save-DC cast preparation failed: %s" % error)\n        return False\n\n'''
+          assert text.count(marker) == 1
+          text = text.replace(marker, prepare + marker, 1)
+          path.write_text(text)
+
+          test = Path('psion/tests/validate_runtime.py')
+          text = test.read_text()
+          needle = '    applied_spells = []\n    roll_value = {"value": 20}\n'
+          insert = '''    applied_spells = []\n    roll_value = {"value": 20}\n    gemrb_vars = {}\n    prepared_casts = []\n    dc_resources = {"PS1MTHR4", "PSMT034"}\n'''
+          assert text.count(needle) == 1
+          text = text.replace(needle, insert, 1)
+          needle = '    gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)\n'
+          insert = '''    gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)\n    gemrb.GetSpell = lambda resref, *_: ({"SpellResRef": str(resref).upper()} if str(resref).upper() in dc_resources else None)\n    gemrb.SetVar = lambda name, value: gemrb_vars.__setitem__(name, value)\n\n    def prepare_spontaneous(actor, source, book_type, level, replacement):\n        prepared_casts.append((actor, str(source).upper(), book_type, level, str(replacement).upper()))\n        return 17\n\n    gemrb.PrepareSpontaneousCast = prepare_spontaneous\n'''
+          assert text.count(needle) == 1
+          text = text.replace(needle, insert, 1)
+          needle = '        real_begin_manifest = module.begin_manifest\n'
+          insert = '''        assert module._dc_modifier(1) == 4\n        assert module.power_info("PS1MTHR4")["resref"] == "PS1MTHR"\n        assert module.power_info("PSMT034")["resref"] == "PSMT03"\n\n        class FakeSpellbook:\n            @staticmethod\n            def GetUsableMemorizedSpells(actor, book_type):\n                if book_type != module.INNATE_TYPE:\n                    return []\n                return [{\n                    "SpellResRef": "PS1MTHR",\n                    "BookType": module.INNATE_TYPE,\n                    "SpellLevel": 1,\n                    "SpellIndex": 4007,\n                }]\n\n        normal_entry = {\n            "SpellResRef": "PS1MTHR",\n            "BookType": module.INNATE_TYPE,\n            "SpellLevel": 1,\n            "SpellIndex": 4007,\n        }\n        assert module.prepare_action_entry(FakeSpellbook, 1, normal_entry) is normal_entry\n        assert prepared_casts[-1][-1] == "PS1MTHR4"\n        assert gemrb_vars["Spell"] == 17 + 1000 * (1 << module.INNATE_TYPE)\n\n        temporary_entry = {"SpellResRef": "PSMT03", "SpellIndex": 255000}\n        assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry\n        assert prepared_casts[-1][1] == "PS1MTHR"\n        assert prepared_casts[-1][-1] == "PSMT034"\n\n        real_begin_manifest = module.begin_manifest\n'''
+          assert text.count(needle) == 1
+          test.write_text(text.replace(needle, insert, 1))
+          PY
+      - name: Commit runtime patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add psion/guiscripts/Psionics.py psion/tests/validate_runtime.py
+          git commit -m 'Route Psion casts through exact Intelligence DC variants'
+          git push
