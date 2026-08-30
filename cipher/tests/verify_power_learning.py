@@ -4,6 +4,8 @@ from pathlib import Path
 import argparse
 import struct
 
+SELECTOR_SAFE_FLAGS = (1 << 14) | (1 << 25)
+
 
 def casefold_path(folder: Path, name: str) -> Path | None:
     exact = folder / name
@@ -30,7 +32,9 @@ def verify_proxy(real: Path, proxy: Path):
     source = real.read_bytes()
     data = proxy.read_bytes()
     assert data[:8] == b"SPL V1  ", proxy
-    assert data[:0x64] == source[:0x64], proxy
+    assert data[:0x18] == source[:0x18], proxy
+    assert data[0x1C:0x64] == source[0x1C:0x64], proxy
+    assert struct.unpack_from("<I", data, 0x18)[0] == SELECTOR_SAFE_FLAGS, proxy
     header = struct.unpack_from("<I", data, 0x64)[0]
     assert struct.unpack_from("<H", data, 0x68)[0] == 1, proxy
     assert struct.unpack_from("<H", data, 0x70)[0] == 0, proxy
