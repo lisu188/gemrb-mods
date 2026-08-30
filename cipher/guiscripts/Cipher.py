@@ -18,6 +18,14 @@ TEMPORARY_SPELLINFO_TYPE = 255
 TRANSACTION_NAMESPACE = "Cipher"
 
 
+def _subclass_module():
+    try:
+        import CipherSubclass
+        return CipherSubclass
+    except ImportError:
+        return None
+
+
 def _class_row(actor):
     try:
         import GUICommon
@@ -38,7 +46,11 @@ def cipher_level(actor):
 
 def maximum_focus(actor):
     level = cipher_level(actor)
-    return 0 if not level else 20 + 5 * level
+    cap = 0 if not level else 20 + 5 * level
+    subclass = _subclass_module()
+    if subclass:
+        cap = subclass.modify_focus_cap(actor, cap)
+    return max(0, int(cap))
 
 
 def _focus_units(actor):
@@ -64,6 +76,14 @@ def current_focus(actor):
     if current > cap:
         return set_focus(actor, cap)
     return current
+
+
+def focus_gain_amount(actor, amount, source=""):
+    value = max(0, int(amount))
+    subclass = _subclass_module()
+    if subclass:
+        value = subclass.modify_focus_gain(actor, value, source)
+    return max(0, int(value))
 
 
 def _power_pick_table():
@@ -97,6 +117,17 @@ def power_info(resref):
         }
     except Exception:
         return None
+
+
+def power_cost(actor, resref):
+    info = power_info(resref)
+    if not info:
+        return 0
+    cost = int(info["cost"])
+    subclass = _subclass_module()
+    if subclass:
+        cost = subclass.modify_power_cost(actor, info["resref"], cost)
+    return max(0, int(cost))
 
 
 def power_choice_info(resref):
@@ -189,7 +220,6 @@ def available_power_choices(actor):
 
 
 def _ensure_power_selector_known(actor):
-    """Grant CILRN to migrated Ciphers when an earned choice remains."""
     if not is_cipher(actor) or not available_power_choices(actor):
         return False
     try:
@@ -225,6 +255,9 @@ def restore_party():
                 _ensure_power_selector_known(actor)
         except Exception:
             pass
+    subclass = _subclass_module()
+    if subclass:
+        subclass.restore_party()
 
 
 def can_manifest(actor, resref):
@@ -233,12 +266,17 @@ def can_manifest(actor, resref):
         info
         and is_cipher(actor)
         and cipher_level(actor) >= info["unlock"]
-        and current_focus(actor) >= info["cost"]
+        and current_focus(actor) >= power_cost(actor, info["resref"])
     )
 
 
 def action_info(resref):
     key = str(resref or "").upper()
+    subclass = _subclass_module()
+    if subclass:
+        info = subclass.action_info(key)
+        if info:
+            return info
     if key == POWER_SELECTOR_RESOURCE:
         return {
             "kind": "power_selector",
@@ -254,6 +292,11 @@ def action_info(resref):
 
 
 def resolve_power_entry(spellbook, actor, raw_spell):
+    subclass = _subclass_module()
+    if subclass:
+        entry = subclass.resolve_power_entry(spellbook, actor, raw_spell)
+        if entry:
+            return entry
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
@@ -282,6 +325,9 @@ def filter_spellinfo(actor, resrefs):
                 filtered.append(resref)
             continue
         filtered.append(resref)
+    subclass = _subclass_module()
+    if subclass:
+        filtered = list(subclass.filter_spellinfo(actor, filtered))
     return filtered
 
 
@@ -298,8 +344,9 @@ def refresh_innate_charges(actor):
     if not is_cipher(actor):
         return 0
     _ensure_power_selector_known(actor)
+    restored = 0
     try:
-        return InnateCharges.refresh(
+        restored = InnateCharges.refresh(
             actor,
             lambda resref: _is_reusable_innate(actor, resref),
             INNATE_TYPE,
@@ -307,11 +354,19 @@ def refresh_innate_charges(actor):
         )
     except Exception as error:
         GemRB.Log(2, "Cipher", "charge refresh failed: %s" % error)
-        return 0
+    subclass = _subclass_module()
+    if subclass:
+        restored += int(subclass.refresh_innate_charges(actor) or 0)
+    return restored
 
 
 def begin_manifest(actor, resref):
-    info = action_info(resref)
+    key = str(resref or "").upper()
+    subclass = _subclass_module()
+    if subclass and subclass.action_info(key):
+        return subclass.begin_manifest(actor, key)
+
+    info = action_info(key)
     if not info:
         return True
 
@@ -329,7 +384,8 @@ def begin_manifest(actor, resref):
             lambda: _learn_power(actor, key),
         )
 
-    transaction = (info["resref"], info["cost"])
+    cost = power_cost(actor, info["resref"])
+    transaction = (info["resref"], cost)
 
     def legal():
         allowed = can_manifest(actor, info["resref"])
@@ -338,7 +394,7 @@ def begin_manifest(actor, resref):
         return allowed
 
     def commit():
-        set_focus(actor, current_focus(actor) - info["cost"])
+        set_focus(actor, current_focus(actor) - cost)
         return True
 
     return Transactions.begin(TRANSACTION_NAMESPACE, actor, transaction, legal, commit)
@@ -346,6 +402,9 @@ def begin_manifest(actor, resref):
 
 def cancel_pending(actor=None):
     Transactions.cancel(TRANSACTION_NAMESPACE, actor)
+    subclass = _subclass_module()
+    if subclass:
+        subclass.cancel_pending(actor)
 
 
 def focus_text(actor):
