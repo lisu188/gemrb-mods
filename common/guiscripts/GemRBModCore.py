@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Dispatcher for optional GemRB class runtime modules."""
 import importlib
+import GemRB
 
 _HANDLER_NAMES = ("Psionics", "Cipher")
 
@@ -63,6 +64,36 @@ def resolve_action_entry(spellbook, actor, raw_spell):
     return None, None
 
 
+def _prepare_cipher_reaping_knives(handler, actor, entry):
+    """Select the Reaping Knives variant that owns this party-slot Cipher.
+
+    GemRB's weapon-effect propagation reloads the external hit EFF without the
+    original spell caster. The installed CI8RK1..CI8RK6 variants therefore tag
+    the casting Cipher with a matching short-lived scripting state. Keeping the
+    canonical entry here preserves Cipher.py's normal 50-Focus transaction.
+    """
+    if handler.__name__ != "Cipher":
+        return None
+    if str(entry.get("SpellResRef", "")).upper() != "CI8RKNI":
+        return None
+    try:
+        owner = int(actor)
+        if owner < 1 or owner > 6:
+            return None
+        source_ref = str(entry.get("SpellResRef", "")).upper()
+        book_type = int(entry["BookType"])
+        spell_level = int(entry["SpellLevel"])
+        replacement = "CI8RK%d" % owner
+        spell_index = GemRB.PrepareSpontaneousCast(
+            actor, source_ref, book_type, spell_level, replacement
+        )
+        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))
+        return entry
+    except Exception as error:
+        GemRB.Log(2, "GemRBModCore", "Reaping Knives cast preparation failed: %s" % error)
+        return False
+
+
 def begin_spell(spellbook, actor, raw_spell):
     handler, entry = resolve_action_entry(spellbook, actor, raw_spell)
     if not entry:
@@ -74,6 +105,12 @@ def begin_spell(spellbook, actor, raw_spell):
     prepare = getattr(handler, "prepare_action_entry", None)
     if prepare:
         prepared = prepare(spellbook, actor, entry)
+        if prepared is False:
+            return False
+        if prepared:
+            entry = prepared
+    else:
+        prepared = _prepare_cipher_reaping_knives(handler, actor, entry)
         if prepared is False:
             return False
         if prepared:
