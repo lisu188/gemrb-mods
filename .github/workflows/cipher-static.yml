@@ -74,3 +74,5 @@ jobs:
             echo "Validating Cipher $layout layout"
             bash cipher/tests/validate_weidu_install.sh vendor/gemrb "$layout"
           done
+      - name: Validate late-installed Cipher items
+        run: bash cipher/tests/validate_late_item_weidu.sh vendor/gemrb
