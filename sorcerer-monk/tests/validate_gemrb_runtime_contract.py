@@ -111,7 +111,7 @@ def validate_sorcerer_book(source: str) -> None:
 def validate_sorcerer_caster_level(source: str) -> None:
     caster = block(
         source,
-        r"ieDword\s+Actor::GetBaseCasterLevel\s*\([^)]*\)\s*\{",
+        r"ieDword\s+Actor::GetBaseCasterLevel\s*\([^)]*\)\s*const\s*\{",
         r"\n\}\n\nint\s+Actor::GetWildMod",
         "Actor::GetBaseCasterLevel",
     )
