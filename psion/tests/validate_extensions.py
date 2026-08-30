@@ -80,7 +80,7 @@ def main():
     assert "WRITE_SHORT ps7clib_death 13" in fidelity
     matrix = (PSION / "docs/high-tier-fidelity.md").read_text(encoding="utf-8")
     for level in (6, 7, 8, 9):
-        assert f"Level {level}" in matrix
+        assert f"| {level} |" in matrix
 
     print("Psion extension validation passed")
 
