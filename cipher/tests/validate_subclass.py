@@ -89,12 +89,16 @@ def main():
         assert any(actor == 1 and resource == module.SOUL_BLADE_PASSIVE for actor, resource, _ in applied)
         assert not module.can_choose(1)
 
+        # Starting a different user action crosses the same GUI action boundary
+        # that GemRBModCore patches into the innate/cast buttons.
+        module.cancel_pending(1)
         before = focus[1]
         assert module.begin_manifest(1, module.SOUL_BLADE_ACTION)
         assert focus[1] == before
         assert module.begin_manifest(1, module.SOUL_BLADE_ACTION)
         assert focus[1] == before - module.SOUL_BLADE_COST
 
+        module.cancel_pending(1)
         focus[1] = module.SOUL_BLADE_COST - 5
         assert not module.begin_manifest(1, module.SOUL_BLADE_ACTION)
         assert focus[1] == module.SOUL_BLADE_COST - 5
