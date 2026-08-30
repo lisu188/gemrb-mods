@@ -66,6 +66,7 @@ def validate_tables() -> None:
         "psiondisc.2da": ["DISCIPLINE", "SCHOOL", "SPECIAL_SKILL"],
         "psionskills.2da": ["ABILITY", "ACCESS", "COST", "BREAK1", "BREAK2", "BREAK3"],
         "psionfeats.2da": ["MIN_LEVEL", "FOCUS", "PP_SURCHARGE"],
+        "pspick.2da": ["ResRef", "Type"],
     }
     for filename, columns in expected.items():
         assert header(filename) == columns, (filename, header(filename), columns)
@@ -82,48 +83,34 @@ def validate_tables() -> None:
 
 def validate_progressions() -> None:
     known = {int(row[0]): (int(row[1]), int(row[2])) for row in rows("psionknown.2da")}
-    powers = {
-        row[0]: {"level": int(row[2]), "discipline": row[3]}
-        for row in rows("psionpowers.2da")
-    }
-    unlock_levels = {1, 3, 5, 7, 9, 11, 13, 15, 17}
+    assert known[1] == (3, 1)
+    assert known[20] == (36, 9)
+    previous_known = previous_max = 0
+    for level in range(1, 21):
+        current_known, current_max = known[level]
+        assert current_known >= previous_known
+        assert current_max >= previous_max
+        previous_known, previous_max = current_known, current_max
 
     for discipline, filename in DISCIPLINE_CLABS.items():
-        learned: list[str] = []
-        for row in rows(filename):
-            level = int(row[0])
-            gained = [token[3:] for token in row[1:] if token.startswith("GA_PS")]
-            learned.extend(gained)
-            expected_count, maximum = known[level]
-
-            assert len(learned) == expected_count, (discipline, level, len(learned), expected_count)
-            assert len(learned) == len(set(learned)), (discipline, level, "duplicate power")
-            assert set(learned) <= set(powers), (discipline, level, "unknown power")
-            assert all(powers[ref]["discipline"] in ("GENERAL", discipline) for ref in learned)
-            assert all(powers[ref]["level"] <= maximum for ref in learned), (discipline, level, maximum)
-
-            if level in unlock_levels:
-                exclusive = [
-                    ref for ref in gained
-                    if powers[ref]["discipline"] == discipline
-                    and powers[ref]["level"] == maximum
-                ]
-                assert len(exclusive) == 1, (discipline, level, maximum, gained)
-
-        assert len(learned) == 36, (discipline, len(learned))
+        data = rows(filename)
+        assert len(data) == 20, (discipline, len(data))
+        level1 = next(row for row in data if row[0] == "1")
+        utilities = {token for token in level1[1:] if token != "****"}
+        assert utilities == {"GA_PXPLRN", "GA_PXCNTR", "GA_PXFSEL", "GA_PXSKILL"}, (discipline, utilities)
+        for row in data:
+            assert not any(token.startswith("GA_PS") for token in row[1:]), (discipline, row)
+            if row[0] != "1":
+                assert all(token == "****" for token in row[1:]), (discipline, row)
 
 
 def validate_learnable_powers() -> None:
-    """Every installed catalogue power must have at least one progression route."""
-    granted = set()
-    for filename in DISCIPLINE_CLABS.values():
-        for row in rows(filename):
-            granted.update(token[3:] for token in row[1:] if token.startswith("GA_PS"))
-
-    catalogue = {row[0] for row in rows("psionpowers.2da")}
-    assert granted <= catalogue, ("CLAB grants an unknown power", sorted(granted - catalogue))
-    stranded = catalogue - granted
-    assert not stranded, ("unreachable catalogue powers", sorted(stranded))
+    catalogue = [row[0] for row in rows("psionpowers.2da")]
+    picks = rows("pspick.2da")
+    assert [row[0] for row in picks] == catalogue
+    assert len(picks) == len({row[1] for row in picks}) == len(catalogue) == 85
+    for index, row in enumerate(picks, 1):
+        assert row == [catalogue[index - 1], f"PXL{index:04d}", "3"], row
 
 
 def validate_weidu_integer_syntax() -> None:
@@ -412,7 +399,7 @@ def validate_installer() -> None:
     for name in (
         "psionpool", "psionknown", "psiondisc", "psionskills", "psionfeats",
         "psionpowers", "psionaugment", "ps1eray", "ps1mthr", "ps1vigr",
-        "ps2aaff", "mxpsion", "clabpsee", "clabpsha", "clabpkin",
+        "ps2aaff", "pspick", "mxpsion", "clabpsee", "clabpsha", "clabpkin",
         "clabpego", "clabpnom", "clabptel",
     ):
         assert name in setup

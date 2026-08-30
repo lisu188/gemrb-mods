@@ -35,6 +35,7 @@ CENTER_RESOURCE = "PXCNTR"
 MEDITATION_CENTER_RESOURCE = "PXCMEDI"
 CENTER_RESOURCES = (CENTER_RESOURCE, MEDITATION_CENTER_RESOURCE)
 FEAT_SELECTOR_RESOURCE = "PXFSEL"
+POWER_SELECTOR_RESOURCE = "PXPLRN"
 SKILL_SELECTOR_RESOURCE = "PXSKILL"
 SPEED_ON_RESOURCE = "PXFSPED"
 SPEED_OFF_RESOURCE = "PXFSPOF"
@@ -177,6 +178,20 @@ def _skill_pick_table():
         return None
 
 
+def _power_pick_table():
+    try:
+        return GemRB.LoadTable("pspick", False, True)
+    except Exception:
+        return None
+
+
+def _known_power_table():
+    try:
+        return GemRB.LoadTable("psionknown", False, True)
+    except Exception:
+        return None
+
+
 def feat_choice_info(resref):
     key = (resref or "").upper()
     if key not in FEAT_MARKERS:
@@ -246,6 +261,124 @@ def skill_choice_info(resref):
     except Exception:
         return None
     return None
+
+
+def power_choice_info(resref):
+    key = (resref or "").upper()
+    if not key.startswith("PXL"):
+        return None
+    table = _power_pick_table()
+    if not table:
+        return None
+    try:
+        for index in range(table.GetRowCount()):
+            power = str(table.GetRowName(index)).upper()
+            if str(table.GetValue(power, "ResRef")).upper() != key:
+                continue
+            base = _base_power_info(power)
+            if not base:
+                return None
+            base.update({
+                "kind": "power_choice",
+                "resref": key,
+                "parent": key,
+                "power": power,
+            })
+            return base
+    except Exception:
+        return None
+    return None
+
+
+def power_learning_limits(actor):
+    if not is_psion(actor):
+        return (0, 0)
+    table = _known_power_table()
+    if not table:
+        return (0, 0)
+    try:
+        level = manifester_level(actor)
+        return (
+            int(table.GetValue(str(level), "KNOWN")),
+            int(table.GetValue(str(level), "MAX_LEVEL")),
+        )
+    except Exception:
+        return (0, 0)
+
+
+def known_power_refs(actor):
+    known = set()
+    try:
+        count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            key = str(spell.get("SpellResRef", "")).upper()
+            if _base_power_info(key):
+                known.add(key)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "known-power scan failed: %s" % error)
+    return known
+
+
+def power_choices_remaining(actor):
+    limit, _ = power_learning_limits(actor)
+    return max(0, limit - len(known_power_refs(actor)))
+
+
+def can_learn_power(actor, resref):
+    info = power_choice_info(resref)
+    if not info or not is_psion(actor) or power_choices_remaining(actor) <= 0:
+        return False
+    if info["power"] in known_power_refs(actor):
+        return False
+    _, maximum_level = power_learning_limits(actor)
+    if info["level"] > maximum_level:
+        return False
+    return info["discipline"] in ("GENERAL", discipline(actor))
+
+
+def available_power_choices(actor):
+    table = _power_pick_table()
+    if not table or power_choices_remaining(actor) <= 0:
+        return []
+    available = []
+    try:
+        for index in range(table.GetRowCount()):
+            power = table.GetRowName(index)
+            resref = str(table.GetValue(power, "ResRef")).upper()
+            if can_learn_power(actor, resref):
+                available.append(resref)
+    except Exception:
+        return []
+    return available
+
+
+def _ensure_power_selector_known(actor):
+    """Grant PXPLRN to migrated Psions that still have legal choices."""
+    if not is_psion(actor) or not available_power_choices(actor):
+        return False
+    try:
+        count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            if str(spell.get("SpellResRef", "")).upper() == POWER_SELECTOR_RESOURCE:
+                return True
+        result = GemRB.LearnSpell(actor, POWER_SELECTOR_RESOURCE, LS_MEMO)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "power selector migration failed: %s" % error)
+        return False
+
+
+def _learn_power(actor, resref):
+    info = power_choice_info(resref)
+    if not info or not can_learn_power(actor, resref):
+        return False
+    try:
+        return GemRB.LearnSpell(actor, info["power"], LS_MEMO) in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "power learning failed: %s" % error)
+        return False
 
 
 def feat_rank(actor, resref):
@@ -745,6 +878,7 @@ def restore_party():
         try:
             ensure_pool(actor, True)
             ensure_focus(actor, True)
+            _ensure_power_selector_known(actor)
             sync_skill_points(actor)
             _ensure_skill_selector_known(actor)
             _sync_center_action(actor)
@@ -877,8 +1011,13 @@ def action_info(resref):
         return {"kind": "center", "resref": key, "parent": key, "cost": 0, "selector": False}
     if key == FEAT_SELECTOR_RESOURCE:
         return {"kind": "feat_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
+    if key == POWER_SELECTOR_RESOURCE:
+        return {"kind": "power_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
     if key == SKILL_SELECTOR_RESOURCE:
         return {"kind": "skill_selector", "resref": key, "parent": key, "cost": 0, "selector": True}
+    power_choice = power_choice_info(key)
+    if power_choice:
+        return power_choice
     feat = feat_choice_info(key)
     if feat:
         return feat
@@ -1005,6 +1144,11 @@ def available_variants(actor, parent, check_parent=True):
 def filter_spellinfo(actor, resrefs):
     filtered = []
     for resref in resrefs:
+        power_choice = power_choice_info(resref)
+        if power_choice:
+            if can_learn_power(actor, resref):
+                filtered.append(resref)
+            continue
         feat = feat_choice_info(resref)
         if feat:
             if can_select_feat(actor, resref):
@@ -1031,6 +1175,8 @@ def _is_reusable_innate(actor, resref):
         return key == _center_resource_for_actor(actor)
     if key == FEAT_SELECTOR_RESOURCE:
         return bonus_feats_remaining(actor) > 0
+    if key == POWER_SELECTOR_RESOURCE:
+        return bool(available_power_choices(actor))
     if key == SKILL_SELECTOR_RESOURCE:
         return bool(available_skill_choices(actor))
     return False
@@ -1040,6 +1186,7 @@ def refresh_innate_charges(actor):
     if not is_psion(actor):
         return 0
     _sync_focus_passives(actor)
+    _ensure_power_selector_known(actor)
     sync_skill_points(actor)
     _ensure_skill_selector_known(actor)
     _sync_center_action(actor)
@@ -1078,6 +1225,19 @@ def begin_manifest(actor, resref):
                 and not is_focused(actor)
             ),
             lambda: concentration_check(actor, 20),
+        )
+
+    if info["kind"] == "power_selector":
+        cancel_pending(actor)
+        return bool(available_power_choices(actor))
+
+    if info["kind"] == "power_choice":
+        key = info["resref"]
+        return _begin_simple_action(
+            actor,
+            ("POWER_LEARN", key),
+            lambda: can_learn_power(actor, key),
+            lambda: _learn_power(actor, key),
         )
 
     if info["kind"] == "feat_selector":

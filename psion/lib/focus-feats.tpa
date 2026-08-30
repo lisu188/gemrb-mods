@@ -80,6 +80,20 @@ COPY_EXISTING ~PXFSEL.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSFSEL~ END
 BUT_ONLY
 
+// Powers-known credits are derived from PSIONKNOWN.2DA. The selector is
+// reusable while a legal unlearned power remains; PXL* choices are harmless
+// proxies that Psionics.py commits into real known powers.
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXPLRN~
+    ps_name = ~Learn Psion Power~
+    ps_description = ~Choose one Psion power to learn. Available choices respect your powers-known total, maximum power level, and discipline. Selecting a choice learns it permanently but does not manifest it or spend power points.~
+    ps_icon = ~spwi112~
+END
+COPY_EXISTING ~PXPLRN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSPICK~ END
+BUT_ONLY
+
 LAF psion_create_focus_action
   STR_VAR
     ps_resref = ~PXFTALT~
