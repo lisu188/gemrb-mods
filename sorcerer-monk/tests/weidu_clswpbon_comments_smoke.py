@@ -27,16 +27,16 @@ def assert_snapshot(override, expected, label):
 
 
 def write_commented_clswpbon(path):
-    path.write_text(
+    text = (
         "2DA V1.0\n"
         "0\n"
         "                        GETS_PROF_APR     UNARMED_DIVISOR   ZERO_SKILL_THAC0\n"
         "SORCERER                0                 0                 4\n"
         "MONK                    0                 5                 7\n"
         "\n"
-        + COMMENTS,
-        encoding="utf-8",
+        + COMMENTS
     )
+    path.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
 
 
 def exercise_comment_preservation(weidu):

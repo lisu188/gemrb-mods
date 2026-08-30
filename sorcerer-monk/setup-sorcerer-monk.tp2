@@ -637,7 +637,7 @@ ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
     // This keeps the source resource byte-for-byte intact except for the new
     // Sorcerer/Monk row appended later in the component.
     SET sm_clswpbon_cols = 0
-    PATCH_IF INDEX_BUFFER (~^[ %TAB%]*GETS_PROF_APR[ %TAB%]+UNARMED_DIVISOR[ %TAB%]+ZERO_SKILL_THAC0[ %TAB%]*$~) >= 0 BEGIN
+    PATCH_IF INDEX_BUFFER (~^[ %TAB%]*GETS_PROF_APR[ %TAB%]+UNARMED_DIVISOR[ %TAB%]+ZERO_SKILL_THAC0[ %TAB%]*~) >= 0 BEGIN
       SET sm_clswpbon_cols = 4
       READ_2DA_ENTRIES_NOW ~sm_clswpbon~ 4
       FOR (sm_i = 0; sm_i < sm_clswpbon; ++sm_i) BEGIN
