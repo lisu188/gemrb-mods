@@ -18,6 +18,9 @@ cp -R "$repo_root/cipher" "$game/cipher"
   weidu cipher/setup-cipher.tp2 --use-lang en_US --force-install 0 --no-exit-pause
 )
 
+echo "Installed CIPHERFOCUS.2DA:"
+cat "$game/override/cipherfocus.2da"
+
 python3 - "$game/override/CILATE.ITM" "$game/override/CILCHAIN.ITM" <<'PY'
 import struct
 import sys
