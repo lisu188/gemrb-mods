@@ -84,6 +84,11 @@ jobs:
           if len(checks) % 2 or checks[:half] != checks[half:]:
               raise SystemExit('runtime DC checks are not an exact double')
           text = text[:start] + checks[:half] + text[end:]
+
+          text = text.replace('dc_resources = {"PS1MTHR4", "PSMT034"}', 'dc_resources = {"PS1CHAR4", "PSMT034"}')
+          text = text.replace('assert module.power_info("PS1MTHR4")["resref"] == "PS1MTHR"', 'assert module.power_info("PS1CHAR4")["resref"] == "PS1CHAR"')
+          text = text.replace('normal_entry = {\n            "SpellResRef": "PS1MTHR",', 'normal_entry = {\n            "SpellResRef": "PS1CHAR",', 1)
+          text = text.replace('assert prepared_casts[-1][-1] == "PS1MTHR4"', 'assert prepared_casts[-1][-1] == "PS1CHAR4"')
           p.write_text(text)
           PY
       - name: Validate deduplicated files
