@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -37,6 +36,7 @@ MODS = {
     },
 }
 MANIFEST = "gemrb-mods-release.json"
+RUNTIME_API = "runtime-api.txt"
 IGNORED_PARTS = {"backup", "__pycache__", ".pytest_cache"}
 
 
@@ -87,8 +87,34 @@ def verify_manifest(root: Path) -> None:
         raise SystemExit("Release bundle validation failed before mutation: " + "; ".join(failures))
 
 
+def _runtime_api(path: Path) -> str:
+    if not path.is_file():
+        raise SystemExit(f"Missing shared-runtime revision marker: {path}")
+    value = path.read_text(encoding="utf-8").strip()
+    if not value:
+        raise SystemExit(f"Empty shared-runtime revision marker: {path}")
+    return value
+
+
+def verify_runtime_api(root: Path, modules: list[str]) -> None:
+    runtime_modules = [name for name in modules if MODS[name]["handler"]]
+    if not runtime_modules:
+        return
+    common_api = _runtime_api(root / "common" / RUNTIME_API)
+    mismatches = []
+    for name in runtime_modules:
+        module_api = _runtime_api(root / name / RUNTIME_API)
+        if module_api != common_api:
+            mismatches.append(f"{name}={module_api}, common={common_api}")
+    if mismatches:
+        raise SystemExit(
+            "Shared-runtime revision mismatch before mutation: " + "; ".join(mismatches)
+        )
+
+
 def validate_target(game: Path, guiscripts: Path | None, modules: list[str], weidu: str) -> None:
     verify_manifest(ROOT)
+    verify_runtime_api(ROOT, modules)
     if not game.is_dir():
         raise SystemExit(f"Game directory does not exist: {game}")
     if not (game / "gemrb_path.txt").is_file():
@@ -180,6 +206,7 @@ def uninstall(args) -> None:
 def package(args) -> None:
     modules = list(dict.fromkeys(args.modules))
     verify_manifest(ROOT)
+    verify_runtime_api(ROOT, modules)
     manifest = build_manifest(ROOT, modules)
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
