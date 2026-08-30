@@ -13,6 +13,7 @@ REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 COPY ~cipher/tables/cipherpowers.2da~ ~override/cipherpowers.2da~
 COPY ~cipher/tables/cipherknown.2da~ ~override/cipherknown.2da~
 COPY ~cipher/tables/cipick.2da~ ~override/cipick.2da~
+COPY ~cipher/tables/cisubpck.2da~ ~override/cisubpck.2da~
 COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
 COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 
@@ -40,6 +41,7 @@ INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
 INCLUDE ~cipher/lib/reaping-knives.tpa~
+INCLUDE ~cipher/lib/subclasses.tpa~
 INCLUDE ~cipher/lib/item-usability.tpa~
 
 BEGIN ~Cipher late item compatibility patch~
