@@ -64,6 +64,8 @@ def main() -> None:
             "psionpowers",
             "psionaugment",
             "psionfeatpick",
+            "psionknown",
+            "pspick",
             "psionskills",
             "psskill",
         )
@@ -73,6 +75,7 @@ def main() -> None:
         {"SpellResRef": "PS1VIGR"},
         {"SpellResRef": "PXCNTR"},
         {"SpellResRef": "PXFSEL"},
+        {"SpellResRef": "PXPLRN"},
         {"SpellResRef": "PXSKILL"},
         {"SpellResRef": "SPCL900"},
     ]
@@ -81,6 +84,7 @@ def main() -> None:
         {"SpellResRef": "PS1VIGR", "Flags": 1},
         {"SpellResRef": "PXCNTR", "Flags": 0},
         {"SpellResRef": "PXFSEL", "Flags": 0},
+        {"SpellResRef": "PXPLRN", "Flags": 1},
         {"SpellResRef": "PXSKILL", "Flags": 1},
         {"SpellResRef": "SPCL900", "Flags": 0},
     ]
@@ -251,7 +255,7 @@ def main() -> None:
             transactional = bool(
                 info
                 and (
-                    info["kind"] in ("center", "feat_choice", "skill_choice")
+                    info["kind"] in ("center", "power_choice", "feat_choice", "skill_choice")
                     or (info["kind"] == "power" and not info.get("selector", False))
                 )
             )
@@ -348,7 +352,27 @@ def main() -> None:
         assert len(applied_spells) == before_resolution
 
         stats[(1, 34)] = 1
-        assert module.sync_skill_points(1) == 24
+    assert module.power_learning_limits(1) == (3, 1)
+    assert module.power_choices_remaining(1) == 1
+    egoist_proxy = next(
+        resref for resref in module.available_power_choices(1)
+        if module.power_choice_info(resref)["power"] == "PS1TSKN"
+    )
+    seer_proxy = next(
+        str(tables["pspick"].GetValue("PS1PREC", "ResRef")).upper()
+        for _ in (0,)
+    )
+    assert egoist_proxy in module.filter_spellinfo(1, [egoist_proxy, seer_proxy])
+    assert seer_proxy not in module.filter_spellinfo(1, [egoist_proxy, seer_proxy])
+    assert "PS1TSKN" not in known_refs()
+    assert module.begin_manifest(1, egoist_proxy)
+    assert "PS1TSKN" not in known_refs()
+    assert module.begin_manifest(1, egoist_proxy)
+    assert "PS1TSKN" in known_refs()
+    assert module.power_choices_remaining(1) == 0
+    assert not module.available_power_choices(1)
+    assert not module.begin_manifest(1, module.POWER_SELECTOR_RESOURCE)
+    assert module.sync_skill_points(1) == 24
         assert module.skill_points_remaining(1) == 24
         assert module.skill_rank_cap(1) == 4
         choices = set(module.available_skill_choices(1))

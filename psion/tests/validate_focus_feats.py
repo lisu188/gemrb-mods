@@ -51,8 +51,10 @@ def main() -> None:
         text = (ROOT / "tables" / filename).read_text(encoding="utf-8")
         rows = table_rows(filename)
         level1 = next(row for row in rows if row[0] == "1")
+        assert level1.count("GA_PXPLRN") == 1, filename
         assert level1.count("GA_PXCNTR") == 1, filename
         assert level1.count("GA_PXFSEL") == 1, filename
+        assert text.count("GA_PXPLRN") == 1, filename
         assert text.count("GA_PXCNTR") == 1, filename
         assert text.count("GA_PXFSEL") == 1, filename
         for level in ("5", "10", "15", "20"):
@@ -64,6 +66,7 @@ def main() -> None:
     assert created == {
         "PXCNTR",
         "PXCMEDI",
+        "PXPLRN",
         "PXFSEL",
         "PXFTALT",
         "PXFBODY",
@@ -97,6 +100,10 @@ def main() -> None:
     selector = section(builder, "PXFSEL")
     assert "opcode = 214" in selector
     assert "resource = ~PSFSEL~" in selector
+
+    power_selector = section(builder, "PXPLRN")
+    assert "opcode = 214" in power_selector
+    assert "resource = ~PSPICK~" in power_selector
 
     speed_on = section(builder, "PXFSPED")
     for fragment in (
@@ -153,6 +160,7 @@ def main() -> None:
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     assert "psionfeatpick.2da" in setup
     assert "psfsel.2da" in setup
+    assert "pspick.2da" in setup
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "focus-feats.tpa" in powers
 
