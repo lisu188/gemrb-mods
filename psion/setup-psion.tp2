@@ -19,6 +19,7 @@ COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
 COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
 COPY ~psion/tables/pspick.2da~ ~override/pspick.2da~
+COPY ~psion/tables/pscrpick.2da~ ~override/pscrpick.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
 COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
@@ -28,10 +29,10 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Fixed power selections through class level 20 plus level-1 utility actions.
-// Every discipline follows the 3-to-36 powers-known progression and gains its
-// discipline power whenever a new tier unlocks. Center Mind is reusable;
-// bonus-feat and skill-training selectors are re-enabled by runtime credits.
+// Player-selected powers through class level 20 plus level-1 utility actions.
+// Every discipline follows PSIONKNOWN.2DA; runtime filters choices to legal
+// general/discipline powers and already-known powers count against the allowance.
+// Center Mind is reusable; bonus-feat and skill selectors use runtime credits.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
@@ -41,6 +42,7 @@ COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
 
 INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/powers.tpa~
+INCLUDE ~psion/lib/psicrystal.tpa~
 
 // Selector choices use harmless proxy SPLs so choosing a power to learn never
 // manifests the real power for free. The proxies retain the real SPL UI metadata.
