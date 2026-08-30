@@ -1,6 +1,6 @@
 BACKUP ~cipher/backup~
 AUTHOR ~lisu188~
-VERSION ~0.2.0~
+VERSION ~0.3.0~
 AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~cipher/tra/english.tra~
@@ -30,12 +30,9 @@ INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/high-tier-fidelity.tpa~
 INCLUDE ~cipher/lib/combat-fidelity.tpa~
 
-// Generate selector entries only after every power-specific patch has run, so
-// their name/description/icon metadata mirrors the final installed CI* resource.
-// The proxies keep no live effects, so choosing one cannot manifest the power.
-AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --override "override" --output ".cipher-learn-build"~
+AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --override "override" --output ".cipher-learn-build"~
 COPY ~.cipher-learn-build~ ~override~
-AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
+AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
 
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
