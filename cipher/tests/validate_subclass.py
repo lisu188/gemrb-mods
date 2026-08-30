@@ -62,10 +62,15 @@ def main():
 
     cipher.set_focus = set_focus
 
+    ie_spells = types.ModuleType("ie_spells")
+    ie_spells.LS_MEMO = 8
+
     old_gemrb = sys.modules.get("GemRB")
     old_cipher = sys.modules.get("Cipher")
+    old_ie_spells = sys.modules.get("ie_spells")
     sys.modules["GemRB"] = gemrb
     sys.modules["Cipher"] = cipher
+    sys.modules["ie_spells"] = ie_spells
     for name in ("PersistentState", "InnateCharges", "Selectors", "Transactions"):
         sys.modules.pop(name, None)
     try:
@@ -89,8 +94,6 @@ def main():
         assert any(actor == 1 and resource == module.SOUL_BLADE_PASSIVE for actor, resource, _ in applied)
         assert not module.can_choose(1)
 
-        # Starting a different user action crosses the same GUI action boundary
-        # that GemRBModCore patches into the innate/cast buttons.
         module.cancel_pending(1)
         before = focus[1]
         assert module.begin_manifest(1, module.SOUL_BLADE_ACTION)
@@ -121,6 +124,10 @@ def main():
             sys.modules.pop("Cipher", None)
         else:
             sys.modules["Cipher"] = old_cipher
+        if old_ie_spells is None:
+            sys.modules.pop("ie_spells", None)
+        else:
+            sys.modules["ie_spells"] = old_ie_spells
 
 
 if __name__ == "__main__":
