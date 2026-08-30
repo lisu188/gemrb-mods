@@ -1,0 +1,123 @@
+// High-tier Cipher mechanics that need conditional effects and helper subspells.
+// Keep these patches after powers.tpa and before learning-proxy generation so
+// selector metadata mirrors the final installed powers.
+
+DEFINE_PATCH_FUNCTION ~CIPHER_PREPEND_SPELL_EFFECT~
+  INT_VAR
+    opcode = 0
+    target = 0
+    timing = 0
+    parameter1 = 0
+    parameter2 = 0
+    power = 255
+    resist_dispel = 0
+    duration = 0
+    probability1 = 100
+    probability2 = 0
+    dicenumber = 0
+    dicesize = 0
+    savingthrow = 0
+    savebonus = 0
+    header = 1
+    special = 0
+  STR_VAR
+    resource = ~~
+BEGIN
+  PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
+    PATCH_FAIL ~CIPHER_PREPEND_SPELL_EFFECT requires a complete SPL V1 header.~
+  END
+
+  READ_LONG 0x64 ci_pre_header_offset
+  READ_SHORT 0x68 ci_pre_header_count
+  READ_LONG 0x6a ci_pre_effect_offset
+
+  PATCH_IF (header < 1) OR (header > ci_pre_header_count) BEGIN
+    PATCH_FAIL ~CIPHER_PREPEND_SPELL_EFFECT received an invalid header number.~
+  END
+
+  SET ci_pre_header_index = header - 1
+  SET ci_pre_current_header = ci_pre_header_offset + (ci_pre_header_index * 0x28)
+  READ_SHORT (ci_pre_current_header + 0x1e) ci_pre_effect_count
+  READ_SHORT (ci_pre_current_header + 0x20) ci_pre_first_effect
+  SET ci_pre_new_effect = ci_pre_effect_offset + (ci_pre_first_effect * 0x30)
+
+  SET ci_pre_effect_power = power
+  PATCH_IF (ci_pre_effect_power = 255) BEGIN
+    READ_LONG 0x34 ci_pre_effect_power
+  END
+  PATCH_IF (ci_pre_effect_power < 0) OR (ci_pre_effect_power > 255) BEGIN
+    PATCH_FAIL ~CIPHER_PREPEND_SPELL_EFFECT received an invalid effect power.~
+  END
+
+  INSERT_BYTES ci_pre_new_effect 0x30
+  WRITE_SHORT ci_pre_new_effect opcode
+  WRITE_BYTE (ci_pre_new_effect + 0x02) target
+  WRITE_BYTE (ci_pre_new_effect + 0x03) ci_pre_effect_power
+  WRITE_LONG (ci_pre_new_effect + 0x04) parameter1
+  WRITE_LONG (ci_pre_new_effect + 0x08) parameter2
+  WRITE_BYTE (ci_pre_new_effect + 0x0c) timing
+  WRITE_BYTE (ci_pre_new_effect + 0x0d) resist_dispel
+  WRITE_LONG (ci_pre_new_effect + 0x0e) duration
+  WRITE_BYTE (ci_pre_new_effect + 0x12) probability1
+  WRITE_BYTE (ci_pre_new_effect + 0x13) probability2
+  WRITE_EVALUATED_ASCII (ci_pre_new_effect + 0x14) ~%resource%~ #8
+  WRITE_LONG (ci_pre_new_effect + 0x1c) dicenumber
+  WRITE_LONG (ci_pre_new_effect + 0x20) dicesize
+  WRITE_LONG (ci_pre_new_effect + 0x24) savingthrow
+  WRITE_LONG (ci_pre_new_effect + 0x28) savebonus
+  WRITE_LONG (ci_pre_new_effect + 0x2c) special
+  WRITE_SHORT (ci_pre_current_header + 0x1e) (ci_pre_effect_count + 1)
+
+  // Inserting at this ability's first feature shifts the first-feature index of
+  // every later ability that starts at or after the insertion point.
+  FOR (ci_pre_other = 0; ci_pre_other < ci_pre_header_count; ++ci_pre_other) BEGIN
+    PATCH_IF ci_pre_other != ci_pre_header_index BEGIN
+      SET ci_pre_other_header = ci_pre_header_offset + (ci_pre_other * 0x28)
+      READ_SHORT (ci_pre_other_header + 0x20) ci_pre_other_first
+      PATCH_IF ci_pre_other_first >= ci_pre_first_effect BEGIN
+        WRITE_SHORT (ci_pre_other_header + 0x20) (ci_pre_other_first + 1)
+      END
+    END
+  END
+END
+
+// Detonate's lethal target becomes the centre of a secondary crushing burst.
+// Opcode 232 condition 16 is Die(). BIT1 in Special makes the subspell fire as
+// the original Cipher instead of the dying effect host; BIT2 suppresses casting
+// feedback. The one-tick duration prevents a nonlethal target from exploding
+// later for unrelated reasons.
+LAF cipher_create_power
+  INT_VAR ci_tier = 5 ci_target = 2 ci_range = 30 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI5DBST~ ci_name = ~Detonate: Soul Burst~ ci_description = ~Internal Detonate death-burst helper.~ ci_icon = ~spwi512~
+END
+COPY_EXISTING ~CI5DBST.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 12 target = 2 resist_dispel = BIT0 parameter2 = IDS_OF_SYMBOL(~dmgtype~ ~CRUSHING~) dicenumber = 8 dicesize = 6 savingthrow = BIT1 savebonus = (0 - 4) special = BIT8 END
+BUT_ONLY
+
+COPY_EXISTING ~CI5DETN.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~The target's soul erupts for 8d6 magical damage; a save vs spell halves the damage. If this damage kills the target, its soul detonates for 8d6 crushing damage around it; a save vs breath halves the burst. Costs 30 Focus.~
+  LPF CIPHER_PREPEND_SPELL_EFFECT
+    INT_VAR opcode = 232 target = 2 parameter1 = 0 parameter2 = 16 timing = 0 duration = 1 special = (BIT1 BOR BIT2)
+    STR_VAR resource = ~CI5DBST~
+  END
+BUT_ONLY
+
+// Soul Collapse now executes a target that falls below 20% HP while the power's
+// short-lived condition is active. Opcode 232 condition 20 uses Special as the
+// percentage threshold; 20 also suppresses the subspell glow via BIT2. The host
+// casts the helper on itself, so no caster-identity flag is needed.
+LAF cipher_create_power
+  INT_VAR ci_tier = 9 ci_projectile = ci_none_projectile ci_flags = ci_hostile_flags
+  STR_VAR ci_resref = ~CI9SDEX~ ci_name = ~Soul Collapse: Execute~ ci_description = ~Internal Soul Collapse execute helper.~ ci_icon = ~spwi917~
+END
+COPY_EXISTING ~CI9SDEX.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 13 target = 2 resist_dispel = BIT1 parameter1 = 1 parameter2 = 4 END
+BUT_ONLY
+
+COPY_EXISTING ~CI9SCOL.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~The target suffers 12d6 magical damage, is held for two rounds on a failed save, and suffers 4 worse saving throws for five rounds. For one round after impact, a target below 20 percent of maximum hit points is executed. Costs 60 Focus.~
+  LPF CIPHER_PREPEND_SPELL_EFFECT
+    INT_VAR opcode = 232 target = 2 parameter1 = 0 parameter2 = 20 timing = 0 duration = 6 special = 20
+    STR_VAR resource = ~CI9SDEX~
+  END
+BUT_ONLY
