@@ -36,12 +36,14 @@ verify() {
   python3 "$repo_root/cipher/tests/verify_item_usability.py" "$game"
   python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game"
   python3 "$repo_root/cipher/tests/verify_high_tier_weidu.py" "$game"
+  python3 "$repo_root/cipher/tests/verify_extensions_weidu.py" "$game"
 }
 
 install
 verify
 uninstall
 python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game" --uninstalled
+python3 "$repo_root/cipher/tests/verify_extensions_weidu.py" "$game" --uninstalled
 test ! -e "$game/override/CI5DBST.SPL"
 test ! -e "$game/override/CI5DBST.spl"
 test ! -e "$game/override/CI9SDEX.SPL"
