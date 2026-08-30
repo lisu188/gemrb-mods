@@ -1,0 +1,42 @@
+name: Class extension validation
+
+on:
+  pull_request:
+    paths:
+      - "cipher/**"
+      - "psion/**"
+      - "sorcerer-monk/**"
+      - "common/**"
+      - "tools/**"
+      - "acceptance/**"
+      - "COMPATIBILITY.md"
+      - ".github/workflows/class-extensions.yml"
+  push:
+    paths:
+      - "cipher/**"
+      - "psion/**"
+      - "sorcerer-monk/**"
+      - "common/**"
+      - "tools/**"
+      - "acceptance/**"
+      - "COMPATIBILITY.md"
+      - ".github/workflows/class-extensions.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate release packaging and documentation
+        run: python tools/validate_release.py
+      - name: Validate Cipher extensions
+        run: python cipher/tests/validate_extensions.py
+      - name: Validate Psion extensions
+        run: python psion/tests/validate_extensions.py
+      - name: Compile acceptance runner
+        run: python -m py_compile acceptance/run.py tools/gemrb_mods.py
