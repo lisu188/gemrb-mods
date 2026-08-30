@@ -35,12 +35,17 @@ verify() {
   python3 "$repo_root/cipher/tests/verify_weidu_install.py" "$game" "$layout"
   python3 "$repo_root/cipher/tests/verify_item_usability.py" "$game"
   python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game"
+  python3 "$repo_root/cipher/tests/verify_high_tier_weidu.py" "$game"
 }
 
 install
 verify
 uninstall
 python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game" --uninstalled
+test ! -e "$game/override/CI5DBST.SPL"
+test ! -e "$game/override/CI5DBST.spl"
+test ! -e "$game/override/CI9SDEX.SPL"
+test ! -e "$game/override/CI9SDEX.spl"
 test "$(baseline "$game/override/CIFHIT.ITM")" = "$hit_baseline"
 test "$(baseline "$game/override/CIFBOW.ITM")" = "$bow_baseline"
 test "$(baseline "$game/override/CIFMWEAP.ITM")" = "$mweap_baseline"
