@@ -1,0 +1,70 @@
+// High-impact fidelity upgrades for level 6-9 powers. Keep these patches after
+// the base level modules so the generated resources remain centralized there and
+// later approximation improvements stay reviewable in one place.
+
+// Fission: retain the bounded self-buffs but also manifest a real second actor
+// for the duration. The echo deliberately uses the already-created astral body
+// instead of cloning a PC CRE, avoiding duplicate inventory, scripts, dialog,
+// plot identity, or protagonist state.
+ACTION_IF FILE_EXISTS_IN_GAME ~PSACON01.CRE~ THEN BEGIN
+  COPY_EXISTING ~PSACON01.CRE~ ~override/PSFISS01.CRE~
+    SAY NAME1 ~Psionic Fission Echo~
+    SAY NAME2 ~Psionic Fission Echo~
+  BUT_ONLY
+END ELSE BEGIN
+  FAIL ~The Fission fidelity patch requires PSACON01.CRE.~
+END
+
+COPY_EXISTING ~PS7FISS.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~For five rounds the Egoist creates a controlled psionic echo and also gains one extra attack per round, +2 to attack rolls, +2 Armor Class, and +2 to all saving throws. The echo is a safe temporary actor rather than a literal clone, so inventory, scripts, dialog, and protagonist identity are never duplicated.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 1 resist_dispel = BIT1 timing = 1 duration = 30 STR_VAR resource = ~PSFISS01~ END
+BUT_ONLY
+
+// Crisis of Life: the original portable approximation replaced the failed-save
+// death branch with extra damage plus hold. Replace that child package with a
+// true Death effect. The tabletop 11-HD cutoff still cannot be expressed here
+// without a campaign-specific HD selector, so the description states the one
+// remaining divergence explicitly.
+COPY_EXISTING ~PS7CLIB.spl~ ~override~
+  READ_LONG 0x64 ps7clib_header_offset
+  READ_LONG 0x6a ps7clib_effect_offset
+  READ_SHORT (ps7clib_header_offset + 0x1e) ps7clib_effect_count
+  READ_SHORT (ps7clib_header_offset + 0x20) ps7clib_first_effect
+  PATCH_IF ps7clib_effect_count < 2 BEGIN
+    PATCH_FAIL ~PS7CLIB no longer has the expected two-effect failed-save package.~
+  END
+
+  SET ps7clib_death = ps7clib_effect_offset + (ps7clib_first_effect * 0x30)
+  WRITE_SHORT ps7clib_death 13
+  WRITE_BYTE (ps7clib_death + 0x02) 2
+  WRITE_LONG (ps7clib_death + 0x04) 0
+  WRITE_LONG (ps7clib_death + 0x08) 0
+  WRITE_BYTE (ps7clib_death + 0x0c) 1
+  WRITE_BYTE (ps7clib_death + 0x0d) BIT1
+  WRITE_LONG (ps7clib_death + 0x0e) 0
+  WRITE_BYTE (ps7clib_death + 0x12) 100
+  WRITE_BYTE (ps7clib_death + 0x13) 0
+  WRITE_ASCII (ps7clib_death + 0x14) ~~ #8
+  WRITE_LONG (ps7clib_death + 0x1c) 0
+  WRITE_LONG (ps7clib_death + 0x20) 0
+  WRITE_LONG (ps7clib_death + 0x24) 0
+  WRITE_LONG (ps7clib_death + 0x28) 0
+  WRITE_LONG (ps7clib_death + 0x2c) 0
+
+  // Make the former hold feature an explicit no-op while preserving feature
+  // indexes expected by generated resources and save-DC variant tooling.
+  SET ps7clib_noop = ps7clib_death + 0x30
+  WRITE_SHORT ps7clib_noop 0
+  WRITE_BYTE (ps7clib_noop + 0x02) 2
+  WRITE_LONG (ps7clib_noop + 0x04) 0
+  WRITE_LONG (ps7clib_noop + 0x08) 0
+  WRITE_BYTE (ps7clib_noop + 0x0c) 1
+  WRITE_BYTE (ps7clib_noop + 0x0d) BIT1
+  WRITE_LONG (ps7clib_noop + 0x0e) 0
+  WRITE_LONG (ps7clib_noop + 0x24) 0
+  WRITE_LONG (ps7clib_noop + 0x28) 0
+BUT_ONLY
+
+COPY_EXISTING ~PS7CLIF.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~The Telepath attacks the target's autonomic functions. Power resistance applies once, then a save vs death determines the result: a successful save takes 7d6 magical damage; a failed save is lethal. Tabletop Crisis of Life limits the death result to targets of 11 Hit Dice or less; the portable engine implementation cannot enforce that HD cutoff and is therefore stronger against high-HD failed-save targets.~
+BUT_ONLY
