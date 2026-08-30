@@ -87,7 +87,7 @@ def test_sources():
     assert "cipherknown.2da" in setup
     assert "cipick.2da" in setup
     assert "generate_learning_proxies.py" in setup
-    assert "VERSION ~0.2.0~" in setup
+    assert "VERSION ~0.3.0~" in setup
 
     class_rules = (CIPHER / "lib" / "class.tpa").read_text(encoding="utf-8")
     assert "SET ci_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)" in class_rules
