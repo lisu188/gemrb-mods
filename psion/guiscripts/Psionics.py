@@ -122,16 +122,6 @@ DC_MODIFIER_SUFFIXES = {
 }
 DC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}
 
-# BG-family GemRB games use MaximumAbility=25. Public Psion SPLs are authored
-# for the class minimum INT 15 (+2); save-bearing internal clones cover every
-# other reachable modifier without changing known-spell or PP state.
-DC_BASELINE_MODIFIER = 2
-DC_MODIFIER_SUFFIXES = {
-    -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",
-    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
-}
-DC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}
-
 PSION_CLASSES = {
     "PSION_SEER": "SEER",
     "PSION_SHAPER": "SHAPER",
@@ -850,38 +840,6 @@ def _dc_resource_exists(resref):
         return False
 
 
-def _dc_modifier(actor):
-    intelligence = max(0, min(25, int(GemRB.GetPlayerStat(actor, INT_STAT))))
-    return (intelligence - 10) // 2
-
-
-def _dc_variant_resref(resref, modifier):
-    key = (resref or "").upper()
-    if modifier == DC_BASELINE_MODIFIER:
-        return key
-    suffix = DC_MODIFIER_SUFFIXES.get(int(modifier))
-    if not suffix or len(key) >= 8:
-        return key
-    return key + suffix
-
-
-def _dc_canonical_resref(resref):
-    key = (resref or "").upper()
-    if len(key) < 2 or key[-1] not in DC_SUFFIX_MODIFIERS:
-        return key
-    candidate = key[:-1]
-    if augment_info(candidate) or _base_power_info(candidate):
-        return candidate
-    return key
-
-
-def _dc_resource_exists(resref):
-    try:
-        return bool(GemRB.GetSpell(resref, 1))
-    except Exception:
-        return False
-
-
 def power_info(resref):
     key = (resref or "").upper()
     if not key.startswith("PS"):
@@ -949,56 +907,6 @@ def resolve_power_entry(spellbook, actor, raw_spell):
             if action_info(resref):
                 return candidate
     return None
-
-
-def _memorized_parent_entry(spellbook, actor, parent):
-    key = (parent or "").upper()
-    try:
-        for candidate in spellbook.GetUsableMemorizedSpells(actor, INNATE_TYPE):
-            if str(candidate.get("SpellResRef", "")).upper() == key:
-                return candidate
-    except Exception:
-        return None
-    return None
-
-
-def prepare_action_entry(spellbook, actor, entry):
-    """Substitute an exact-INT save-DC resource before ActionsWindow casts.
-
-    Normal powers replace themselves. Temporary augmentation choices (type 255)
-    replace their memorized parent power, converting the selector result to an
-    ordinary innate SpellCast while preserving the selected child for PP cost.
-    """
-    selected = str(entry.get("SpellResRef", "")).upper()
-    canonical = _dc_canonical_resref(selected)
-    if canonical != selected:
-        return entry
-    info = power_info(canonical)
-    if not info or info.get("selector", False):
-        return entry
-
-    replacement = _dc_variant_resref(canonical, _dc_modifier(actor))
-    if replacement == canonical or not _dc_resource_exists(replacement):
-        return entry
-
-    source = entry
-    if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:
-        source = _memorized_parent_entry(spellbook, actor, info.get("parent"))
-        if not source:
-            return False
-
-    try:
-        source_ref = str(source.get("SpellResRef", "")).upper()
-        book_type = int(source["BookType"])
-        spell_level = int(source["SpellLevel"])
-        spell_index = GemRB.PrepareSpontaneousCast(
-            actor, source_ref, book_type, spell_level, replacement
-        )
-        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))
-        return entry
-    except Exception as error:
-        GemRB.Log(2, "Psionics", "exact save-DC cast preparation failed: %s" % error)
-        return False
 
 
 def _memorized_parent_entry(spellbook, actor, parent):
