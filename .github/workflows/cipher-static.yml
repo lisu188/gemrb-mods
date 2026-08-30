@@ -30,6 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Validate repeated spell transactions
+        run: python common/tests/validate_transactions.py
       - name: Validate Cipher sources and runtime
         run: python cipher/tests/validate.py
       - name: Install official WeiDU release
