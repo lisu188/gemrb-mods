@@ -34,3 +34,4 @@ Dual-classing is not supported.~
 @29 = ~Could not derive Sorcerer/Monk modern Monk-skill metadata. Expected a non-negative numeric MONK column in THIEFSCL.2DA and exactly one non-negative MONK row in THIEFSKL.2DA.~
 @30 = ~Could not derive Sorcerer spell metadata from CLSKILLS.2DA. Expected exactly one SORCERER row with a non-empty MAGESPELL table and a non-negative numeric BOOKTYPE.~
 @31 = ~Ambiguous Sorcerer or Monk source metadata. A component table contains zero or multiple matching source rows/columns; restore exactly one canonical SORCERER and MONK source before installing.~
+@32 = ~Sorcerer and Monk HLA tables define the same ability with different eligibility metadata. The merge would silently discard one policy; reconcile the conflicting HLA rows before installing.~
