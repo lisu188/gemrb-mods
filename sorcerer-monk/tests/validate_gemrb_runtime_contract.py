@@ -3,8 +3,8 @@
 
 This is intentionally a source-contract test, not a substitute for an in-game
 smoke test. It catches upstream changes to the hardcoded BG class-level mapping,
-multiclass CLAB level lookup, or Monk fist level lookup before they silently
-invalidate the installer assumptions.
+multiclass CLAB level lookup, Monk fist level lookup, or Sorcerer-style book
+selection before they silently invalidate the installer assumptions.
 """
 
 from pathlib import Path
@@ -79,6 +79,42 @@ def validate_monk_fists(source: str) -> None:
     )
 
 
+def validate_sorcerer_book(source: str) -> None:
+    pcf_class = block(
+        source,
+        r"static\s+void\s+pcf_class\s*\([^)]*\)\s*\{",
+        r"\n\}",
+        "pcf_class",
+    )
+    require(
+        re.search(r"ChangeSorcererType\s*\(\s*newValue\s*\)\s*;", pcf_class) is not None,
+        "GemRB no longer refreshes the Sorcerer-style book from the active class",
+    )
+
+    change = block(
+        source,
+        r"void\s+Actor::ChangeSorcererType\s*\([^)]*\)\s*\{",
+        r"\n\}",
+        "Actor::ChangeSorcererType",
+    )
+    require(
+        re.search(r"switch\s*\(\s*bookTypes\s*\[\s*classIdx\s*\]\s*\)", change) is not None,
+        "GemRB no longer derives spontaneous casting from the active class BOOKTYPE",
+    )
+    require(
+        re.search(
+            r"case\s+2\s*:.*?sorcerer\s*=\s*1\s*<<\s*IE_SPELL_TYPE_WIZARD\s*;",
+            change,
+            re.S,
+        ) is not None,
+        "GemRB BOOKTYPE=2 no longer enables the wizard Sorcerer-style spellbook",
+    )
+    require(
+        re.search(r"spellbook\.SetBookType\s*\(\s*sorcerer\s*\)\s*;", change) is not None,
+        "GemRB no longer commits the derived Sorcerer-style spellbook type",
+    )
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: validate_gemrb_runtime_contract.py <Actor.cpp>")
@@ -86,6 +122,7 @@ def main() -> None:
     validate_level_slots(source)
     validate_multiclass_clabs(source)
     validate_monk_fists(source)
+    validate_sorcerer_book(source)
     print("GemRB Sorcerer/Monk runtime contract validated")
 
 
