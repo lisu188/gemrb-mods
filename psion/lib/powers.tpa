@@ -12,6 +12,7 @@ INCLUDE ~psion/lib/level6-powers.tpa~
 INCLUDE ~psion/lib/level7-powers.tpa~
 INCLUDE ~psion/lib/level8-powers.tpa~
 INCLUDE ~psion/lib/level9-powers.tpa~
+INCLUDE ~psion/lib/high-tier-fidelity.tpa~
 INCLUDE ~psion/lib/energy-ray-augment.tpa~
 INCLUDE ~psion/lib/mind-vigor-augment.tpa~
 INCLUDE ~psion/lib/swarm-augment.tpa~
