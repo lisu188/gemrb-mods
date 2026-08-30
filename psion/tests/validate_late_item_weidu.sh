@@ -60,6 +60,15 @@ for line in (override / "class.ids").read_text(encoding="utf-8", errors="replace
 assert set(class_ids) == disciplines, class_ids
 
 
+def item_path(name):
+    path = override / name
+    if path.exists():
+        return path
+    matches = [candidate for candidate in override.iterdir() if candidate.name.lower() == name.lower()]
+    assert len(matches) == 1, (name, matches)
+    return matches[0]
+
+
 def restrictions(path):
     data = path.read_bytes()
     effect_offset = struct.unpack_from("<I", data, 0x6A)[0]
@@ -78,7 +87,7 @@ def restrictions(path):
     return result
 
 for name in ("PSLATE.ITM", "PSMACE.ITM"):
-    effects = restrictions(override / name)
+    effects = restrictions(item_path(name))
     assert len(effects) == 6, (name, effects)
     assert {effect[2] for effect in effects} == set(class_ids.values()), (name, effects)
     assert all((opcode, target, parameter2, timing) == (319, 2, 5, 2)
