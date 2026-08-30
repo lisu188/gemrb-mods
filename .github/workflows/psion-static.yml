@@ -31,8 +31,16 @@ jobs:
 
       - name: Verify generated augment tables are current
         run: python psion/tools/generate_augment_tables.py --check
-      - name: Validate tables, installer source and Python
-        run: python psion/tests/validate.py
+      - name: Validate core tables, builders and installer source
+        run: python psion/tests/validate_core.py
+      - name: Validate high-tier powers
+        run: python psion/tests/validate_high_tier.py
+      - name: Validate psionic focus and feats
+        run: python psion/tests/validate_focus_feats.py
+      - name: Validate Psion skills
+        run: python psion/tests/validate_skills.py
+      - name: Validate selectable-power proxies
+        run: python psion/tests/validate_power_learning.py
       - name: Validate class XP, THAC0, and saving throw progression
         run: python psion/tests/validate_class_progression.py
       - name: Validate character-generation startup tables
