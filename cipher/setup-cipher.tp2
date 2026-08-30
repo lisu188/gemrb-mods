@@ -24,3 +24,8 @@ INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
+
+BEGIN ~Cipher late item compatibility patch~
+DESIGNATED 100
+REQUIRE_COMPONENT ~cipher/setup-cipher.tp2~ ~0~ ~Install the main Cipher component first.~
+INCLUDE ~cipher/lib/focus-items-late.tpa~
