@@ -4,17 +4,18 @@
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
 // creates that row. CIPHERFOCUS.2DA is a private one-cell contract, so read the
-// single data entry directly instead of depending on COUNT_2DA_* row semantics.
+// single data entry directly and explicitly evaluate the textual 2DA value as
+// an integer before exporting it from patch scope.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
 COPY_EXISTING ~cipherfocus.2da~ ~override~
   READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value
   INNER_ACTION BEGIN
-    OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
+    OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~
   END
 BUT_ONLY
 
-ACTION_IF ci_hostile_splprot < 0 THEN BEGIN
+ACTION_IF ci_hostile_splprot <= 0 THEN BEGIN
   FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIPHERFOCUS.2DA.~
 END
 
