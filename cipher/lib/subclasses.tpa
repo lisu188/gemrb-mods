@@ -1,0 +1,35 @@
+// Runtime-backed Cipher subclass framework resources. Subclass identity lives in
+// a private serialized actor effect; no class row or kit is changed, so a Cipher
+// that never selects a subclass retains exactly the existing base progression.
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CISUBSEL~ END
+COPY_EXISTING ~CISUBSEL.spl~ ~override~
+  SAY NAME1 ~Choose Cipher Subclass~
+  SAY UNIDENTIFIED_DESC ~Choose an optional persistent Cipher subclass. Ignoring this action leaves the character as an unchanged base Cipher.~
+  WRITE_ASCII 0x3a ~spcl321C~ #8
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~CISUBPCK~ END
+BUT_ONLY
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CISBSBLD~ END
+COPY_EXISTING ~CISBSBLD.spl~ ~override~
+  SAY NAME1 ~Soul Blade~
+  SAY UNIDENTIFIED_DESC ~Become a Soul Blade. You gain +2 melee THAC0 but suffer 1 worse Armor Class while the subclass resonance is active. You also learn Soul Annihilation, a Focus-paid melee burst. The choice is permanent for this character.~
+  WRITE_ASCII 0x3a ~spcl321C~ #8
+BUT_ONLY
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CISBPASS~ END
+COPY_EXISTING ~CISBPASS.spl~ ~override~
+  SAY NAME1 ~Soul Blade Resonance~
+  SAY UNIDENTIFIED_DESC ~Internal persistent Soul Blade passive.~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 timing = 1 STR_VAR resource = ~CISBPASS~ END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 284 target = 1 resist_dispel = BIT1 parameter1 = (0 - 2) parameter2 = 0 timing = 9 END
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = 1 timing = 9 END
+BUT_ONLY
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CISBANN~ END
+COPY_EXISTING ~CISBANN.spl~ ~override~
+  SAY NAME1 ~Soul Annihilation~
+  SAY UNIDENTIFIED_DESC ~Spend 20 Focus to channel the Soul Blade through your weapon. For one round your melee weapon damage is multiplied to 125 percent of its normal value. The Focus cost is committed by the shared Cipher transaction runtime only when the action resolves.~
+  WRITE_ASCII 0x3a ~spcl321C~ #8
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 285 target = 1 resist_dispel = BIT1 parameter1 = 125 parameter2 = 2 timing = 0 duration = 6 END
+BUT_ONLY
