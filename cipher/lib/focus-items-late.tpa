@@ -2,29 +2,29 @@
 // component. The shared patch function is idempotent, so existing attack
 // headers remain unchanged.
 //
-// SPLPROT.2DA is the authoritative installed registry for opcode 326 target
-// filters. Resolve CIPHER_HOSTILE by its row name instead of reverse-engineering
-// an effect from CIFCRIT.SPL: this remains correct if another mod appends rows
-// after Cipher and avoids depending on a generated SPL's internal layout.
+// Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
+// creates that row. Reading this tiny metadata table avoids depending on the
+// generated CIFCRIT.SPL layout or on ambiguous SPLPROT row-name indexing.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
-OUTER_SET ci_hostile_splprot_matches = 0
-COPY_EXISTING ~splprot.2da~ ~override~
-  COUNT_2DA_COLS ci_late_splprot_cols
-  COUNT_2DA_ROWS ci_late_splprot_cols ci_late_splprot_rows
-  FOR (ci_late_splprot_row = 0; ci_late_splprot_row < ci_late_splprot_rows; ++ci_late_splprot_row) BEGIN
-    READ_2DA_ENTRY ci_late_splprot_row 0 ci_late_splprot_cols ci_late_splprot_name
-    PATCH_IF ~%ci_late_splprot_name%~ STRING_EQUAL_CASE ~CIPHER_HOSTILE~ BEGIN
+OUTER_SET ci_focus_metadata_valid = 0
+COPY_EXISTING ~cipherfocus.2da~ ~override~
+  COUNT_2DA_COLS ci_focus_metadata_cols
+  COUNT_2DA_ROWS ci_focus_metadata_cols ci_focus_metadata_rows
+  PATCH_IF (ci_focus_metadata_cols = 2) AND (ci_focus_metadata_rows = 1) BEGIN
+    READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_name
+    READ_2DA_ENTRY 0 1 ci_focus_metadata_cols ci_focus_metadata_value
+    PATCH_IF ~%ci_focus_metadata_name%~ STRING_EQUAL_CASE ~HOSTILE~ BEGIN
       INNER_ACTION BEGIN
-        OUTER_SET ci_hostile_splprot = ci_late_splprot_row
-        OUTER_SET ci_hostile_splprot_matches = ci_hostile_splprot_matches + 1
+        OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
+        OUTER_SET ci_focus_metadata_valid = 1
       END
     END
   END
 BUT_ONLY
 
-ACTION_IF ci_hostile_splprot_matches != 1 THEN BEGIN
-  FAIL ~The Cipher late item patch requires exactly one CIPHER_HOSTILE row in SPLPROT.2DA.~
+ACTION_IF (ci_focus_metadata_valid != 1) OR (ci_hostile_splprot < 0) THEN BEGIN
+  FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIPHERFOCUS.2DA.~
 END
 
 COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
