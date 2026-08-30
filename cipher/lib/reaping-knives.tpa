@@ -1,0 +1,103 @@
+// Reaping Knives: preserve the originating Cipher across ally weapon hits.
+//
+// GemRB's SetMeleeEffect/SetRangedEffect reloads an external EFF for each hit,
+// so the original spell caster is not carried into that attack projectile.
+// The GUI runtime therefore substitutes one of six party-slot variants. Each
+// variant tags the originating Cipher in SCRIPTINGSTATE27 for the buff duration;
+// its hit EFF casts a party-targeted helper that advances Focus only on the
+// matching tag. This keeps simultaneous Ciphers isolated from each other.
+
+OUTER_SET ci_rk_scripting_stat = 182
+OUTER_SET ci_rk_scripting_index = 26
+OUTER_SET ci_rk_splprot_base = 0
+
+COPY_EXISTING ~splprot.2da~ ~override~
+  COUNT_2DA_COLS ci_rk_splprot_cols
+  COUNT_2DA_ROWS ci_rk_splprot_cols ci_rk_splprot_count
+  INNER_ACTION BEGIN OUTER_SET ci_rk_splprot_base = ci_rk_splprot_count END
+BUT_ONLY
+
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_1 182 1 1~
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_2 182 2 1~
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_3 182 3 1~
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_4 182 4 1~
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_5 182 5 1~
+APPEND ~splprot.2da~ ~CIPHER_RK_OWNER_6 182 6 1~
+
+// The attack EFFs are tiny external Spell:Cast effects. Their CIRKG<n> helper
+// targets the whole party, then opcode 326 admits only the tagged origin Cipher.
+COPY ~cipher/eff/CIRKE1.eff~ ~override/CIRKE1.eff~
+COPY ~cipher/eff/CIRKE2.eff~ ~override/CIRKE2.eff~
+COPY ~cipher/eff/CIRKE3.eff~ ~override/CIRKE3.eff~
+COPY ~cipher/eff/CIRKE4.eff~ ~override/CIRKE4.eff~
+COPY ~cipher/eff/CIRKE5.eff~ ~override/CIRKE5.eff~
+COPY ~cipher/eff/CIRKE6.eff~ ~override/CIRKE6.eff~
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG1~ END
+COPY_EXISTING ~CIRKG1.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = ci_rk_splprot_base STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG2~ END
+COPY_EXISTING ~CIRKG2.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = (ci_rk_splprot_base + 1) STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG3~ END
+COPY_EXISTING ~CIRKG3.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = (ci_rk_splprot_base + 2) STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG4~ END
+COPY_EXISTING ~CIRKG4.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = (ci_rk_splprot_base + 3) STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG5~ END
+COPY_EXISTING ~CIRKG5.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = (ci_rk_splprot_base + 4) STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKG6~ END
+COPY_EXISTING ~CIRKG6.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = (ci_rk_splprot_base + 5) STR_VAR resource = ~CIFSTEP~ END
+BUT_ONLY
+
+// Patch the canonical power description before learning proxies are generated.
+COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~An ally's attacks gain +2 to hit and 20 percent damage for five rounds. Each successful melee or ranged weapon hit restores 5 Focus to the Cipher who cast Reaping Knives. Costs 50 Focus.~
+BUT_ONLY
+
+DEFINE_PATCH_FUNCTION cipher_patch_reaping_variant
+INT_VAR ci_rk_owner = 1
+STR_VAR ci_rk_eff = ~~
+BEGIN
+  // Tag the original caster, not the ally receiving the knives.
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 282 target = 9 timing = 0 duration = 30
+            parameter1 = ci_rk_owner parameter2 = ci_rk_scripting_index
+  END
+  // Add the same owner-specific hit payload to melee and ranged attacks.
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 248 target = 2 timing = 0 duration = 30
+    STR_VAR resource = ~%ci_rk_eff%~
+  END
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 249 target = 2 timing = 0 duration = 30
+    STR_VAR resource = ~%ci_rk_eff%~
+  END
+END
+
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK1.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 1 STR_VAR ci_rk_eff = ~CIRKE1~ END
+BUT_ONLY
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK2.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 2 STR_VAR ci_rk_eff = ~CIRKE2~ END
+BUT_ONLY
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK3.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 3 STR_VAR ci_rk_eff = ~CIRKE3~ END
+BUT_ONLY
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK4.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 4 STR_VAR ci_rk_eff = ~CIRKE4~ END
+BUT_ONLY
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK5.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 5 STR_VAR ci_rk_eff = ~CIRKE5~ END
+BUT_ONLY
+COPY_EXISTING ~CI8RKNI.spl~ ~override/CI8RK6.spl~
+  LPF cipher_patch_reaping_variant INT_VAR ci_rk_owner = 6 STR_VAR ci_rk_eff = ~CIRKE6~ END
+BUT_ONLY
