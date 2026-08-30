@@ -102,6 +102,9 @@ jobs:
             python psion/tests/validate_qslots_install.py "$RUNNER_TEMP/psion-weidu-game-$layout" "$layout"
           done
 
+      - name: Validate late-installed Psion items
+        run: bash psion/tests/validate_late_item_weidu.sh vendor/gemrb
+
       - name: Validate Psion saving throw install lifecycle
         shell: bash
         run: bash psion/tests/validate_save_weidu.sh vendor/gemrb
