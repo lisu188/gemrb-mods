@@ -13,10 +13,15 @@ cp -R "$repo_root/common" "$game/common"
 cp -R "$repo_root/cipher" "$game/cipher"
 python3 "$repo_root/cipher/tests/seed_weidu_fixture.py" "$game"
 
-hit_baseline="$(sha256sum "$game/override/CIFHIT.ITM" | cut -d' ' -f1)"
-bow_baseline="$(sha256sum "$game/override/CIFBOW.ITM" | cut -d' ' -f1)"
-mweap_baseline="$(sha256sum "$game/override/CIFMWEAP.ITM" | cut -d' ' -f1)"
-magic_baseline="$(sha256sum "$game/override/CIFMAGIC.ITM" | cut -d' ' -f1)"
+baseline() { sha256sum "$1" | cut -d' ' -f1; }
+hit_baseline="$(baseline "$game/override/CIFHIT.ITM")"
+bow_baseline="$(baseline "$game/override/CIFBOW.ITM")"
+mweap_baseline="$(baseline "$game/override/CIFMWEAP.ITM")"
+magic_baseline="$(baseline "$game/override/CIFMAGIC.ITM")"
+leather_baseline="$(baseline "$game/override/CIFLEATH.ITM")"
+chain_baseline="$(baseline "$game/override/CIFCHAIN.ITM")"
+robe_baseline="$(baseline "$game/override/CIFROBE.ITM")"
+shield_baseline="$(baseline "$game/override/CIFSHLD.ITM")"
 
 install() {
   (cd "$game" && weidu cipher/setup-cipher.tp2 --use-lang en_US --force-install 0 --no-exit-pause)
@@ -28,15 +33,20 @@ uninstall() {
 
 verify() {
   python3 "$repo_root/cipher/tests/verify_weidu_install.py" "$game" "$layout"
+  python3 "$repo_root/cipher/tests/verify_item_usability.py" "$game"
 }
 
 install
 verify
 uninstall
-test "$(sha256sum "$game/override/CIFHIT.ITM" | cut -d' ' -f1)" = "$hit_baseline"
-test "$(sha256sum "$game/override/CIFBOW.ITM" | cut -d' ' -f1)" = "$bow_baseline"
-test "$(sha256sum "$game/override/CIFMWEAP.ITM" | cut -d' ' -f1)" = "$mweap_baseline"
-test "$(sha256sum "$game/override/CIFMAGIC.ITM" | cut -d' ' -f1)" = "$magic_baseline"
+test "$(baseline "$game/override/CIFHIT.ITM")" = "$hit_baseline"
+test "$(baseline "$game/override/CIFBOW.ITM")" = "$bow_baseline"
+test "$(baseline "$game/override/CIFMWEAP.ITM")" = "$mweap_baseline"
+test "$(baseline "$game/override/CIFMAGIC.ITM")" = "$magic_baseline"
+test "$(baseline "$game/override/CIFLEATH.ITM")" = "$leather_baseline"
+test "$(baseline "$game/override/CIFCHAIN.ITM")" = "$chain_baseline"
+test "$(baseline "$game/override/CIFROBE.ITM")" = "$robe_baseline"
+test "$(baseline "$game/override/CIFSHLD.ITM")" = "$shield_baseline"
 ! grep -q 'CIPHER' "$game/override/class.ids"
 install
 verify
