@@ -6,10 +6,13 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import subprocess
-import sys
-import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_REJECT_PATTERNS = (
+    "Traceback (most recent call last):",
+    "ModuleNotFoundError:",
+    "ImportError:",
+)
 
 
 def write_config(path: Path, game: Path, guiscripts: Path, save_path: Path) -> None:
@@ -50,12 +53,15 @@ def main() -> int:
     parser.add_argument("--game", type=Path, required=True)
     parser.add_argument("--guiscripts", type=Path, required=True)
     parser.add_argument("--gemrb", default="gemrb")
+    parser.add_argument("--gemrb-revision", required=True)
     parser.add_argument("--profile", choices=("bgee", "bg2ee", "eet"), required=True)
     parser.add_argument("--scenario", required=True)
+    parser.add_argument("--manual-result", choices=("pass", "fail", "not-run"), default="not-run")
     parser.add_argument("--artifacts", type=Path, default=ROOT / "acceptance" / "artifacts")
     parser.add_argument("--save-path", type=Path)
     parser.add_argument("--timeout", type=int)
     parser.add_argument("--expect-log", action="append", default=[])
+    parser.add_argument("--reject-log", action="append", default=[])
     parser.add_argument("--skip-launch", action="store_true")
     args = parser.parse_args()
 
@@ -72,16 +78,20 @@ def main() -> int:
     log = run_dir / "gemrb.log"
     write_config(config, args.game, args.guiscripts, save_path)
 
+    reject_patterns = list(dict.fromkeys([*DEFAULT_REJECT_PATTERNS, *args.reject_log]))
     result = {
-        "schema": 1,
+        "schema": 2,
         "profile": args.profile,
         "scenario": args.scenario,
         "started_utc": stamp,
         "game": str(args.game.resolve()),
         "guiscripts": str(args.guiscripts.resolve()),
+        "gemrb_revision": args.gemrb_revision,
         "config": str(config.resolve()),
         "log": str(log.resolve()),
         "expected_log_patterns": args.expect_log,
+        "rejected_log_patterns": reject_patterns,
+        "manual_result": args.manual_result,
         "launch_skipped": args.skip_launch,
     }
 
@@ -98,12 +108,17 @@ def main() -> int:
 
     text = log.read_text(encoding="utf-8", errors="replace")
     missing = [pattern for pattern in args.expect_log if pattern not in text]
+    rejected = [pattern for pattern in reject_patterns if pattern in text]
+    engine_passed = return_code == 0 and not missing and not rejected
+    accepted = engine_passed and args.manual_result == "pass" and not args.skip_launch
     result["return_code"] = return_code
     result["missing_log_patterns"] = missing
-    result["passed"] = return_code == 0 and not missing
+    result["matched_rejected_log_patterns"] = rejected
+    result["engine_passed"] = engine_passed
+    result["passed"] = accepted
     (run_dir / "result.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(run_dir)
-    return 0 if result["passed"] else 1
+    return 0 if accepted else 1
 
 
 if __name__ == "__main__":
