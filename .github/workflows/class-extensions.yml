@@ -40,5 +40,7 @@ jobs:
         run: python cipher/tests/validate_extensions.py
       - name: Validate Psion extensions
         run: python psion/tests/validate_extensions.py
+      - name: Validate enemy Psion runtime
+        run: python psion/tests/validate_enemy_psion.py
       - name: Compile acceptance runner
         run: python -m py_compile acceptance/run.py tools/gemrb_mods.py
