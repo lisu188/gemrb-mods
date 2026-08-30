@@ -10,8 +10,7 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 if __name__ == "__main__":
-    module.main_for_handler(
-        "Psionics",
+    module.main_for_handler("Psionics",
         ROOT / "psion" / "guiscripts" / "Psionics.py",
         (
             ROOT / "psion" / "guiscripts" / "Psicrystal.py",
