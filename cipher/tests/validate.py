@@ -40,6 +40,7 @@ def test_sources():
     setup = (CIPHER / "setup-cipher.tp2").read_text(encoding="utf-8")
     for required in (
         "common/weidu/spell-functions.tpa",
+        "cipher/lib/focus-item-patch.tpa",
         "cipher/lib/class.tpa",
         "cipher/lib/class-skills-fix.tpa",
         "cipher/lib/class-thac0-fix.tpa",
@@ -67,24 +68,34 @@ def test_sources():
     assert "InnateCharges.refresh" in runtime
 
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
+    focus_item_patch = (CIPHER / "lib" / "focus-item-patch.tpa").read_text(encoding="utf-8")
+    late_focus = (CIPHER / "lib" / "focus-items-late.tpa").read_text(encoding="utf-8")
     assert "CIPHER_HOSTILE 0x108 2 1" in focus
     assert "ci_hostile_splprot" in focus
     assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
-    assert "WRITE_SHORT ci_new_effect 326" in focus
-    assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus
-    assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus
+    assert "cifmeta.2da" in focus
+    assert "CLASS_SPLPROT" in focus
+    assert "HOSTILE_SPLPROT" in focus
+    assert "WRITE_SHORT ci_new_effect 326" in focus_item_patch
+    assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus_item_patch
+    assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus_item_patch
+    assert "READ_ASCII (ci_effect + 0x14) ci_resource (8)" in focus_item_patch
+    assert "STRING_EQUAL_CASE ~CIFGAIN~" in focus_item_patch
+    assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
+    assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
+    assert "READ_2DA_ENTRY 1 0 ci_meta_cols ci_hostile_splprot" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
     assert "timing = 9 parameter1 = ci_unit parameter2 = 9" in focus
     assert "ci_unit = 33; ci_unit >= 0; --ci_unit" in focus
-    assert "ci_location = 1" in focus
-    assert "ci_attack_type = 1" in focus
-    assert "ci_attack_type = 2" in focus
-    assert "ci_attack_type = 3" in focus
-    assert "ci_equipping_index" in focus
+    assert "ci_location = 1" in focus_item_patch
+    assert "ci_attack_type = 1" in focus_item_patch
+    assert "ci_attack_type = 2" in focus_item_patch
+    assert "ci_attack_type = 3" in focus_item_patch
+    assert "ci_equipping_index" in focus_item_patch
 
     focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
     assert "CIFS4" in focus_core
