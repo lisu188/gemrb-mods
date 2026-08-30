@@ -1,6 +1,6 @@
 BACKUP ~cipher/backup~
 AUTHOR ~lisu188~
-VERSION ~0.2.0~
+VERSION ~0.2.1~
 AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~cipher/tra/english.tra~
@@ -26,6 +26,7 @@ INCLUDE ~cipher/lib/powers.tpa~
 INCLUDE ~cipher/lib/power-learning.tpa~
 INCLUDE ~cipher/lib/power-thac0-fix.tpa~
 INCLUDE ~cipher/lib/soul-whip-fix.tpa~
+INCLUDE ~cipher/lib/high-tier-fidelity.tpa~
 
 // Generate selector entries only after every power-specific patch has run, so
 // their name/description/icon metadata mirrors the final installed CI* resource.
