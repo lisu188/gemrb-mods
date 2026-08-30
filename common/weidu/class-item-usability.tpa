@@ -1,0 +1,37 @@
+// Shared item-local usability helpers for GemRB custom classes.
+// Custom classes do not have spare legacy ITM usability bits, so exact class
+// restrictions are represented with opcode 319 (Item Usability) equipping
+// effects keyed by CLASS.IDS numeric class ID.
+
+DEFINE_PATCH_FUNCTION GEMRB_ADD_CLASS_ITEM_RESTRICTION
+INT_VAR class_id = 0
+BEGIN
+  PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
+    READ_LONG 0x6a gcir_effect_offset
+    READ_SHORT 0x6e gcir_effect_index
+    READ_SHORT 0x70 gcir_effect_count
+    SET gcir_has_restriction = 0
+
+    FOR (gcir_i = 0; gcir_i < gcir_effect_count; ++gcir_i) BEGIN
+      SET gcir_effect = gcir_effect_offset + ((gcir_effect_index + gcir_i) * 0x30)
+      READ_SHORT gcir_effect gcir_opcode
+      READ_BYTE (gcir_effect + 0x02) gcir_target
+      READ_LONG (gcir_effect + 0x04) gcir_parameter1
+      READ_LONG (gcir_effect + 0x08) gcir_parameter2
+      READ_BYTE (gcir_effect + 0x0c) gcir_timing
+      PATCH_IF (gcir_opcode = 319)
+        AND (gcir_target = 2)
+        AND (gcir_parameter1 = class_id)
+        AND (gcir_parameter2 = 5)
+        AND (gcir_timing = 2) BEGIN
+        SET gcir_has_restriction = 1
+      END
+    END
+
+    PATCH_IF gcir_has_restriction = 0 BEGIN
+      LPF ADD_ITEM_EQEFFECT
+        INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = class_id parameter2 = 5 power = 0
+      END
+    END
+  END
+END
