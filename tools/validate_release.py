@@ -58,15 +58,19 @@ def main():
         "psion/guiscripts/Psicrystal.py",
         "psion/guiscripts/PsionAI.py",
     }
+    driver.verify_runtime_api(ROOT, ["cipher", "psion"])
 
     manifest = driver.build_manifest(ROOT, ["cipher", "psion"])
     for required in (
         "common/guiscripts/GemRBModCore.py",
+        "common/runtime-api.txt",
         "cipher/guiscripts/Cipher.py",
         "cipher/guiscripts/CipherSubclass.py",
+        "cipher/runtime-api.txt",
         "psion/guiscripts/Psionics.py",
         "psion/guiscripts/Psicrystal.py",
         "psion/guiscripts/PsionAI.py",
+        "psion/runtime-api.txt",
     ):
         assert required in manifest["files"]
 
@@ -88,15 +92,34 @@ def main():
             raise AssertionError("manifest mismatch was accepted")
 
     with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        (root / "common").mkdir()
+        (root / "cipher").mkdir()
+        (root / "psion").mkdir()
+        (root / "common" / driver.RUNTIME_API).write_text("core-v1\n", encoding="utf-8")
+        (root / "cipher" / driver.RUNTIME_API).write_text("core-v1\n", encoding="utf-8")
+        (root / "psion" / driver.RUNTIME_API).write_text("core-v2\n", encoding="utf-8")
+        try:
+            driver.verify_runtime_api(root, ["cipher", "psion"])
+        except SystemExit as error:
+            assert "Shared-runtime revision mismatch before mutation" in str(error)
+            assert "psion=core-v2, common=core-v1" in str(error)
+        else:
+            raise AssertionError("mixed shared-runtime revisions were accepted")
+
+    with tempfile.TemporaryDirectory() as temp:
         output = Path(temp) / "classes.zip"
         driver.package(argparse.Namespace(modules=["cipher", "psion"], output=output))
         with zipfile.ZipFile(output) as archive:
             names = set(archive.namelist())
             assert "gemrb-mods/gemrb-mods-release.json" in names
             assert "gemrb-mods/common/guiscripts/GemRBModCore.py" in names
+            assert "gemrb-mods/common/runtime-api.txt" in names
             assert "gemrb-mods/cipher/guiscripts/CipherSubclass.py" in names
+            assert "gemrb-mods/cipher/runtime-api.txt" in names
             assert "gemrb-mods/psion/guiscripts/Psicrystal.py" in names
             assert "gemrb-mods/psion/guiscripts/PsionAI.py" in names
+            assert "gemrb-mods/psion/runtime-api.txt" in names
 
     print("Release packaging and documentation consistency validation passed")
 
