@@ -10,33 +10,6 @@
 // GemRB evaluates opcode 319 in Actor::Unusable, so this is an engine-level
 // restriction rather than a GUI-only approximation.
 
-DEFINE_PATCH_FUNCTION PSION_ADD_CLASS_RESTRICTION
-INT_VAR class_id = 0
-BEGIN
-  READ_LONG 0x6a ps_eq_effect_offset
-  READ_SHORT 0x6e ps_eq_index
-  READ_SHORT 0x70 ps_eq_count
-  SET ps_has_restriction = 0
-  FOR (ps_eq_i = 0; ps_eq_i < ps_eq_count; ++ps_eq_i) BEGIN
-    SET ps_eq_effect = ps_eq_effect_offset + ((ps_eq_index + ps_eq_i) * 0x30)
-    READ_SHORT ps_eq_effect ps_eq_opcode
-    READ_BYTE (ps_eq_effect + 0x02) ps_eq_target
-    READ_LONG (ps_eq_effect + 0x04) ps_eq_parameter1
-    READ_LONG (ps_eq_effect + 0x08) ps_eq_parameter2
-    READ_BYTE (ps_eq_effect + 0x0c) ps_eq_timing
-    PATCH_IF (ps_eq_opcode = 319)
-      AND (ps_eq_target = 2)
-      AND (ps_eq_parameter1 = class_id)
-      AND (ps_eq_parameter2 = 5)
-      AND (ps_eq_timing = 2) BEGIN
-      SET ps_has_restriction = 1
-    END
-  END
-  PATCH_IF ps_has_restriction = 0 BEGIN
-    LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = class_id parameter2 = 5 power = 0 END
-  END
-END
-
 COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
   PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
     READ_ASCII 0 ps_item_signature (8)
@@ -102,12 +75,12 @@ COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
       END
 
       PATCH_IF ps_item_restrict_psion = 1 BEGIN
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_seer_id END
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_shaper_id END
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_kineticist_id END
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_egoist_id END
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_nomad_id END
-        LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = ps_telepath_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_seer_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_shaper_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_kineticist_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_egoist_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_nomad_id END
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_telepath_id END
       END
     END
   END

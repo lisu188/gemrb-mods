@@ -1,0 +1,53 @@
+// Cipher equipment identity: light armor and robes are allowed; medium/heavy
+// armor and shields are rejected with item-local opcode 319 effects. This keeps
+// the custom class independent of legacy class-usability bits.
+//
+// BG-family games normally use generic item type 2 for all armor, so the item
+// animation distinguishes leather/robes from chain/plate there. IWD-family
+// item types are also recognized for converted campaigns.
+
+COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
+  PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
+    READ_ASCII 0 ci_item_signature (8)
+    PATCH_IF ~%ci_item_signature%~ STRING_EQUAL_CASE ~ITM V1  ~ BEGIN
+      READ_SHORT 0x1c ci_item_type
+      READ_ASCII 0x22 ci_item_animation (2)
+      SET ci_item_restrict_cipher = 0
+
+      // Shields: BG/BG2 generic plus IWD-family buckler/large/medium/small.
+      PATCH_IF (ci_item_type = 0x0c)
+        OR (ci_item_type = 0x29)
+        OR (ci_item_type = 0x2f)
+        OR (ci_item_type = 0x31)
+        OR (ci_item_type = 0x35) BEGIN
+        SET ci_item_restrict_cipher = 1
+      END
+
+      // Generic BG-family armor. Leather uses 2A; robe animations are allowed
+      // defensively in case a conversion classifies them as generic armor.
+      PATCH_IF ci_item_type = 0x02 BEGIN
+        PATCH_IF !(~%ci_item_animation%~ STRING_EQUAL_CASE ~2A~)
+          AND !(~%ci_item_animation%~ STRING_EQUAL_CASE ~2W~)
+          AND !(~%ci_item_animation%~ STRING_EQUAL_CASE ~3W~)
+          AND !(~%ci_item_animation%~ STRING_EQUAL_CASE ~4W~) BEGIN
+          SET ci_item_restrict_cipher = 1
+        END
+      END
+
+      // IWD-family explicit armor categories. Leather and studded leather
+      // (0x3c/0x3d) and robes (0x43) remain legal.
+      PATCH_IF (ci_item_type = 0x3e)
+        OR (ci_item_type = 0x3f)
+        OR (ci_item_type = 0x40)
+        OR (ci_item_type = 0x41)
+        OR (ci_item_type = 0x42)
+        OR (ci_item_type = 0x44) BEGIN
+        SET ci_item_restrict_cipher = 1
+      END
+
+      PATCH_IF ci_item_restrict_cipher = 1 BEGIN
+        LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ci_class_id END
+      END
+    END
+  END
+BUT_ONLY

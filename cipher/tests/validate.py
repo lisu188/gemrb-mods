@@ -40,6 +40,7 @@ def test_sources():
     setup = (CIPHER / "setup-cipher.tp2").read_text(encoding="utf-8")
     for required in (
         "common/weidu/spell-functions.tpa",
+        "common/weidu/class-item-usability.tpa",
         "cipher/lib/focus-item-patch.tpa",
         "cipher/lib/class.tpa",
         "cipher/lib/class-skills-fix.tpa",
@@ -50,6 +51,7 @@ def test_sources():
         "cipher/lib/focus.tpa",
         "cipher/lib/focus-core.tpa",
         "cipher/lib/critical-focus.tpa",
+        "cipher/lib/item-usability.tpa",
     ):
         assert required in setup
     assert "psion/lib/spell-functions.tpa" not in setup
@@ -95,6 +97,18 @@ def test_sources():
     assert "ci_attack_type = 2" in focus_item_patch
     assert "ci_attack_type = 3" in focus_item_patch
     assert "ci_equipping_index" in focus_item_patch
+
+    shared_usability = (ROOT / "common" / "weidu" / "class-item-usability.tpa").read_text(encoding="utf-8")
+    assert "GEMRB_ADD_CLASS_ITEM_RESTRICTION" in shared_usability
+    assert "opcode = 319" in shared_usability
+    assert "parameter1 = class_id" in shared_usability
+    assert "parameter2 = 5" in shared_usability
+
+    item_usability = (CIPHER / "lib" / "item-usability.tpa").read_text(encoding="utf-8")
+    assert "ci_item_type = 0x02" in item_usability
+    assert "STRING_EQUAL_CASE ~2A~" in item_usability
+    assert "ci_item_type = 0x0c" in item_usability
+    assert "GEMRB_ADD_CLASS_ITEM_RESTRICTION" in item_usability
 
     focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
     assert "CIFS4" in focus_core

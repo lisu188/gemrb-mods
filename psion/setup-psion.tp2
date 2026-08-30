@@ -38,6 +38,7 @@ COPY ~psion/tables/clabpego.2da~ ~override/clabpego.2da~
 COPY ~psion/tables/clabpnom.2da~ ~override/clabpnom.2da~
 COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
 
+INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/powers.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
@@ -53,5 +54,6 @@ BEGIN ~Psion late item compatibility patch~
 DESIGNATED 100
 REQUIRE_COMPONENT ~psion/setup-psion.tp2~ ~0~ ~Install the main Psion component first.~
 INCLUDE ~common/weidu/spell-functions.tpa~
+INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/item-usability.tpa~
