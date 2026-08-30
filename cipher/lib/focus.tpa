@@ -37,6 +37,13 @@ BUT_ONLY
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 
+// Persist the exact numeric opcode-326 target row for later compatibility
+// components. Component 0 is the authority because it creates CIPHER_HOSTILE.
+// Use text replacement here because WeiDU's 2DA column APIs exclude row labels;
+// trying to address the apparent second column would patch the version token.
+COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~
+  REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~
+
 // Every setter owns one permanent ScriptingState effect. Before installing the
 // next state it removes every previous CIFS<n> parent resource. Timing mode 9
 // keeps the current Focus state in the actor effect queue, so normal CRE

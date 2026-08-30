@@ -28,6 +28,10 @@ def test_tables():
         assert unlock == expected_unlocks[tier]
         assert cost == expected_costs[tier]
 
+    metadata_header, metadata = read_2da(CIPHER / "tables" / "cipherfocus.2da")
+    assert metadata_header == ["VALUE"]
+    assert metadata == {"HOSTILE": ["0"]}
+
     clab = (CIPHER / "tables" / "clabciph.2da").read_text(encoding="utf-8")
     for resref in powers:
         assert f"GA_{resref}" in clab
@@ -77,6 +81,8 @@ def test_sources():
     assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
+    assert "COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~" in focus
+    assert "REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~" in focus
     assert "WRITE_SHORT ci_new_effect 326" in focus_item_patch
     assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus_item_patch
     assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus_item_patch
@@ -84,9 +90,10 @@ def test_sources():
     assert "STRING_EQUAL_CASE ~CIFGAIN~" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
-    assert "COPY_EXISTING ~CIFCRIT.spl~" in late_focus
-    assert "READ_LONG (ci_late_effect + 0x08) ci_late_hostile_value" in late_focus
-    assert "OUTER_SET ci_hostile_splprot = ci_late_hostile_value" in late_focus
+    assert "COPY_EXISTING ~cipherfocus.2da~" in late_focus
+    assert "READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value" in late_focus
+    assert "OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~" in late_focus
+    assert "ci_hostile_splprot <= 0" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
