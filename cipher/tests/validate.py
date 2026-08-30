@@ -92,8 +92,8 @@ def test_sources():
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
     assert "COPY_EXISTING ~cipherfocus.2da~" in late_focus
     assert "READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value" in late_focus
-    assert "OUTER_SET ci_hostile_splprot = ci_focus_metadata_value" in late_focus
-    assert "ci_hostile_splprot < 0" in late_focus
+    assert "OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~" in late_focus
+    assert "ci_hostile_splprot <= 0" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
