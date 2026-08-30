@@ -43,12 +43,26 @@ def features(path: Path) -> list[dict[str, int | str]]:
     return result
 
 
-def locate(override: Path, resref: str) -> Path:
-    for suffix in (".SPL", ".spl"):
+def locate(override: Path, resref: str, extension: str = "SPL") -> Path:
+    for suffix in (f".{extension.upper()}", f".{extension.lower()}"):
         path = override / f"{resref}{suffix}"
         if path.exists():
             return path
-    raise AssertionError(f"missing {resref}.SPL")
+    raise AssertionError(f"missing {resref}.{extension}")
+
+
+def splprot_rows(path: Path) -> dict[str, int]:
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    rows = {}
+    index = 0
+    for line in lines[3:]:
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("#", "//")):
+            continue
+        fields = stripped.split()
+        rows[fields[0].upper()] = index
+        index += 1
+    return rows
 
 
 def verify_detonate(override: Path) -> None:
@@ -90,6 +104,41 @@ def verify_amplified_wave(override: Path) -> None:
     assert prone[0]["special"] == 1
 
 
+def verify_reaping_knives(override: Path) -> None:
+    rows = splprot_rows(locate(override, "SPLPROT", "2DA"))
+    for owner in range(1, 7):
+        label = f"CIPHER_RK_OWNER_{owner}"
+        assert label in rows
+
+        variant = features(locate(override, f"CI8RK{owner}"))
+        marker = [effect for effect in variant if effect["opcode"] == 282]
+        assert len(marker) == 1
+        assert marker[0]["target"] == 9
+        assert marker[0]["parameter1"] == owner
+        assert marker[0]["parameter2"] == 26
+        assert marker[0]["duration"] == 30
+
+        melee = [effect for effect in variant if effect["opcode"] == 248]
+        ranged = [effect for effect in variant if effect["opcode"] == 249]
+        assert len(melee) == len(ranged) == 1
+        assert melee[0]["target"] == ranged[0]["target"] == 2
+        assert melee[0]["resource"] == ranged[0]["resource"] == f"CIRKE{owner}"
+        assert melee[0]["duration"] == ranged[0]["duration"] == 30
+
+        gain = features(locate(override, f"CIRKG{owner}"))
+        assert len(gain) == 1
+        assert gain[0]["opcode"] == 326
+        assert gain[0]["target"] == 3
+        assert gain[0]["parameter2"] == rows[label]
+        assert gain[0]["resource"] == "CIFSTEP"
+
+        eff = locate(override, f"CIRKE{owner}", "EFF").read_bytes()
+        assert eff[:8] == b"EFF V2.0"
+        assert read_u32(eff, 0x10) == 0x92
+        assert read_u32(eff, 0x14) == 2
+        assert eff[0x30:0x38].split(b"\0", 1)[0].decode("ascii") == f"CIRKG{owner}"
+
+
 def verify_soul_collapse(override: Path) -> None:
     effects = features(locate(override, "CI9SCOL"))
     watcher = effects[0]
@@ -119,6 +168,7 @@ def main() -> None:
     override = game / "override"
     verify_detonate(override)
     verify_amplified_wave(override)
+    verify_reaping_knives(override)
     verify_soul_collapse(override)
     print("Cipher high-tier installed-resource validation passed")
 
