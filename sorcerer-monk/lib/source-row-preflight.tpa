@@ -129,14 +129,92 @@ END
 ACTION_IF FILE_EXISTS_IN_GAME ~luabbr.2da~ THEN BEGIN
   OUTER_SET sm_pre_sorcerer = 0
   OUTER_SET sm_pre_monk = 0
+  OUTER_SPRINT sm_pre_so_abbr ~~
+  OUTER_SPRINT sm_pre_mo_abbr ~~
   COPY_EXISTING ~luabbr.2da~ ~override~
     COUNT_2DA_COLS sm_pre_cols
     READ_2DA_ENTRIES_NOW ~sm_pre_table~ sm_pre_cols
     FOR (sm_pre_i = 0; sm_pre_i < sm_pre_table; ++sm_pre_i) BEGIN
       READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 0 sm_pre_name
-      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN SET sm_pre_sorcerer += 1 END
-      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN SET sm_pre_monk += 1 END
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~SORCERER~) BEGIN
+        SET sm_pre_sorcerer += 1
+        READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 1 sm_pre_so_abbr
+      END
+      PATCH_IF (~%sm_pre_name%~ STRING_EQUAL_CASE ~MONK~) BEGIN
+        SET sm_pre_monk += 1
+        READ_2DA_ENTRY_FORMER ~sm_pre_table~ sm_pre_i 1 sm_pre_mo_abbr
+      END
     END
   BUT_ONLY
   ACTION_IF (sm_pre_sorcerer > 1) OR (sm_pre_monk > 1) THEN BEGIN FAIL @31 END
+
+  // The final HLA merge deduplicates by ABILITY resref. That is safe only when
+  // duplicate rows have identical policy metadata. If an HLA overhaul gives
+  // the same ability different level ranges, repeat limits, prerequisites,
+  // exclusions, or alignment restrictions, silently keeping the first row
+  // changes the source class rules. Reject that ambiguity before any table is
+  // mutated. Identical duplicates remain legal and collapse to one merged row.
+  ACTION_IF (~%sm_pre_so_abbr%~ STRING_COMPARE_CASE ~~)
+      AND (~%sm_pre_mo_abbr%~ STRING_COMPARE_CASE ~~)
+      AND (FILE_EXISTS_IN_GAME ~lu%sm_pre_so_abbr%.2da~)
+      AND (FILE_EXISTS_IN_GAME ~lu%sm_pre_mo_abbr%.2da~) THEN BEGIN
+    OUTER_SET sm_pre_hla_cols = 0
+    OUTER_SET sm_pre_hla_mo_cols = 0
+    OUTER_SET sm_pre_hla_ambiguous = 0
+
+    COPY_EXISTING ~lu%sm_pre_so_abbr%.2da~ ~override~
+      COUNT_2DA_COLS sm_pre_hla_cols
+    BUT_ONLY
+    COPY_EXISTING ~lu%sm_pre_mo_abbr%.2da~ ~override~
+      COUNT_2DA_COLS sm_pre_hla_mo_cols
+    BUT_ONLY
+
+    ACTION_IF (sm_pre_hla_cols > 2) AND (sm_pre_hla_cols = sm_pre_hla_mo_cols) THEN BEGIN
+      COPY_EXISTING ~lu%sm_pre_so_abbr%.2da~ ~override~
+        READ_2DA_ENTRIES_NOW ~sm_pre_hla_source~ sm_pre_hla_cols
+        FOR (sm_pre_i = 0; sm_pre_i < sm_pre_hla_source; ++sm_pre_i) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_pre_hla_source~ sm_pre_i 1 sm_pre_ability
+          PATCH_IF (~%sm_pre_ability%~ STRING_COMPARE_CASE ~*~) BEGIN
+            SPRINT sm_pre_policy ~~
+            FOR (sm_pre_j = 2; sm_pre_j < sm_pre_hla_cols; ++sm_pre_j) BEGIN
+              READ_2DA_ENTRY_FORMER ~sm_pre_hla_source~ sm_pre_i sm_pre_j sm_pre_cell
+              SPRINT sm_pre_policy ~%sm_pre_policy%|%sm_pre_cell%~
+            END
+            PATCH_IF VARIABLE_IS_SET $sm_pre_hla_policy(~%sm_pre_ability%~) BEGIN
+              SPRINT sm_pre_old_policy $sm_pre_hla_policy(~%sm_pre_ability%~)
+              PATCH_IF (~%sm_pre_old_policy%~ STRING_COMPARE_CASE ~%sm_pre_policy%~) BEGIN
+                SET sm_pre_hla_ambiguous = 1
+              END
+            END ELSE BEGIN
+              SPRINT $sm_pre_hla_policy(~%sm_pre_ability%~) ~%sm_pre_policy%~
+            END
+          END
+        END
+      BUT_ONLY
+
+      COPY_EXISTING ~lu%sm_pre_mo_abbr%.2da~ ~override~
+        READ_2DA_ENTRIES_NOW ~sm_pre_hla_source~ sm_pre_hla_cols
+        FOR (sm_pre_i = 0; sm_pre_i < sm_pre_hla_source; ++sm_pre_i) BEGIN
+          READ_2DA_ENTRY_FORMER ~sm_pre_hla_source~ sm_pre_i 1 sm_pre_ability
+          PATCH_IF (~%sm_pre_ability%~ STRING_COMPARE_CASE ~*~) BEGIN
+            SPRINT sm_pre_policy ~~
+            FOR (sm_pre_j = 2; sm_pre_j < sm_pre_hla_cols; ++sm_pre_j) BEGIN
+              READ_2DA_ENTRY_FORMER ~sm_pre_hla_source~ sm_pre_i sm_pre_j sm_pre_cell
+              SPRINT sm_pre_policy ~%sm_pre_policy%|%sm_pre_cell%~
+            END
+            PATCH_IF VARIABLE_IS_SET $sm_pre_hla_policy(~%sm_pre_ability%~) BEGIN
+              SPRINT sm_pre_old_policy $sm_pre_hla_policy(~%sm_pre_ability%~)
+              PATCH_IF (~%sm_pre_old_policy%~ STRING_COMPARE_CASE ~%sm_pre_policy%~) BEGIN
+                SET sm_pre_hla_ambiguous = 1
+              END
+            END ELSE BEGIN
+              SPRINT $sm_pre_hla_policy(~%sm_pre_ability%~) ~%sm_pre_policy%~
+            END
+          END
+        END
+      BUT_ONLY
+
+      ACTION_IF sm_pre_hla_ambiguous = 1 THEN BEGIN FAIL @32 END
+    END
+  END
 END

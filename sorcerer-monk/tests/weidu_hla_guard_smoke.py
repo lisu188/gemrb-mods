@@ -8,6 +8,7 @@ from weidu_smoke import HLA_HEADERS, build_fixture, write_2da
 
 
 ERROR = "Could not build a complete Sorcerer/Monk high-level-ability table"
+AMBIGUOUS_ERROR = "same ability with different eligibility metadata"
 
 
 def snapshot(override):
@@ -49,12 +50,12 @@ def write_lunumab(override):
     )
 
 
-def assert_rejected(weidu, game, label):
+def assert_rejected(weidu, game, label, error=ERROR):
     override = game / "override"
     originals = snapshot(override)
     result = run_weidu(weidu, game)
     print(result.stdout, flush=True)
-    assert ERROR.casefold() in result.stdout.casefold(), result.stdout
+    assert error.casefold() in result.stdout.casefold(), result.stdout
     assert_snapshot(override, originals, label)
 
 
@@ -118,6 +119,35 @@ def exercise_empty_component_tables(weidu):
         print("empty Sorcerer/Monk HLA sources: rejected safely", flush=True)
 
 
+def exercise_conflicting_duplicate_ability(weidu):
+    with tempfile.TemporaryDirectory(prefix="sorcerer-monk-hla-conflicting-duplicate-") as tmp:
+        game = Path(tmp)
+        build_fixture(game)
+        override = game / "override"
+        write_lunumab(override)
+
+        # GA_SPCL900 is deliberately shared by the normal fixture. Change only
+        # Monk's repeat limit: the old merge would silently keep Sorcerer's row
+        # and discard this different policy for the same ability.
+        write_2da(
+            override / "lumo0.2da",
+            HLA_HEADERS,
+            [
+                ("0", ["GA_SPCL900", 1, "ICON", 1, 99, 2, "*", "*", "*"]),
+                ("1", ["GA_SPCL930", 1, "ICON", 1, 99, 1, "*", "*", "*"]),
+                ("2", ["GA_SPCL931", 1, "ICON", 1, 99, 1, "*", "*", "*"]),
+                ("3", ["*"] * len(HLA_HEADERS)),
+            ],
+        )
+        assert_rejected(
+            weidu,
+            game,
+            "conflicting duplicate HLA rejection",
+            AMBIGUOUS_ERROR,
+        )
+        print("same HLA with conflicting policy: rejected safely", flush=True)
+
+
 def main():
     weidu = shutil.which(sys.argv[1] if len(sys.argv) > 1 else "weidu")
     if not weidu:
@@ -128,6 +158,7 @@ def main():
     exercise_missing_component_table(weidu)
     exercise_mismatched_component_tables(weidu)
     exercise_empty_component_tables(weidu)
+    exercise_conflicting_duplicate_ability(weidu)
 
 
 if __name__ == "__main__":
