@@ -255,9 +255,6 @@ def restore_party():
                 _ensure_power_selector_known(actor)
         except Exception:
             pass
-    subclass = _subclass_module()
-    if subclass:
-        subclass.restore_party()
 
 
 def can_manifest(actor, resref):
@@ -272,11 +269,6 @@ def can_manifest(actor, resref):
 
 def action_info(resref):
     key = str(resref or "").upper()
-    subclass = _subclass_module()
-    if subclass:
-        info = subclass.action_info(key)
-        if info:
-            return info
     if key == POWER_SELECTOR_RESOURCE:
         return {
             "kind": "power_selector",
@@ -292,11 +284,6 @@ def action_info(resref):
 
 
 def resolve_power_entry(spellbook, actor, raw_spell):
-    subclass = _subclass_module()
-    if subclass:
-        entry = subclass.resolve_power_entry(spellbook, actor, raw_spell)
-        if entry:
-            return entry
     encoded_type = raw_spell // 1000
     spell_index = raw_spell % 1000
     if encoded_type == TEMPORARY_SPELLINFO_TYPE:
@@ -325,9 +312,6 @@ def filter_spellinfo(actor, resrefs):
                 filtered.append(resref)
             continue
         filtered.append(resref)
-    subclass = _subclass_module()
-    if subclass:
-        filtered = list(subclass.filter_spellinfo(actor, filtered))
     return filtered
 
 
@@ -344,9 +328,8 @@ def refresh_innate_charges(actor):
     if not is_cipher(actor):
         return 0
     _ensure_power_selector_known(actor)
-    restored = 0
     try:
-        restored = InnateCharges.refresh(
+        return InnateCharges.refresh(
             actor,
             lambda resref: _is_reusable_innate(actor, resref),
             INNATE_TYPE,
@@ -354,19 +337,11 @@ def refresh_innate_charges(actor):
         )
     except Exception as error:
         GemRB.Log(2, "Cipher", "charge refresh failed: %s" % error)
-    subclass = _subclass_module()
-    if subclass:
-        restored += int(subclass.refresh_innate_charges(actor) or 0)
-    return restored
+        return 0
 
 
 def begin_manifest(actor, resref):
-    key = str(resref or "").upper()
-    subclass = _subclass_module()
-    if subclass and subclass.action_info(key):
-        return subclass.begin_manifest(actor, key)
-
-    info = action_info(key)
+    info = action_info(resref)
     if not info:
         return True
 
@@ -402,9 +377,6 @@ def begin_manifest(actor, resref):
 
 def cancel_pending(actor=None):
     Transactions.cancel(TRANSACTION_NAMESPACE, actor)
-    subclass = _subclass_module()
-    if subclass:
-        subclass.cancel_pending(actor)
 
 
 def focus_text(actor):
