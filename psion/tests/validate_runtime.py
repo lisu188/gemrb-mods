@@ -87,6 +87,9 @@ def main() -> None:
     raw_spellinfo = ["PSMT03", "PSNOTMOD"]
     applied_spells = []
     roll_value = {"value": 20}
+    gemrb_vars = {}
+    prepared_casts = []
+    dc_resources = {"PS1MTHR4", "PSMT034"}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
 
@@ -101,6 +104,14 @@ def main() -> None:
     gemrb.Log = lambda *_: None
     gemrb.Roll = lambda dice, sides, bonus: roll_value["value"] + bonus
     gemrb.GetSpelldata = lambda actor: list(raw_spellinfo)
+    gemrb.GetSpell = lambda resref, *_: ({"SpellResRef": str(resref).upper()} if str(resref).upper() in dc_resources else None)
+    gemrb.SetVar = lambda name, value: gemrb_vars.__setitem__(name, value)
+
+    def prepare_spontaneous(actor, source, book_type, level, replacement):
+        prepared_casts.append((actor, str(source).upper(), book_type, level, str(replacement).upper()))
+        return 17
+
+    gemrb.PrepareSpontaneousCast = prepare_spontaneous
     gemrb.ApplySpell = lambda actor, resref, *_: applied_spells.append((actor, resref))
     gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
     gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[index])
@@ -200,6 +211,37 @@ def main() -> None:
         spec = importlib.util.spec_from_file_location("psion_runtime_test", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+
+        assert module._dc_modifier(1) == 4
+        assert module.power_info("PS1MTHR4")["resref"] == "PS1MTHR"
+        assert module.power_info("PSMT034")["resref"] == "PSMT03"
+
+        class FakeSpellbook:
+            @staticmethod
+            def GetUsableMemorizedSpells(actor, book_type):
+                if book_type != module.INNATE_TYPE:
+                    return []
+                return [{
+                    "SpellResRef": "PS1MTHR",
+                    "BookType": module.INNATE_TYPE,
+                    "SpellLevel": 1,
+                    "SpellIndex": 4007,
+                }]
+
+        normal_entry = {
+            "SpellResRef": "PS1MTHR",
+            "BookType": module.INNATE_TYPE,
+            "SpellLevel": 1,
+            "SpellIndex": 4007,
+        }
+        assert module.prepare_action_entry(FakeSpellbook, 1, normal_entry) is normal_entry
+        assert prepared_casts[-1][-1] == "PS1MTHR4"
+        assert gemrb_vars["Spell"] == 17 + 1000 * (1 << module.INNATE_TYPE)
+
+        temporary_entry = {"SpellResRef": "PSMT03", "SpellIndex": 255000}
+        assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry
+        assert prepared_casts[-1][1] == "PS1MTHR"
+        assert prepared_casts[-1][-1] == "PSMT034"
 
         real_begin_manifest = module.begin_manifest
         callback_counts = {}
