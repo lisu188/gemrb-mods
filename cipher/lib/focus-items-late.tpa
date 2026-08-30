@@ -3,13 +3,13 @@
 // headers remain unchanged.
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
-// creates that row. CIPHERFOCUS.2DA is a private one-cell contract, so read the
-// single data entry directly and explicitly evaluate the textual 2DA value as
-// an integer before exporting it from patch scope.
+// creates that row. Requiring two columns filters out the default/header lines;
+// the 2DA signature is then row 0 and HOSTILE is row 1, with its numeric value
+// in column 1.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
 COPY_EXISTING ~cipherfocus.2da~ ~override~
-  READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value
+  READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value
   INNER_ACTION BEGIN
     OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~
   END
