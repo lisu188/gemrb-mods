@@ -82,7 +82,7 @@ def test_sources():
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
     assert "COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~" in focus
-    assert "SET_2DA_ENTRY 0 1 2 ~%ci_hostile_splprot%~" in focus
+    assert "REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~" in focus
     assert "WRITE_SHORT ci_new_effect 326" in focus_item_patch
     assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus_item_patch
     assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus_item_patch
@@ -91,9 +91,9 @@ def test_sources():
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
     assert "COPY_EXISTING ~cipherfocus.2da~" in late_focus
-    assert "READ_2DA_ENTRY 0 0 ci_focus_metadata_cols" in late_focus
-    assert "READ_2DA_ENTRY 0 1 ci_focus_metadata_cols" in late_focus
-    assert "STRING_EQUAL_CASE ~HOSTILE~" in late_focus
+    assert "ci_focus_metadata_cols = 1" in late_focus
+    assert "ci_focus_metadata_rows = 1" in late_focus
+    assert "READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_value" in late_focus
     assert "ci_focus_metadata_valid != 1" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
