@@ -37,14 +37,6 @@ BUT_ONLY
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 
-// Persist the allocated SPLPROT rows for later compatibility components.
-// Row labels are deliberately informational; consumers read the single VALUE
-// column by row index so no SPLPROT row-label parsing is required.
-COPY ~cipher/tables/cifmeta.2da~ ~override/cifmeta.2da~
-  REPLACE_TEXTUALLY ~CLASS_SPLPROT -1~ ~CLASS_SPLPROT %ci_class_splprot%~
-  REPLACE_TEXTUALLY ~HOSTILE_SPLPROT -1~ ~HOSTILE_SPLPROT %ci_hostile_splprot%~
-BUT_ONLY
-
 // Every setter owns one permanent ScriptingState effect. Before installing the
 // next state it removes every previous CIFS<n> parent resource. Timing mode 9
 // keeps the current Focus state in the actor effect queue, so normal CRE
