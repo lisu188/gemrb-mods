@@ -631,14 +631,15 @@ OUTER_SPRINT sm_profs_row ~%sm_prof_first% %sm_prof_rate%~
 // copy a single valid live Monk row instead of freezing the stock 1/3/2 values.
 ACTION_IF FILE_EXISTS_IN_GAME ~clswpbon.2da~ THEN BEGIN
   COPY_EXISTING ~clswpbon.2da~ ~override~
-    // GemRB's shared table documents its columns with trailing hash-comment
-    // lines. WeiDU's 2DA helpers count those words as an extra-wide row, so
-    // remove comment-only lines before validating the live table.
-    REPLACE_TEXTUALLY ~%MNL%~ ~~
-    REPLACE_TEXTUALLY ~^[ %TAB%]*#.*$~ ~~
-    COUNT_2DA_COLS sm_clswpbon_cols
-    PATCH_IF sm_clswpbon_cols = 4 BEGIN
-      READ_2DA_ENTRIES_NOW ~sm_clswpbon~ sm_clswpbon_cols
+    // GemRB's shared table ends with human-readable hash comments. Do not use
+    // COUNT_2DA_COLS here: it can mistake those comment words for table cells.
+    // Validate the real header directly, then read the four logical columns.
+    // This keeps the source resource byte-for-byte intact except for the new
+    // Sorcerer/Monk row appended later in the component.
+    SET sm_clswpbon_cols = 0
+    PATCH_IF INDEX_BUFFER (~^[ %TAB%]*GETS_PROF_APR[ %TAB%]+UNARMED_DIVISOR[ %TAB%]+ZERO_SKILL_THAC0[ %TAB%]*~) >= 0 BEGIN
+      SET sm_clswpbon_cols = 4
+      READ_2DA_ENTRIES_NOW ~sm_clswpbon~ 4
       FOR (sm_i = 0; sm_i < sm_clswpbon; ++sm_i) BEGIN
         READ_2DA_ENTRY_FORMER ~sm_clswpbon~ sm_i 0 sm_clswpbon_class
         PATCH_IF (~%sm_clswpbon_class%~ STRING_EQUAL_CASE ~MONK~) BEGIN

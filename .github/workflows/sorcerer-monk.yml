@@ -75,6 +75,8 @@ jobs:
         run: python sorcerer-monk/tests/weidu_profs_smoke.py weidu
       - name: Real WeiDU live Monk combat bonus smoke tests
         run: python sorcerer-monk/tests/weidu_clswpbon_smoke.py weidu
+      - name: Real WeiDU CLSWPBON comment preservation smoke test
+        run: python sorcerer-monk/tests/weidu_clswpbon_comments_smoke.py weidu
       - name: Real WeiDU modern Monk skill smoke tests
         run: python sorcerer-monk/tests/weidu_modern_monk_skills_smoke.py weidu
       - name: Real WeiDU sibling exclusion smoke tests
