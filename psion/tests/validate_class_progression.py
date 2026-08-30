@@ -29,13 +29,10 @@ def main() -> None:
     for fragment in (
         "COPY_EXISTING ~xplevel.2da~ ~override~",
         "COUNT_2DA_COLS ps_xp_cols",
-        "COUNT_2DA_ROWS ps_xp_cols ps_xp_rows",
         "SET ps_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)",
         "READ_ASCII ps_mage_start ps_mage_row",
         "REPLACE_TEXTUALLY ~^MAGE[ %TAB%]+~ ~~",
         "OUTER_SPRINT ps_xp_values ~ %ps_values%~",
-        "FOR (ps_col = 21; ps_col < ps_xp_cols; ++ps_col)",
-        "SET_2DA_ENTRY ps_row ps_col ps_xp_cols ~2147483647~",
     ):
         assert fragment in progression, fragment
 
@@ -81,7 +78,9 @@ def main() -> None:
         "COPY_EXISTING ~abclasrq.2da~ ~override~",
         "PATCH_IF ps_abclasrq_cols = 7",
         "COPY_EXISTING ~xpcap.2da~ ~override~",
-        "OUTER_SET ps_xpcap_value = ps_cap",
+        "OUTER_SET ps_level20_xp_cap = 3750000",
+        "ACTION_IF ps_xpcap_value > ps_level20_xp_cap",
+        "OUTER_SET ps_xpcap_value = ps_level20_xp_cap",
         "could not locate the MAGE cap in XPCAP.2DA",
     ):
         assert fragment in class_common, fragment
@@ -172,7 +171,7 @@ def main() -> None:
         'restricted_items = {',
         'legal_items = {',
         '(319, 2, 0, 5, 2)',
-        'expected_xp = xp_rows["MAGE"][:20] + ["2147483647"] * max(0, len(xp_columns) - 20)',
+        'xp_rows.get(discipline) == xp_rows["MAGE"]',
         '20 - (level // 2)',
         'assert xp_rows["MAGE"][8] == "135000"',
         'lore_rows.get(discipline) == ["5"]',
@@ -185,7 +184,7 @@ def main() -> None:
     assert expected[19] == 10
     assert expected[-1] == 0
 
-    print("Psion capped XP, THAC0, saves, Lore, weapon, chargen, and item usability validation passed.")
+    print("Psion XP cap, THAC0, saves, Lore, weapon, chargen, and item usability validation passed.")
 
 
 if __name__ == "__main__":
