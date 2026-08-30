@@ -39,6 +39,7 @@ AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --output ".cipher-le
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
+INCLUDE ~cipher/lib/reaping-knives.tpa~
 INCLUDE ~cipher/lib/item-usability.tpa~
 
 BEGIN ~Cipher late item compatibility patch~
