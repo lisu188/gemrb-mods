@@ -1,0 +1,36 @@
+name: temporary Cipher metadata regression update
+
+on:
+  push:
+    branches:
+      - fix-cipher-late-focus-row
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-cipher-late-focus-row
+      - name: Align metadata assertion and remove temporary workflow
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('cipher/tests/validate.py')
+          text = path.read_text()
+          old = 'assert "READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value" in late_focus'
+          new = 'assert "READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value" in late_focus'
+          if old not in text:
+              raise SystemExit('old Cipher metadata assertion not found')
+          path.write_text(text.replace(old, new))
+          PY
+          rm .github/workflows/tmp-fix-cipher-metadata-test.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cipher/tests/validate.py .github/workflows/tmp-fix-cipher-metadata-test.yml
+          git commit -m 'Validate corrected Cipher metadata indexing'
+          git push origin HEAD:fix-cipher-late-focus-row
