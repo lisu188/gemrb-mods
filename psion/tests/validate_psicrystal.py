@@ -56,10 +56,15 @@ def main():
     psionics.is_psion = lambda actor: actor in (1, 2)
     psionics.manifester_level = lambda actor: levels[actor]
 
+    ie_spells = types.ModuleType("ie_spells")
+    ie_spells.LS_MEMO = 8
+
     old_gemrb = sys.modules.get("GemRB")
     old_psionics = sys.modules.get("Psionics")
+    old_ie_spells = sys.modules.get("ie_spells")
     sys.modules["GemRB"] = gemrb
     sys.modules["Psionics"] = psionics
+    sys.modules["ie_spells"] = ie_spells
     for name in ("PersistentState", "InnateCharges", "Selectors", "Transactions"):
         sys.modules.pop(name, None)
     try:
@@ -105,6 +110,10 @@ def main():
             sys.modules.pop("Psionics", None)
         else:
             sys.modules["Psionics"] = old_psionics
+        if old_ie_spells is None:
+            sys.modules.pop("ie_spells", None)
+        else:
+            sys.modules["ie_spells"] = old_ie_spells
 
 
 if __name__ == "__main__":
