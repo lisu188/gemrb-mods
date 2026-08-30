@@ -37,6 +37,13 @@ BUT_ONLY
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 
+// Persist the exact numeric opcode-326 target row for later compatibility
+// components. Component 0 is the authority because it creates CIPHER_HOSTILE;
+// consumers should not need to reverse-engineer generated SPL resources or
+// reinterpret SPLPROT row-label semantics.
+COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~
+  SET_2DA_ENTRY 0 1 2 ~%ci_hostile_splprot%~
+
 // Every setter owns one permanent ScriptingState effect. Before installing the
 // next state it removes every previous CIFS<n> parent resource. Timing mode 9
 // keeps the current Focus state in the actor effect queue, so normal CRE
