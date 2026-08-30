@@ -48,3 +48,10 @@ INCLUDE ~psion/lib/class-common.tpa~
 INCLUDE ~psion/lib/item-usability.tpa~
 INCLUDE ~psion/lib/class-startup.tpa~
 INCLUDE ~psion/lib/class-skills.tpa~
+
+BEGIN ~Psion late item compatibility patch~
+DESIGNATED 100
+REQUIRE_COMPONENT ~psion/setup-psion.tp2~ ~0~ ~Install the main Psion component first.~
+INCLUDE ~common/weidu/spell-functions.tpa~
+INCLUDE ~psion/lib/class-detect.tpa~
+INCLUDE ~psion/lib/item-usability.tpa~
