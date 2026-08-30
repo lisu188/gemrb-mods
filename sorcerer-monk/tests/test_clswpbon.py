@@ -6,9 +6,11 @@ TP2 = (Path(__file__).resolve().parents[1] / "setup-sorcerer-monk.tp2").read_tex
 
 
 class CombatBonusTests(unittest.TestCase):
-    def test_live_monk_row_is_scanned(self):
-        self.assertIn("REPLACE_TEXTUALLY ~^[ %TAB%]*#.*$~ ~~", TP2)
-        self.assertIn("READ_2DA_ENTRIES_NOW ~sm_clswpbon~ sm_clswpbon_cols", TP2)
+    def test_live_monk_row_is_scanned_without_rewriting_comments(self):
+        self.assertNotIn("REPLACE_TEXTUALLY ~^[ %TAB%]*#.*$~ ~~", TP2)
+        self.assertNotIn("REPLACE_TEXTUALLY ~%MNL%~ ~~", TP2)
+        self.assertIn("INDEX_BUFFER (~^[ %TAB%]*GETS_PROF_APR", TP2)
+        self.assertIn("READ_2DA_ENTRIES_NOW ~sm_clswpbon~ 4", TP2)
         self.assertIn("STRING_EQUAL_CASE ~MONK~", TP2)
         self.assertIn("SET sm_monk_clswpbon_matches += 1", TP2)
 
