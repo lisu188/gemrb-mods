@@ -2,7 +2,7 @@
 """Dispatcher for optional GemRB class runtime modules."""
 import importlib
 
-_HANDLER_NAMES = ("Psionics", "Cipher")
+_HANDLER_NAMES = ("Psicrystal", "Psionics", "CipherSubclass", "Cipher")
 
 
 def _handlers():
@@ -11,9 +11,6 @@ def _handlers():
         try:
             result.append(importlib.import_module(name))
         except ImportError as exc:
-            # A handler that is not installed is optional. Import failures raised
-            # *by* an installed handler are configuration/runtime errors and must
-            # remain visible instead of silently disabling that class runtime.
             if getattr(exc, "name", None) == name:
                 continue
             raise
@@ -67,10 +64,6 @@ def begin_spell(spellbook, actor, raw_spell):
     handler, entry = resolve_action_entry(spellbook, actor, raw_spell)
     if not entry:
         return True
-    # Handlers may replace the selected resource through GemRB's own
-    # PrepareSpontaneousCast mechanism before ActionsWindow reads the Spell var.
-    # The transaction still receives the canonical selected resref, so resource
-    # substitutions cannot change PP/Focus cost or selector ownership.
     prepare = getattr(handler, "prepare_action_entry", None)
     if prepare:
         prepared = prepare(spellbook, actor, entry)
