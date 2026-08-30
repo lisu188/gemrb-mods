@@ -1,0 +1,36 @@
+// Reaping Knives transfers Focus through the originating spell effect rather
+// than a global weapon patch. GemRB copies SetMeleeEffect/SetRangedEffect from
+// the buffed ally into each successful weapon projectile, preserving the
+// originating Cipher as the effect source across normal CRE serialization.
+
+CREATE EFF VERSION ~V2.0~ ~CIRKHIT~
+  WRITE_LONG 0x10 326
+  WRITE_LONG 0x14 2
+  WRITE_LONG 0x20 ci_hostile_splprot
+  WRITE_SHORT 0x24 1
+  WRITE_SHORT 0x2c 100
+  WRITE_ASCII 0x30 ~CIRKGAIN~ #8
+  WRITE_LONG 0x5c 2
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKGAIN~ END
+COPY_EXISTING ~CIRKGAIN.spl~ ~override~
+  // The hit EFF is executed on the struck hostile. Target 9 routes the credit
+  // back to the original Cipher and the class gate prevents non-Cipher sources
+  // from gaining Focus if another mod reuses the resource.
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 9 timing = 1 parameter2 = ci_class_splprot
+    STR_VAR resource = ~CIFSTEP~
+  END
+BUT_ONLY
+
+COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~An ally's successful melee or ranged weapon attacks against hostile creatures transfer 5 Focus to the originating Cipher for five rounds. The ally also gains +2 to hit and 20 percent weapon damage. A critical hit transfers the same 5 Focus; it is not doubled by Reaping Knives itself. Costs 50 Focus.~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 248 target = 2 resist_dispel = BIT1 timing = 0 duration = 30
+    STR_VAR resource = ~CIRKHIT~
+  END
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 249 target = 2 resist_dispel = BIT1 timing = 0 duration = 30
+    STR_VAR resource = ~CIRKHIT~
+  END
+BUT_ONLY
