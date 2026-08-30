@@ -40,6 +40,7 @@ def test_sources():
     setup = (CIPHER / "setup-cipher.tp2").read_text(encoding="utf-8")
     for required in (
         "common/weidu/spell-functions.tpa",
+        "common/weidu/class-item-usability.tpa",
         "cipher/lib/focus-item-patch.tpa",
         "cipher/lib/class.tpa",
         "cipher/lib/class-skills-fix.tpa",
@@ -50,6 +51,7 @@ def test_sources():
         "cipher/lib/focus.tpa",
         "cipher/lib/focus-core.tpa",
         "cipher/lib/critical-focus.tpa",
+        "cipher/lib/item-usability.tpa",
     ):
         assert required in setup
     assert "psion/lib/spell-functions.tpa" not in setup
@@ -75,9 +77,6 @@ def test_sources():
     assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
-    assert "cifmeta.2da" in focus
-    assert "CLASS_SPLPROT" in focus
-    assert "HOSTILE_SPLPROT" in focus
     assert "WRITE_SHORT ci_new_effect 326" in focus_item_patch
     assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus_item_patch
     assert "WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot" in focus_item_patch
@@ -85,7 +84,9 @@ def test_sources():
     assert "STRING_EQUAL_CASE ~CIFGAIN~" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
-    assert "READ_2DA_ENTRY 1 0 ci_meta_cols ci_hostile_splprot" in late_focus
+    assert "COPY_EXISTING ~CIFCRIT.spl~" in late_focus
+    assert "READ_LONG (ci_late_effect + 0x08) ci_late_hostile_value" in late_focus
+    assert "OUTER_SET ci_hostile_splprot = ci_late_hostile_value" in late_focus
     assert "opcode = 282" in focus
     assert "opcode = 321" in focus
     assert "opcode = 326" in focus
@@ -96,6 +97,18 @@ def test_sources():
     assert "ci_attack_type = 2" in focus_item_patch
     assert "ci_attack_type = 3" in focus_item_patch
     assert "ci_equipping_index" in focus_item_patch
+
+    shared_usability = (ROOT / "common" / "weidu" / "class-item-usability.tpa").read_text(encoding="utf-8")
+    assert "GEMRB_ADD_CLASS_ITEM_RESTRICTION" in shared_usability
+    assert "opcode = 319" in shared_usability
+    assert "parameter1 = class_id" in shared_usability
+    assert "parameter2 = 5" in shared_usability
+
+    item_usability = (CIPHER / "lib" / "item-usability.tpa").read_text(encoding="utf-8")
+    assert "ci_item_type = 0x02" in item_usability
+    assert "STRING_EQUAL_CASE ~2A~" in item_usability
+    assert "ci_item_type = 0x0c" in item_usability
+    assert "GEMRB_ADD_CLASS_ITEM_RESTRICTION" in item_usability
 
     focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
     assert "CIFS4" in focus_core
