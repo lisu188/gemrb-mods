@@ -13,6 +13,10 @@ OFFENSE_BY_DISCIPLINE = {
 }
 DEFENSE = ("PS1IARM", "PS1FSCR", "PS2TSHD", "PS3DANG", "PS4IFOR", "PS6DBUF", "PS7RDOP")
 MOBILITY = ("PS1BRST", "PS3HUST", "PS4DDOR", "PS5TELE", "PS7EJNT", "PS9TCIR")
+SELF_TARGET = frozenset(DEFENSE + MOBILITY + (
+    "PS1ACON", "PS9TCRE",
+    "PS2BIOF", "PS5ADBD", "PS7FISS", "PS9GMET",
+))
 
 
 def initialize(actor, refill=True):
@@ -64,17 +68,23 @@ def choose_power(actor, role="offense"):
     return _best_legal(actor, OFFENSE_BY_DISCIPLINE.get(Psionics.discipline(actor), ()))
 
 
+def target_for_power(actor, resref, target=None):
+    key = str(resref or "").upper()
+    if key in SELF_TARGET or target is None:
+        return actor
+    return target
+
+
 def manifest(actor, resref, target=None):
     key = str(resref or "").upper()
     info = Psionics.power_info(key)
     if not info or info.get("selector", False) or not legal_power(actor, key):
         return False
-    if target is None:
-        target = actor
+    recipient = target_for_power(actor, key, target)
     resource = exact_dc_resource(actor, key)
     current = Psionics.ensure_pool(actor)
     try:
-        GemRB.ApplySpell(target, resource, actor)
+        GemRB.ApplySpell(recipient, resource, actor)
     except Exception as error:
         GemRB.Log(2, "PsionAI", "manifestation failed: %s" % error)
         return False
