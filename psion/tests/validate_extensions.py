@@ -74,6 +74,14 @@ def main():
     assert "parameter2 = 5 power = 1" in equipment
     assert "SetPlayerStat" not in equipment
 
+    equipment_doc = (PSION / "docs/equipment.md").read_text(encoding="utf-8")
+    for index in range(1, 7):
+        assert f"`PSIITM{index:02d}`" in equipment_doc
+    for heading in ("Target tier", "Balance rationale", "Availability"):
+        assert heading in equipment_doc
+    assert "unplaced by design" in equipment_doc
+    assert "canonical runtime state setters" in equipment_doc
+
     fidelity = (PSION / "lib/high-tier-fidelity.tpa").read_text(encoding="utf-8")
     assert "PSFISS01" in fidelity
     assert "opcode = 67" in fidelity
@@ -81,6 +89,10 @@ def main():
     matrix = (PSION / "docs/high-tier-fidelity.md").read_text(encoding="utf-8")
     for level in (6, 7, 8, 9):
         assert f"| {level} |" in matrix
+    for heading in ("Gameplay value", "Engine feasibility", "Runtime complexity", "Priority"):
+        assert heading in matrix
+    assert "## Resource-growth budget" in matrix
+    assert "## Next ranked slices" in matrix
 
     print("Psion extension validation passed")
 
