@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~1.3.0~
+VERSION ~1.4.0~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -9,7 +9,6 @@ DESIGNATED 0
 REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @1
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 
-// Rules and runtime metadata.
 COPY ~psion/tables/psionpool.2da~ ~override/psionpool.2da~
 COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
@@ -29,10 +28,6 @@ COPY ~psion/tables/ps2swcr.2da~ ~override/ps2swcr.2da~
 COPY ~psion/tables/ps2aaff.2da~ ~override/ps2aaff.2da~
 COPY ~psion/tables/mxpsion.2da~ ~override/mxpsion.2da~
 
-// Player-selected powers through class level 20 plus level-1 utility actions.
-// Every discipline follows PSIONKNOWN.2DA; runtime filters choices to legal
-// general/discipline powers and already-known powers count against the allowance.
-// Center Mind is reusable; bonus-feat and skill selectors use runtime credits.
 COPY ~psion/tables/clabpsee.2da~ ~override/clabpsee.2da~
 COPY ~psion/tables/clabpsha.2da~ ~override/clabpsha.2da~
 COPY ~psion/tables/clabpkin.2da~ ~override/clabpkin.2da~
@@ -44,19 +39,13 @@ INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/powers.tpa~
 INCLUDE ~psion/lib/psicrystal.tpa~
 
-// Selector choices use harmless proxy SPLs so choosing a power to learn never
-// manifests the real power for free. The proxies retain the real SPL UI metadata.
-AT_NOW ~python3 "psion/tools/generate_learning_proxies.py" --override "override" --output ".psion-learn-build"~
+AT_NOW ~python "psion/tools/generate_learning_proxies.py" --override "override" --output ".psion-learn-build"~
 COPY ~.psion-learn-build~ ~override~
-AT_NOW ~python3 "psion/tools/generate_learning_proxies.py" --output ".psion-learn-build" --cleanup~
+AT_NOW ~python "psion/tools/generate_learning_proxies.py" --output ".psion-learn-build" --cleanup~
 
-// The power resources are authored against the guaranteed INT 15 minimum.
-// Build internal copies for every other BG-family ability modifier that alter
-// only save-bearing effects. WeiDU then owns the copies normally, so uninstall
-// removes/restores them like any other installed resource.
-AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --override "override" --output ".psion-dc-build"~
+AT_NOW ~python "psion/tools/generate_dc_variants.py" --override "override" --output ".psion-dc-build"~
 COPY ~.psion-dc-build~ ~override~
-AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --output ".psion-dc-build" --cleanup~
+AT_NOW ~python "psion/tools/generate_dc_variants.py" --output ".psion-dc-build" --cleanup~
 
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
@@ -75,3 +64,10 @@ INCLUDE ~common/weidu/spell-functions.tpa~
 INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/item-usability.tpa~
+
+BEGIN ~Psion discipline equipment~
+DESIGNATED 200
+REQUIRE_COMPONENT ~psion/setup-psion.tp2~ ~0~ ~Install the main Psion component first.~
+INCLUDE ~common/weidu/spell-functions.tpa~
+INCLUDE ~psion/lib/class-detect.tpa~
+INCLUDE ~psion/lib/equipment.tpa~
