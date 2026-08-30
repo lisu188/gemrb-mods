@@ -31,10 +31,10 @@ INCLUDE ~cipher/lib/combat-fidelity.tpa~
 
 // Generate selector entries only after every power-specific patch has run, so
 // their name/description/icon metadata mirrors the final installed CI* resource.
-// The proxies keep no live effects, so choosing one cannot manifest the power.
-AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --override "override" --output ".cipher-learn-build"~
+// The proxies keep no live effects or hostile-cast flags.
+AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --override "override" --output ".cipher-learn-build"~
 COPY ~.cipher-learn-build~ ~override~
-AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
+AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
 
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~

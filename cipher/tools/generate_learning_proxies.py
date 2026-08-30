@@ -7,6 +7,8 @@ import argparse
 import shutil
 import struct
 
+SELECTOR_SAFE_FLAGS = (1 << 14) | (1 << 25)
+
 
 def rows(path: Path) -> list[tuple[str, str]]:
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -34,9 +36,9 @@ def neutralize(source: bytes) -> bytes:
     if header_count < 1 or header_offset + 0x28 > len(data):
         raise ValueError("learning proxy source has no complete ability")
 
-    # Preserve the source spell header plus first ability icon so the selector
-    # displays the real power. Live counts/targeting are neutralized; old
-    # headers and effects become unreferenced trailing bytes.
+    # Preserve UI metadata, but never preserve hostile-cast semantics from the
+    # real power. Learning a power must not break sanctuary/invisibility.
+    struct.pack_into("<I", data, 0x18, SELECTOR_SAFE_FLAGS)
     struct.pack_into("<H", data, 0x68, 1)
     struct.pack_into("<H", data, 0x6E, 0)
     struct.pack_into("<H", data, 0x70, 0)

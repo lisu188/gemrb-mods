@@ -7,6 +7,8 @@ import argparse
 import shutil
 import struct
 
+SELECTOR_SAFE_FLAGS = (1 << 14) | (1 << 25)
+
 
 def rows(path: Path) -> list[tuple[str, str]]:
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -34,9 +36,10 @@ def neutralize(source: bytes) -> bytes:
     if header_count < 1 or header_offset + 0x28 > len(data):
         raise ValueError("learning proxy source has no complete ability")
 
-    # The proxy keeps the source spell header and first ability icon, so the
-    # selector shows the real power's name/description/art. Only live counts and
-    # targeting are changed; old headers/effects become unreferenced trailing data.
+    # Preserve UI metadata, but make the proxy selector-safe as well as effect-free.
+    # Hostile parent flags must not leak into the self-cast learning action: doing
+    # so can break sanctuary/invisibility or trigger other hostile-cast handling.
+    struct.pack_into("<I", data, 0x18, SELECTOR_SAFE_FLAGS)
     struct.pack_into("<H", data, 0x68, 1)
     struct.pack_into("<H", data, 0x6E, 0)
     struct.pack_into("<H", data, 0x70, 0)
