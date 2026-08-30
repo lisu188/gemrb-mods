@@ -13,6 +13,7 @@ spec.loader.exec_module(mod)
 def fake_spl():
     data = bytearray(0x72 + 0x28 + 0x30)
     data[:8] = b"SPL V1  "
+    struct.pack_into("<I", data, 0x18, (1 << 9) | (1 << 10) | (1 << 14) | (1 << 25))
     struct.pack_into("<I", data, 0x64, 0x72)
     struct.pack_into("<H", data, 0x68, 1)
     struct.pack_into("<I", data, 0x6A, 0x72 + 0x28)
@@ -29,7 +30,9 @@ def main():
     assert picks[0][1] == "PXL0001" and picks[-1][1] == "PXL0085"
     source = fake_spl()
     proxy = mod.neutralize(source)
-    assert proxy[:0x64] == source[:0x64]
+    assert proxy[:0x18] == source[:0x18]
+    assert proxy[0x1C:0x64] == source[0x1C:0x64]
+    assert struct.unpack_from("<I", proxy, 0x18)[0] == mod.SELECTOR_SAFE_FLAGS
     assert struct.unpack_from("<H", proxy, 0x68)[0] == 1
     assert struct.unpack_from("<H", proxy, 0x70)[0] == 0
     header = struct.unpack_from("<I", proxy, 0x64)[0]
@@ -45,7 +48,8 @@ def main():
         pick = base / "pick.2da"
         pick.write_text("2DA V1.0\n****\n        ResRef Type\nPS1ERAY PXL0001 3\n", encoding="utf-8")
         assert mod.build(override, output, pick) == 1
-        assert (output / "PXL0001.spl").exists()
+        built = (output / "PXL0001.spl").read_bytes()
+        assert struct.unpack_from("<I", built, 0x18)[0] == mod.SELECTOR_SAFE_FLAGS
     print("Psion selectable-power proxy validation passed")
 
 
