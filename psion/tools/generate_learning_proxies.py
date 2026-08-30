@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 """Build harmless PXL* selector proxies for Psion power learning."""
 from __future__ import annotations
+
 from pathlib import Path
 import argparse
 import shutil
 import struct
 
 
-def rows(path: Path):
+def rows(path: Path) -> list[tuple[str, str]]:
     lines = path.read_text(encoding="utf-8").splitlines()
     if len(lines) < 3 or lines[0].strip().upper() != "2DA V1.0":
         raise ValueError(f"not a 2DA table: {path}")
-    result = []
+    result: list[tuple[str, str]] = []
     for line in lines[3:]:
         stripped = line.strip()
         if not stripped or stripped.startswith(("#", "//")):
-  continue
+            continue
         fields = stripped.split()
         if len(fields) < 3:
-  raise ValueError(f"malformed PSPICK row: {line}")
+            raise ValueError(f"malformed PSPICK row: {line}")
         result.append((fields[0].upper(), fields[1].upper()))
     return result
 
 
 def neutralize(source: bytes) -> bytes:
+    """Preserve UI metadata while making the first ability a zero-effect self action."""
     data = bytearray(source)
     if len(data) < 0x72 or bytes(data[:8]) != b"SPL V1  ":
         raise ValueError("expected an SPL V1 resource")
@@ -31,9 +33,10 @@ def neutralize(source: bytes) -> bytes:
     header_count = struct.unpack_from("<H", data, 0x68)[0]
     if header_count < 1 or header_offset + 0x28 > len(data):
         raise ValueError("learning proxy source has no complete ability")
-    # Keep the first ability solely for its icon, but make it an immediate
-    # self-targeted, zero-effect action. Old headers/effects remain inert
-    # trailing bytes because both live counts are reduced to one/zero.
+
+    # The proxy keeps the source spell header and first ability icon, so the
+    # selector shows the real power's name/description/art. Only live counts and
+    # targeting are changed; old headers/effects become unreferenced trailing data.
     struct.pack_into("<H", data, 0x68, 1)
     struct.pack_into("<H", data, 0x6E, 0)
     struct.pack_into("<H", data, 0x70, 0)
@@ -53,23 +56,23 @@ def neutralize(source: bytes) -> bytes:
 def build(override: Path, output: Path, pick: Path) -> int:
     shutil.rmtree(output, ignore_errors=True)
     output.mkdir(parents=True)
-    seen = set()
+    seen: set[str] = set()
     count = 0
     for power, proxy in rows(pick):
         if proxy in seen:
-  raise ValueError(f"duplicate learning proxy: {proxy}")
+            raise ValueError(f"duplicate learning proxy: {proxy}")
         seen.add(proxy)
         source = override / f"{power}.SPL"
         if not source.exists():
-  source = override / f"{power}.spl"
+            source = override / f"{power}.spl"
         if not source.exists():
-  raise FileNotFoundError(f"missing Psion power {power}.SPL")
+            raise FileNotFoundError(f"missing Psion power {power}.SPL")
         (output / f"{proxy}.spl").write_bytes(neutralize(source.read_bytes()))
         count += 1
     return count
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--override", type=Path, default=Path("override"))
     parser.add_argument("--output", type=Path, default=Path(".psion-learn-build"))
