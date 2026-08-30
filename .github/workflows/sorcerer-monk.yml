@@ -21,6 +21,16 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m unittest discover -s sorcerer-monk/tests -p "test_*.py"
+      - name: Validate current GemRB runtime contract
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/core/Scriptable/Actor.cpp -o /tmp/Actor.cpp
+          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/GUICommon.py -o /tmp/GUICommon.py
+          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/LUCommon.py -o /tmp/LUCommon.py
+          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/LevelUp.py -o /tmp/LevelUp.py
+          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/Spellbook.py -o /tmp/Spellbook.py
+          python sorcerer-monk/tests/validate_gemrb_runtime_contract.py /tmp/Actor.cpp /tmp/GUICommon.py /tmp/LUCommon.py
+          python sorcerer-monk/tests/validate_gemrb_hla_contract.py /tmp/LevelUp.py
+          python sorcerer-monk/tests/validate_gemrb_spell_levelup_contract.py /tmp/LevelUp.py /tmp/Spellbook.py
       - name: Install WeiDU 251
         run: |
           asset_url="$(curl -fsSL https://api.github.com/repos/WeiDUorg/weidu/releases/tags/v251.00 | python -c 'import json, sys; assets = json.load(sys.stdin)["assets"]; print(next(asset["browser_download_url"] for asset in assets if "linux" in asset["name"].lower()))')"
