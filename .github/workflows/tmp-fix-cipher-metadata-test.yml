@@ -1,0 +1,46 @@
+name: temporary Cipher metadata test fix
+
+on:
+  push:
+    branches:
+      - fix-cipher-late-focus-row
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-cipher-late-focus-row
+      - name: Align static metadata assertions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('cipher/tests/validate.py')
+          text = p.read_text()
+          old = '    assert "SET_2DA_ENTRY 0 1 2 ~%ci_hostile_splprot%~" in focus\n'
+          new = '    assert "REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~" in focus\n'
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          old = '''    assert "READ_2DA_ENTRY 0 0 ci_focus_metadata_cols" in late_focus
+              assert "READ_2DA_ENTRY 0 1 ci_focus_metadata_cols" in late_focus
+              assert "STRING_EQUAL_CASE ~HOSTILE~" in late_focus
+          '''
+          new = '''    assert "ci_focus_metadata_cols = 1" in late_focus
+              assert "ci_focus_metadata_rows = 1" in late_focus
+              assert "READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_value" in late_focus
+          '''
+          assert text.count(old) == 1
+          p.write_text(text.replace(old, new, 1))
+          PY
+          python cipher/tests/validate.py
+      - name: Commit test update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cipher/tests/validate.py
+          git commit -m 'Validate one-column Cipher Focus metadata'
+          git push
