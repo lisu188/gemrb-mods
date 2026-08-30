@@ -28,13 +28,35 @@ def test_tables():
         assert unlock == expected_unlocks[tier]
         assert cost == expected_costs[tier]
 
+    known_header, known = read_2da(CIPHER / "tables" / "cipherknown.2da")
+    assert known_header == ["KNOWN", "MAX_TIER"]
+    assert len(known) == 30
+    assert known["1"] == ["1", "1"]
+    assert known["10"] == ["5", "5"]
+    assert known["19"] == ["9", "9"]
+    assert known["30"] == ["9", "9"]
+    previous_known = previous_tier = 0
+    for level in range(1, 31):
+        current_known, current_tier = map(int, known[str(level)])
+        assert current_known >= previous_known
+        assert current_tier >= previous_tier
+        previous_known, previous_tier = current_known, current_tier
+
+    pick_header, picks = read_2da(CIPHER / "tables" / "cipick.2da")
+    assert pick_header == ["ResRef", "Type"]
+    assert list(picks) == list(powers)
+    assert len({values[0] for values in picks.values()}) == 18
+    for index, (power, values) in enumerate(picks.items(), 1):
+        assert values == [f"CIL{index:04d}", "3"], (power, values)
+
     metadata_header, metadata = read_2da(CIPHER / "tables" / "cipherfocus.2da")
     assert metadata_header == ["VALUE"]
     assert metadata == {"HOSTILE": ["0"]}
 
     clab = (CIPHER / "tables" / "clabciph.2da").read_text(encoding="utf-8")
     for resref in powers:
-        assert f"GA_{resref}" in clab
+        assert f"GA_{resref}" not in clab
+    assert clab.count("GA_CILRN") == 1
     assert "AP_CIFCORE" in clab
     assert "AP_CIFSW15" in clab
     assert "AP_CIFSW20" in clab
@@ -50,6 +72,7 @@ def test_sources():
         "cipher/lib/class-skills-fix.tpa",
         "cipher/lib/class-thac0-fix.tpa",
         "cipher/lib/powers.tpa",
+        "cipher/lib/power-learning.tpa",
         "cipher/lib/power-thac0-fix.tpa",
         "cipher/lib/soul-whip-fix.tpa",
         "cipher/lib/focus.tpa",
@@ -61,6 +84,10 @@ def test_sources():
     assert "psion/lib/spell-functions.tpa" not in setup
     assert "override/mxcipher.2da" in setup
     assert "override/mxpsion.2da" not in setup
+    assert "cipherknown.2da" in setup
+    assert "cipick.2da" in setup
+    assert "generate_learning_proxies.py" in setup
+    assert "VERSION ~0.2.0~" in setup
 
     class_rules = (CIPHER / "lib" / "class.tpa").read_text(encoding="utf-8")
     assert "SET ci_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)" in class_rules
@@ -68,10 +95,25 @@ def test_sources():
     assert "OUTER_SPRINT ci_xp_values ~ %ci_values%~" in class_rules
 
     runtime = (CIPHER / "guiscripts" / "Cipher.py").read_text(encoding="utf-8")
-    assert "import Transactions" in runtime
-    assert "import InnateCharges" in runtime
-    assert "Transactions.begin" in runtime
-    assert "InnateCharges.refresh" in runtime
+    for fragment in (
+        "import Transactions",
+        "import InnateCharges",
+        "import Selectors",
+        "from ie_spells import LS_MEMO",
+        'POWER_SELECTOR_RESOURCE = "CILRN"',
+        "def power_learning_limits(actor):",
+        "def available_power_choices(actor):",
+        "def filter_spellinfo(actor, resrefs):",
+        "Selectors.resolve_temporary",
+        "Transactions.begin",
+        "InnateCharges.refresh",
+    ):
+        assert fragment in runtime, fragment
+
+    learning = (CIPHER / "lib" / "power-learning.tpa").read_text(encoding="utf-8")
+    assert "ci_resref = ~CILRN~" in learning
+    assert "opcode = 214" in learning
+    assert "resource = ~CIPICK~" in learning
 
     focus = (CIPHER / "lib" / "focus.tpa").read_text(encoding="utf-8")
     focus_item_patch = (CIPHER / "lib" / "focus-item-patch.tpa").read_text(encoding="utf-8")
@@ -161,41 +203,93 @@ def test_sources():
 def load_runtime():
     state = {34: 10, 165: 4}
     applied = []
+    known_innates = [
+        {"SpellResRef": "CI1WHSP"},
+        {"SpellResRef": "CI2MBND"},
+        {"SpellResRef": "CI3PUPP"},
+        {"SpellResRef": "CI4PBLK"},
+    ]
+    memorized_innates = [dict(spell, Flags=1) for spell in known_innates]
+
+    table_files = {
+        "cipherpowers": "cipherpowers.2da",
+        "cipherknown": "cipherknown.2da",
+        "cipick": "cipick.2da",
+    }
 
     class Table:
+        def __init__(self, name):
+            self.header, self.data = read_2da(CIPHER / "tables" / table_files[name])
+            self.names = list(self.data)
+
         def GetValue(self, row, column):
-            _, powers = read_2da(CIPHER / "tables" / "cipherpowers.2da")
-            index = {"TIER": 0, "UNLOCK": 1, "COST": 2}[column]
-            return powers[row][index]
+            return self.data[str(row)][self.header.index(column)]
+
+        def GetRowCount(self):
+            return len(self.names)
+
+        def GetRowName(self, index):
+            return self.names[index]
 
     def apply_spell(actor, resref, caster=None):
         applied.append((actor, resref, caster))
         if resref.startswith("CIFS"):
             state[165] = int(resref[4:])
 
+    def learn_spell(actor, resref, flags=0, *args):
+        key = str(resref).upper()
+        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates):
+            return 1
+        known_innates.append({"SpellResRef": key})
+        if int(flags) & 8:
+            memorized_innates.append({"SpellResRef": key, "Flags": 1})
+        return 0
+
+    def unmemorize(actor, spell_type, level, index):
+        memorized_innates.pop(index)
+        return True
+
+    def memorize(actor, spell_type, level, known_index, usable):
+        memorized_innates.append({
+            "SpellResRef": known_innates[known_index]["SpellResRef"],
+            "Flags": 1 if usable else 0,
+        })
+        return True
+
     gemrb = types.ModuleType("GemRB")
     gemrb.GetPlayerStat = lambda actor, stat, *args: state.get(stat, 0)
     gemrb.ApplySpell = apply_spell
-    gemrb.LoadTable = lambda name, *args: Table()
+    gemrb.LoadTable = lambda name, *args: Table(str(name).lower())
     gemrb.DisplayString = lambda *args: None
     gemrb.Log = lambda *args: None
-    gemrb.GetKnownSpellsCount = lambda *args: 0
-    gemrb.GetMemorizedSpellsCount = lambda *args: 0
+    gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
+    gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[index])
+    gemrb.GetMemorizedSpellsCount = lambda actor, spell_type, level, real: len(memorized_innates)
+    gemrb.GetMemorizedSpell = lambda actor, spell_type, level, index: dict(memorized_innates[index])
+    gemrb.LearnSpell = learn_spell
+    gemrb.UnmemorizeSpell = unmemorize
+    gemrb.MemorizeSpell = memorize
+    gemrb.GetSpelldata = lambda actor: []
     sys.modules["GemRB"] = gemrb
 
     gui_common = types.ModuleType("GUICommon")
     gui_common.GetClassRowName = lambda actor: "CIPHER"
     sys.modules["GUICommon"] = gui_common
 
+    ie_spells = types.ModuleType("ie_spells")
+    ie_spells.LS_MEMO = 8
+    sys.modules["ie_spells"] = ie_spells
+
     sys.modules.pop("InnateCharges", None)
+    sys.modules.pop("Selectors", None)
     spec = importlib.util.spec_from_file_location("cipher_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module, state, applied
+    return module, state, applied, known_innates, memorized_innates
 
 
 def test_runtime():
-    runtime, state, applied = load_runtime()
+    runtime, state, applied, known_innates, _ = load_runtime()
     runtime.cancel_pending()
     assert runtime.maximum_focus(1) == 70
     assert runtime.current_focus(1) == 20
@@ -211,15 +305,52 @@ def test_runtime():
     assert runtime.current_focus(1) == 10
     assert applied[-1] == (1, "CIFS2", 1)
     assert not runtime.can_manifest(1, "CI2MBND")
+
+    # A migrated level-10 Cipher with four old fixed powers has one choice under
+    # the new five-power cap. Restore grants the selector without revoking old powers.
     runtime.restore_party()
     assert state[165] == 4
     assert (1, "CIFS4", 1) in applied[-6:]
     assert runtime.current_focus(1) == 20
+    known_refs = {str(spell["SpellResRef"]).upper() for spell in known_innates}
+    assert runtime.POWER_SELECTOR_RESOURCE in known_refs
+    assert runtime.power_learning_limits(1) == (5, 5)
+    assert runtime.power_choices_remaining(1) == 1
+
+    _, picks = read_2da(CIPHER / "tables" / "cipick.2da")
+    tier5_proxy = picks["CI5BINS"][0]
+    tier6_proxy = picks["CI6DSIN"][0]
+    assert tier5_proxy in runtime.available_power_choices(1)
+    assert tier6_proxy not in runtime.available_power_choices(1)
+    assert runtime.action_info(runtime.POWER_SELECTOR_RESOURCE)["kind"] == "power_selector"
+    assert runtime.action_info(tier5_proxy)["kind"] == "power_choice"
+    assert runtime.begin_manifest(1, runtime.POWER_SELECTOR_RESOURCE)
+    assert runtime.begin_manifest(1, tier5_proxy)
+    assert "CI5BINS" not in {str(spell["SpellResRef"]).upper() for spell in known_innates}
+    assert runtime.begin_manifest(1, tier5_proxy)
+    assert "CI5BINS" in {str(spell["SpellResRef"]).upper() for spell in known_innates}
+    assert runtime.power_choices_remaining(1) == 0
+    assert not runtime.begin_manifest(1, runtime.POWER_SELECTOR_RESOURCE)
+
+    state[34] = 11
+    assert runtime.power_learning_limits(1) == (6, 6)
+    assert runtime.power_choices_remaining(1) == 1
+    assert tier6_proxy in runtime.available_power_choices(1)
+
+
+def test_power_learning_proxy():
+    path = CIPHER / "tests" / "validate_power_learning.py"
+    spec = importlib.util.spec_from_file_location("cipher_power_learning_validation", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.main()
 
 
 def test_python_syntax():
     py_compile.compile(str(CIPHER / "guiscripts" / "Cipher.py"), doraise=True)
     py_compile.compile(str(CIPHER / "tools" / "install_guiscripts.py"), doraise=True)
+    py_compile.compile(str(CIPHER / "tools" / "generate_learning_proxies.py"), doraise=True)
+    py_compile.compile(str(CIPHER / "tests" / "verify_power_learning.py"), doraise=True)
     for path in COMMON.glob("*.py"):
         py_compile.compile(str(path), doraise=True)
     py_compile.compile(str(ROOT / "common" / "tools" / "install_guiscripts.py"), doraise=True)
@@ -237,6 +368,7 @@ def main():
     test_tables()
     test_sources()
     test_runtime()
+    test_power_learning_proxy()
     test_python_syntax()
     test_shared_gui_lifecycle()
     print("Cipher validation passed")
