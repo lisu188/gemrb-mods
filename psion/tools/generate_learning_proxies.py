@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build harmless PXL* selector proxies for Psion power learning."""
+"""Build harmless PXL* selector proxies for safe Psion power learning."""
 from __future__ import annotations
 
 from pathlib import Path
