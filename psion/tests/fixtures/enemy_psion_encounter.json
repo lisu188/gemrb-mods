@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "actor": 2001,
+  "target": 3001,
+  "discipline": "SEER",
+  "manifester_level": 5,
+  "intelligence_modifier": 7,
+  "starting_pp": 20,
+  "roles": {
+    "offense": "PS3EBLT",
+    "defense": "PS1IARM",
+    "mobility": "PS1BRST"
+  },
+  "manifestation": {
+    "power": "PS3EBLT",
+    "cost": 5,
+    "expected_dc_resource": "PS3EBLT7",
+    "expected_remaining_pp": 15
+  },
+  "save_reload": {
+    "expected_remaining_pp": 15,
+    "expected_focus": true,
+    "expected_discipline": "SEER"
+  }
+}
