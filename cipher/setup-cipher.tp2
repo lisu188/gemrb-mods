@@ -15,6 +15,7 @@ COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
 COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 
 INCLUDE ~common/weidu/spell-functions.tpa~
+INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~cipher/lib/focus-item-patch.tpa~
 INCLUDE ~cipher/lib/class.tpa~
 INCLUDE ~cipher/lib/class-skills-fix.tpa~
@@ -25,9 +26,16 @@ INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
+INCLUDE ~cipher/lib/item-usability.tpa~
 
 BEGIN ~Cipher late item compatibility patch~
 DESIGNATED 100
 REQUIRE_COMPONENT ~cipher/setup-cipher.tp2~ ~0~ ~Install the main Cipher component first.~
+OUTER_SET ci_class_id = IDS_OF_SYMBOL (~class~ ~CIPHER~)
+ACTION_IF ci_class_id < 0 THEN BEGIN
+  FAIL ~The Cipher late item patch could not recover the CIPHER class ID.~
+END
+INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~cipher/lib/focus-item-patch.tpa~
 INCLUDE ~cipher/lib/focus-items-late.tpa~
+INCLUDE ~cipher/lib/item-usability.tpa~
