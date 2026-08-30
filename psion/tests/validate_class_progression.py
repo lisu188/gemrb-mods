@@ -22,6 +22,7 @@ def main() -> None:
     class_layout = (ROOT / "lib" / "class-layout.tpa").read_text(encoding="utf-8")
     item_usability = (ROOT / "lib" / "item-usability.tpa").read_text(encoding="utf-8")
     spell_helpers = (COMMON / "weidu" / "spell-functions.tpa").read_text(encoding="utf-8")
+    item_helper = (COMMON / "weidu" / "class-item-usability.tpa").read_text(encoding="utf-8")
     setup = (ROOT / "setup-psion.tp2").read_text(encoding="utf-8")
     fixture = (ROOT / "tests" / "make_weidu_fixture.py").read_text(encoding="utf-8")
     lifecycle = (ROOT / "tests" / "validate_weidu_install.sh").read_text(encoding="utf-8")
@@ -102,7 +103,13 @@ def main() -> None:
     assert "DEFINE_PATCH_FUNCTION ~ADD_ITEM_EQEFFECT~" in spell_helpers
     assert "ITM V1" in spell_helpers
     for fragment in (
-        "DEFINE_PATCH_FUNCTION PSION_ADD_CLASS_RESTRICTION",
+        "DEFINE_PATCH_FUNCTION GEMRB_ADD_CLASS_ITEM_RESTRICTION",
+        "LPF ADD_ITEM_EQEFFECT",
+        "opcode = 319",
+        "parameter2 = 5",
+    ):
+        assert fragment in item_helper, fragment
+    for fragment in (
         "COPY_EXISTING_REGEXP GLOB ~.*\\.itm~ ~override~",
         "READ_SHORT 0x1c ps_item_type",
         "READ_LONG 0x1e ps_item_usability",
@@ -119,14 +126,14 @@ def main() -> None:
         "ps_item_proficiency = 0x6a",
         "ps_item_proficiency = 0x6b",
         "ps_item_proficiency = 0x73",
-        "ps_has_restriction = 0",
+        "ps_item_restrict_psion = 0",
     ):
         assert fragment in item_usability, fragment
     for variable in (
         "ps_seer_id", "ps_shaper_id", "ps_kineticist_id",
         "ps_egoist_id", "ps_nomad_id", "ps_telepath_id",
     ):
-        assert f"LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = {variable} END" in item_usability
+        assert f"LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = {variable} END" in item_usability
 
     saves_pos = setup.index("INCLUDE ~psion/lib/class-saves.tpa~")
     layout_pos = setup.index("INCLUDE ~psion/lib/class-layout.tpa~")

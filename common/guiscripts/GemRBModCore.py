@@ -67,6 +67,17 @@ def begin_spell(spellbook, actor, raw_spell):
     handler, entry = resolve_action_entry(spellbook, actor, raw_spell)
     if not entry:
         return True
+    # Handlers may replace the selected resource through GemRB's own
+    # PrepareSpontaneousCast mechanism before ActionsWindow reads the Spell var.
+    # The transaction still receives the canonical selected resref, so resource
+    # substitutions cannot change PP/Focus cost or selector ownership.
+    prepare = getattr(handler, "prepare_action_entry", None)
+    if prepare:
+        prepared = prepare(spellbook, actor, entry)
+        if prepared is False:
+            return False
+        if prepared:
+            entry = prepared
     return bool(handler.begin_manifest(actor, entry["SpellResRef"]))
 
 

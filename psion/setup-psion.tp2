@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~1.1.0~
+VERSION ~1.2.0~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 
@@ -40,6 +40,15 @@ COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
 
 INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/powers.tpa~
+
+// The power resources are authored against the guaranteed INT 15 minimum.
+// Build internal copies for every other BG-family ability modifier that alter
+// only save-bearing effects. WeiDU then owns the copies normally, so uninstall
+// removes/restores them like any other installed resource.
+AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --override "override" --output ".psion-dc-build"~
+COPY ~.psion-dc-build~ ~override~
+AT_NOW ~python3 "psion/tools/generate_dc_variants.py" --output ".psion-dc-build" --cleanup~
+
 INCLUDE ~psion/lib/class-detect.tpa~
 INCLUDE ~psion/lib/class-strings.tpa~
 INCLUDE ~psion/lib/class-saves.tpa~
