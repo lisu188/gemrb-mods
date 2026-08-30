@@ -1,0 +1,43 @@
+name: temporary Cipher direct metadata test
+
+on:
+  push:
+    branches:
+      - fix-cipher-late-focus-row
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-cipher-late-focus-row
+      - name: Align direct metadata assertions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('cipher/tests/validate.py')
+          text = p.read_text()
+          old = '''    assert "ci_focus_metadata_cols = 1" in late_focus
+              assert "ci_focus_metadata_rows = 1" in late_focus
+              assert "READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_value" in late_focus
+              assert "ci_focus_metadata_valid != 1" in late_focus
+          '''
+          new = '''    assert "READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value" in late_focus
+              assert "OUTER_SET ci_hostile_splprot = ci_focus_metadata_value" in late_focus
+              assert "ci_hostile_splprot < 0" in late_focus
+          '''
+          assert text.count(old) == 1, text.count(old)
+          p.write_text(text.replace(old, new, 1))
+          PY
+          python cipher/tests/validate.py
+      - name: Commit static test update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cipher/tests/validate.py
+          git commit -m 'Validate direct Cipher Focus metadata read'
+          git push
