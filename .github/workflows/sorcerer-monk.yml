@@ -11,6 +11,8 @@ on:
       - sorcerer-monk/**
       - sorcerer-monk-cleric/**
       - .github/workflows/sorcerer-monk.yml
+  schedule:
+    - cron: "17 5 * * *"
 
 jobs:
   test:
