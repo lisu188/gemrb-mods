@@ -2,41 +2,21 @@
 // component. The shared patch function is idempotent, so existing attack
 // headers remain unchanged.
 //
-// CIFCRIT is an authoritative installed resource: its ApplyEffectsList effect
-// stores the allocated CIPHER_HOSTILE SPLPROT row numerically. Recovering the
-// row from that effect avoids string-to-integer conversion and stays correct if
-// another mod appended SPLPROT rows after the main Cipher component.
+// Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
+// creates that row. WeiDU's READ_2DA_ENTRY considers only rows meeting the
+// required column count: with two required columns the 2DA signature is row 0
+// and HOSTILE is row 1, with its numeric value in column 1.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
-COPY_EXISTING ~CIFCRIT.spl~ ~override~
-  READ_LONG 0x64 ci_late_header_offset
-  READ_SHORT 0x68 ci_late_header_count
-  READ_LONG 0x6a ci_late_effect_offset
-
-  FOR (ci_late_header_index = 0; ci_late_header_index < ci_late_header_count; ++ci_late_header_index) BEGIN
-    SET ci_late_header = ci_late_header_offset + (ci_late_header_index * 0x28)
-    READ_SHORT (ci_late_header + 0x1e) ci_late_effect_count
-    READ_SHORT (ci_late_header + 0x20) ci_late_first_effect
-
-    FOR (ci_late_effect_index = 0; ci_late_effect_index < ci_late_effect_count; ++ci_late_effect_index) BEGIN
-      SET ci_late_effect = ci_late_effect_offset + ((ci_late_first_effect + ci_late_effect_index) * 0x30)
-      READ_SHORT ci_late_effect ci_late_opcode
-      READ_BYTE (ci_late_effect + 0x02) ci_late_target
-      READ_ASCII (ci_late_effect + 0x14) ci_late_resource (8)
-      PATCH_IF (ci_late_opcode = 326)
-        AND (ci_late_target = 2)
-        AND (~%ci_late_resource%~ STRING_EQUAL_CASE ~CIFGAIN~) BEGIN
-        READ_LONG (ci_late_effect + 0x08) ci_late_hostile_value
-        INNER_ACTION BEGIN
-          OUTER_SET ci_hostile_splprot = ci_late_hostile_value
-        END
-      END
-    END
+COPY_EXISTING ~cipherfocus.2da~ ~override~
+  READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value
+  INNER_ACTION BEGIN
+    OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~
   END
 BUT_ONLY
 
-ACTION_IF ci_hostile_splprot < 0 THEN BEGIN
-  FAIL ~The Cipher late item patch could not recover the CIPHER_HOSTILE SPLPROT row from CIFCRIT.SPL.~
+ACTION_IF ci_hostile_splprot <= 0 THEN BEGIN
+  FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIPHERFOCUS.2DA.~
 END
 
 COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
