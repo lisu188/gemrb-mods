@@ -1,0 +1,99 @@
+DEFINE_ACTION_FUNCTION psion_prepare_equipment_item
+INT_VAR
+  ps_item_class = 0
+  ps_item_price = 1
+STR_VAR
+  ps_item_source = ~~
+  ps_item_resref = ~~
+  ps_item_name = ~~
+  ps_item_description = ~~
+BEGIN
+  ACTION_IF NOT FILE_EXISTS_IN_GAME ~%ps_item_source%.ITM~ THEN BEGIN
+    FAIL ~Psion equipment requires %ps_item_source%.ITM from the target campaign.~
+  END
+  COPY_EXISTING ~%ps_item_source%.ITM~ ~override/%ps_item_resref%.ITM~
+    SAY NAME1 ~%ps_item_name%~
+    SAY NAME2 ~%ps_item_name%~
+    SAY UNIDENTIFIED_DESC ~%ps_item_description%~
+    SAY DESC ~%ps_item_description%~
+    WRITE_LONG 0x34 ps_item_price
+    WRITE_SHORT 0x68 0
+    WRITE_SHORT 0x70 0
+    LPF ADD_ITEM_EQEFFECT
+      INT_VAR opcode = 319 target = 2 timing = 2 parameter1 = ps_item_class parameter2 = 5 power = 1
+    END
+  BUT_ONLY
+END
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_seer_id ps_item_price = 6000
+  STR_VAR
+    ps_item_source = ~AMUL01~
+    ps_item_resref = ~PSIITM01~
+    ps_item_name = ~Seer's Lens~
+    ps_item_description = ~This faceted crystal focuses clairsentient thought. Only a Seer can use it. While equipped, Intelligence increases by 1, naturally increasing Psion bonus power points and Intelligence-based save difficulty.~
+END
+COPY_EXISTING ~PSIITM01.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 19 target = 1 timing = 2 parameter1 = 1 END
+BUT_ONLY
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_shaper_id ps_item_price = 7500
+  STR_VAR
+    ps_item_source = ~BRAC01~
+    ps_item_resref = ~PSIITM02~
+    ps_item_name = ~Ectoplasmic Bracers~
+    ps_item_description = ~Dense ectoplasm hardens around these bracers when worn by a Shaper. Only a Shaper can use them. They improve Armor Class by 1.~
+END
+COPY_EXISTING ~PSIITM02.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 0 target = 1 timing = 2 parameter1 = (0 - 1) END
+BUT_ONLY
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_kineticist_id ps_item_price = 8000
+  STR_VAR
+    ps_item_source = ~RING01~
+    ps_item_resref = ~PSIITM03~
+    ps_item_name = ~Conductive Ring~
+    ps_item_description = ~A Kineticist can bleed dangerous electrical charge into this ring's psionically aligned lattice. Only a Kineticist can use it. It grants 20 percent electrical resistance.~
+END
+COPY_EXISTING ~PSIITM03.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 29 target = 1 timing = 2 parameter1 = 20 END
+BUT_ONLY
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_egoist_id ps_item_price = 8500
+  STR_VAR
+    ps_item_source = ~BELT01~
+    ps_item_resref = ~PSIITM04~
+    ps_item_name = ~Mutable Girdle~
+    ps_item_description = ~The weave of this girdle responds to psychometabolic discipline. Only an Egoist can use it. Constitution increases by 1 while equipped.~
+END
+COPY_EXISTING ~PSIITM04.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 10 target = 1 timing = 2 parameter1 = 1 END
+BUT_ONLY
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_nomad_id ps_item_price = 10000
+  STR_VAR
+    ps_item_source = ~BOOT01~
+    ps_item_resref = ~PSIITM05~
+    ps_item_name = ~Nomad's Striders~
+    ps_item_description = ~These boots bend the distance of every stride for a trained Nomad. Only a Nomad can use them. Movement speed increases by 15 percent.~
+END
+COPY_EXISTING ~PSIITM05.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 126 target = 1 timing = 2 parameter1 = 115 parameter2 = 2 END
+BUT_ONLY
+
+LAF psion_prepare_equipment_item
+  INT_VAR ps_item_class = ps_telepath_id ps_item_price = 12000
+  STR_VAR
+    ps_item_source = ~HELM01~
+    ps_item_resref = ~PSIITM06~
+    ps_item_name = ~Whispering Circlet~
+    ps_item_description = ~A Telepath wearing this circlet hears hostile intent before it fully forms. Only a Telepath can use it. Intelligence increases by 1 and saving throws vs spells improve by 1.~
+END
+COPY_EXISTING ~PSIITM06.ITM~ ~override~
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 19 target = 1 timing = 2 parameter1 = 1 END
+  LPF ADD_ITEM_EQEFFECT INT_VAR opcode = 37 target = 1 timing = 2 parameter1 = (0 - 1) END
+BUT_ONLY
