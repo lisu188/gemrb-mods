@@ -254,7 +254,19 @@ def _active_handlers(folder):
     return list(folder.glob(".gemrbmodcore.*.active"))
 
 
-def install_handler(guiscripts, handler, runtime_source):
+def _dependency_names(marker):
+    if not marker.is_file():
+        return []
+    result = []
+    for line in marker.read_text(encoding="utf-8").splitlines():
+        if line.startswith("dependency="):
+            name = line.partition("=")[2].strip()
+            if name and Path(name).name == name:
+                result.append(name)
+    return result
+
+
+def install_handler(guiscripts, handler, runtime_source, runtime_dependencies=()):
     targets = [
         (guiscripts / "ActionsWindow.py", "actions"),
         (guiscripts / "Spellbook.py", "spellbook"),
@@ -272,17 +284,32 @@ def install_handler(guiscripts, handler, runtime_source):
     runtime_target = guiscripts / (handler + ".py")
     _migrate_legacy_runtime_ownership(runtime_target, handler)
 
+    dependencies = [Path(path) for path in runtime_dependencies]
+    for dependency in dependencies:
+        if not dependency.is_file():
+            raise RuntimeError(f"Missing runtime dependency {dependency}")
+        if dependency.name == runtime_target.name:
+            raise RuntimeError(f"Runtime dependency duplicates {runtime_target.name}")
+
     common_source = Path(__file__).resolve().parents[1] / "guiscripts"
     for name in COMMON_MODULES:
         install_owned_file(common_source / name, guiscripts / name, "core")
     install_owned_file(runtime_source, runtime_target, handler)
+    for dependency in dependencies:
+        install_owned_file(dependency, guiscripts / dependency.name, handler)
     for path, rendered in prepared:
         apply_patch(path, rendered)
-    _marker(guiscripts, handler).write_text("active\n", encoding="utf-8")
+
+    marker_lines = ["active"] + [f"dependency={dependency.name}" for dependency in dependencies]
+    _marker(guiscripts, handler).write_text("\n".join(marker_lines) + "\n", encoding="utf-8")
 
 
 def uninstall_handler(guiscripts, handler):
-    _marker(guiscripts, handler).unlink(missing_ok=True)
+    marker = _marker(guiscripts, handler)
+    dependencies = _dependency_names(marker)
+    marker.unlink(missing_ok=True)
+    for name in dependencies:
+        remove_owned_file(guiscripts / name, handler)
     remove_owned_file(guiscripts / (handler + ".py"), handler)
     if _active_handlers(guiscripts):
         return
@@ -292,7 +319,7 @@ def uninstall_handler(guiscripts, handler):
         remove_owned_file(guiscripts / name, "core")
 
 
-def main_for_handler(handler, runtime_source):
+def main_for_handler(handler, runtime_source, runtime_dependencies=()):
     parser = argparse.ArgumentParser()
     parser.add_argument("guiscripts", type=Path)
     parser.add_argument("--uninstall", action="store_true")
@@ -301,7 +328,12 @@ def main_for_handler(handler, runtime_source):
         if args.uninstall:
             uninstall_handler(args.guiscripts, handler)
         else:
-            install_handler(args.guiscripts, handler, Path(runtime_source))
+            install_handler(
+                args.guiscripts,
+                handler,
+                Path(runtime_source),
+                tuple(Path(path) for path in runtime_dependencies),
+            )
     except (OSError, RuntimeError, ValueError) as error:
         raise SystemExit(str(error)) from error
 
