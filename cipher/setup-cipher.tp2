@@ -1,6 +1,6 @@
 BACKUP ~cipher/backup~
 AUTHOR ~lisu188~
-VERSION ~0.3.0~
+VERSION ~0.2.0~
 AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~cipher/tra/english.tra~
