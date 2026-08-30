@@ -3,24 +3,18 @@
 // headers remain unchanged.
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
-// creates that row. WeiDU excludes the row label from COUNT_2DA_COLS, so this
-// private table is deliberately validated as one data column and one data row.
+// creates that row. CIPHERFOCUS.2DA is a private one-cell contract, so read the
+// single data entry directly instead of depending on COUNT_2DA_* row semantics.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
-OUTER_SET ci_focus_metadata_valid = 0
 COPY_EXISTING ~cipherfocus.2da~ ~override~
-  COUNT_2DA_COLS ci_focus_metadata_cols
-  COUNT_2DA_ROWS ci_focus_metadata_cols ci_focus_metadata_rows
-  PATCH_IF (ci_focus_metadata_cols = 1) AND (ci_focus_metadata_rows = 1) BEGIN
-    READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_value
-    INNER_ACTION BEGIN
-      OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
-      OUTER_SET ci_focus_metadata_valid = 1
-    END
+  READ_2DA_ENTRY 0 0 1 ci_focus_metadata_value
+  INNER_ACTION BEGIN
+    OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
   END
 BUT_ONLY
 
-ACTION_IF (ci_focus_metadata_valid != 1) OR (ci_hostile_splprot < 0) THEN BEGIN
+ACTION_IF ci_hostile_splprot < 0 THEN BEGIN
   FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIPHERFOCUS.2DA.~
 END
 
