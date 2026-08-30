@@ -3,9 +3,9 @@
 // headers remain unchanged.
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
-// creates that row. Requiring two columns filters out the default/header lines;
-// the 2DA signature is then row 0 and HOSTILE is row 1, with its numeric value
-// in column 1.
+// creates that row. WeiDU's READ_2DA_ENTRY considers only rows meeting the
+// required column count: with two required columns the 2DA signature is row 0
+// and HOSTILE is row 1, with its numeric value in column 1.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
 COPY_EXISTING ~cipherfocus.2da~ ~override~
