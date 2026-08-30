@@ -75,6 +75,21 @@ def verify_detonate(override: Path) -> None:
     assert burst[0]["sides"] == 6
 
 
+def verify_amplified_wave(override: Path) -> None:
+    effects = features(locate(override, "CI6AWAV"))
+    assert any(effect["opcode"] == 12 and effect["dice"] == 8 and effect["sides"] == 6 for effect in effects)
+    assert not any(effect["opcode"] == 175 for effect in effects)
+    prone = [effect for effect in effects if effect["opcode"] == 39]
+    assert len(prone) == 1
+    assert prone[0]["target"] == 2
+    assert prone[0]["parameter1"] == 0
+    assert prone[0]["parameter2"] == 1
+    assert prone[0]["timing"] == 0
+    assert prone[0]["duration"] == 6
+    assert prone[0]["save"] == 2
+    assert prone[0]["special"] == 1
+
+
 def verify_soul_collapse(override: Path) -> None:
     effects = features(locate(override, "CI9SCOL"))
     watcher = effects[0]
@@ -103,6 +118,7 @@ def main() -> None:
     game = Path(sys.argv[1])
     override = game / "override"
     verify_detonate(override)
+    verify_amplified_wave(override)
     verify_soul_collapse(override)
     print("Cipher high-tier installed-resource validation passed")
 

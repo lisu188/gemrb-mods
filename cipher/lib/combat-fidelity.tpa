@@ -1,0 +1,29 @@
+// Combat fidelity patches that refine portable BG-family approximations.
+
+// Amplified Wave used State:Hold as a generic immobilization. Current GemRB's
+// State:Helpless implementation sets SS_PRONE when the SPL effect's Special
+// field is nonzero, drives the sleep/get-up animation, and keeps the actor in
+// the normal target list. Parameter2=1 prevents damage from waking the target
+// before the one-round knockdown expires.
+COPY_EXISTING ~CI6AWAV.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~A telekinetic wave deals 8d6 crushing damage in an area and knocks failed saves prone for one round. Costs 35 Focus.~
+  READ_LONG 0x64 ci_wave_header_offset
+  READ_LONG 0x6a ci_wave_effect_offset
+  READ_SHORT (ci_wave_header_offset + 0x1e) ci_wave_effect_count
+  READ_SHORT (ci_wave_header_offset + 0x20) ci_wave_first_effect
+  SET ci_wave_replaced = 0
+  FOR (ci_wave_index = 0; ci_wave_index < ci_wave_effect_count; ++ci_wave_index) BEGIN
+    SET ci_wave_effect = ci_wave_effect_offset + ((ci_wave_first_effect + ci_wave_index) * 0x30)
+    READ_SHORT ci_wave_effect ci_wave_opcode
+    PATCH_IF ci_wave_opcode = 175 BEGIN
+      WRITE_SHORT ci_wave_effect 39
+      WRITE_LONG (ci_wave_effect + 0x04) 0
+      WRITE_LONG (ci_wave_effect + 0x08) 1
+      WRITE_LONG (ci_wave_effect + 0x2c) 1
+      SET ci_wave_replaced = ci_wave_replaced + 1
+    END
+  END
+  PATCH_IF ci_wave_replaced != 1 BEGIN
+    PATCH_FAIL ~Cipher expected exactly one Amplified Wave hold effect to replace with prone.~
+  END
+BUT_ONLY
