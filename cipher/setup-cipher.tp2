@@ -5,6 +5,9 @@ AUTO_EVAL_STRINGS
 
 LANGUAGE ~English~ ~english~ ~cipher/tra/english.tra~
 
+// Pure function definition shared by the main and late compatibility components.
+INCLUDE ~cipher/lib/focus-item-patch.tpa~
+
 BEGIN @0
 DESIGNATED 0
 REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @1
