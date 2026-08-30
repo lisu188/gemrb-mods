@@ -3,22 +3,19 @@
 // headers remain unchanged.
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
-// creates that row. Reading this tiny metadata table avoids depending on the
-// generated CIFCRIT.SPL layout or on ambiguous SPLPROT row-name indexing.
+// creates that row. WeiDU excludes the row label from COUNT_2DA_COLS, so this
+// private table is deliberately validated as one data column and one data row.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
 OUTER_SET ci_focus_metadata_valid = 0
 COPY_EXISTING ~cipherfocus.2da~ ~override~
   COUNT_2DA_COLS ci_focus_metadata_cols
   COUNT_2DA_ROWS ci_focus_metadata_cols ci_focus_metadata_rows
-  PATCH_IF (ci_focus_metadata_cols = 2) AND (ci_focus_metadata_rows = 1) BEGIN
-    READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_name
-    READ_2DA_ENTRY 0 1 ci_focus_metadata_cols ci_focus_metadata_value
-    PATCH_IF ~%ci_focus_metadata_name%~ STRING_EQUAL_CASE ~HOSTILE~ BEGIN
-      INNER_ACTION BEGIN
-        OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
-        OUTER_SET ci_focus_metadata_valid = 1
-      END
+  PATCH_IF (ci_focus_metadata_cols = 1) AND (ci_focus_metadata_rows = 1) BEGIN
+    READ_2DA_ENTRY 0 0 ci_focus_metadata_cols ci_focus_metadata_value
+    INNER_ACTION BEGIN
+      OUTER_SET ci_hostile_splprot = ci_focus_metadata_value
+      OUTER_SET ci_focus_metadata_valid = 1
     END
   END
 BUT_ONLY
