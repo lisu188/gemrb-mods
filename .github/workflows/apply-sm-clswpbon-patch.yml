@@ -101,8 +101,6 @@ jobs:
             END
           END
           '''
-          old = '\n'.join(line[10:] if line.startswith('          ') else line for line in old.splitlines()) + '\n'
-          new = '\n'.join(line[10:] if line.startswith('          ') else line for line in new.splitlines()) + '\n'
           if old not in text:
               raise SystemExit('expected CLSWPBON block not found')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
