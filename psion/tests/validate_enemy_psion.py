@@ -56,7 +56,7 @@ def main():
     psionics._dc_canonical_resref = lambda resref: str(resref).upper()
     psionics._dc_modifier = lambda who: int(fixture["intelligence_modifier"])
     psionics._dc_variant_resref = lambda resref, modifier: resref + str(modifier)
-    psionics._dc_resource_exists = lambda resref: resref.endswith(str(fixture["intelligence_modifier"]))
+    psionics._dc_resource_exists = lambda resref: resref == fixture["manifestation"]["expected_dc_resource"]
 
     def write_pool(who, value):
         state["pool"] = max(0, int(value))
@@ -77,10 +77,22 @@ def main():
         for role, expected in fixture["roles"].items():
             assert module.choose_power(actor, role) == expected
 
+        state["pool"] = fixture["starting_pp"]
+        applied.clear()
+        assert module.act(actor, target, "defense") == fixture["roles"]["defense"]
+        assert applied == [(actor, fixture["roles"]["defense"], actor)]
+
+        state["pool"] = fixture["starting_pp"]
+        applied.clear()
+        assert module.act(actor, target, "mobility") == fixture["roles"]["mobility"]
+        assert applied == [(actor, fixture["roles"]["mobility"], actor)]
+
+        state["pool"] = fixture["starting_pp"]
+        applied.clear()
         manifestation = fixture["manifestation"]
         power = manifestation["power"]
         assert module.exact_dc_resource(actor, power) == manifestation["expected_dc_resource"]
-        assert module.manifest(actor, power, target)
+        assert module.act(actor, target, "offense") == power
         assert applied == [(target, manifestation["expected_dc_resource"], actor)]
         assert state["pool"] == manifestation["expected_remaining_pp"]
 
