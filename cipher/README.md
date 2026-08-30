@@ -26,11 +26,13 @@ Critical hits use GemRB's `CastSpellOnCriticalHit` actor hook. The installer exp
 | VIII | 16 | 50 | Reaping Knives, Soul Cascade |
 | IX | 19 | 60 | Absolute Domination, Soul Collapse |
 
-The initial implementation grants a fixed pair of powers at each tier. A power-selection UI is intentionally deferred until the core resource loop is stable.
+Cipher 0.2 replaces the fixed pair of powers at each tier with a reusable **Learn Cipher Power** selector. A new powers-known credit is earned whenever a new tier unlocks (levels 1, 3, 5, 7, 9, 11, 13, 16, and 19), for nine chosen powers by level 19. Each credit may be spent on any currently unlocked power rather than being forced into the newest tier. This reduced cadence is intentional: the current catalogue contains only two powers per tier, so the much denser original Pillars progression would exhaust the available catalogue too quickly.
+
+The selector uses harmless `CIL*` proxy resources that preserve the chosen power's name, description, and icon but contain no live effects. The runtime converts the confirmed proxy into a permanently learned real `CI*` power. Canceling the selector does not consume a choice and learning never spends Focus or manifests the selected power. Existing saves from Cipher 0.1 keep all powers they already know; migration never removes powers, and an old character only receives the selector if its number of known powers is below the new level-based allowance.
 
 ## Installation
 
-Cipher now uses the repository's shared GemRB runtime infrastructure. A distributable/install tree must therefore contain both `cipher/` and its sibling `common/` directory:
+Cipher uses the repository's shared GemRB runtime infrastructure. A distributable/install tree must therefore contain both `cipher/` and its sibling `common/` directory:
 
 ```text
 game/
@@ -52,7 +54,7 @@ Then patch the GemRB GUI scripts:
 python cipher/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts
 ```
 
-The GUI hook is required. It makes Cipher innate powers reusable, enforces Focus costs with reserve/commit semantics, restores 20 Focus on rest, and routes Cipher quickslots through the same transaction path.
+The GUI hook is required. It makes Cipher innate powers reusable, enforces Focus costs with reserve/commit semantics, restores 20 Focus on rest, filters the power-learning selector, and routes Cipher quickslots through the same transaction path.
 
 Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in either order. Removing one handler leaves the shared GUI layer active for the other; the original GemRB scripts and shared runtime files are restored only after the last active handler is removed.
 
@@ -68,15 +70,15 @@ Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in ei
 - class ID allocation follows the exact `CLSKILLS.2DA` row index and is restricted to GemRB's sub-32 custom-class range; the installer validates class-table, `CLASS.IDS`, and positional `QSLOTS.2DA` identity before mutation
 - combined versus split class tables are detected from `CLASSES.2DA`, including native EE 9/10-column `CLASTEXT.2DA` layouts even when `HPCLASS.2DA` is present
 
-## Deliberate approximations in 0.1
+## Deliberate approximations in 0.2
 
 - Soul Whip uses +1/+2/+3 weapon damage rather than PoE-style percentage weapon scaling because the supported BG-family effect model does not expose a portable weapon-source-only percentage modifier.
+- The reduced 18-power catalogue grants one powers-known credit per tier unlock rather than reproducing Pillars' denser level-by-level power acquisition.
 - Reaping Knives grants its ally attack/damage enhancement but does not yet transfer Focus from that ally's attacks.
 - Amplified Wave represents knockdown with a one-round hold.
 - Detonate implements the direct psychic damage but not the on-death secondary explosion.
 - Soul Collapse omits the conditional execute below 20% HP.
-- Power choice on level-up, Beguiler, Soul Blade, and Ascendant are not part of this first core implementation.
-- Armor/shield usability has not yet been narrowed to the final light-armor/no-shield design; the class table and Focus mechanics are implemented first to avoid global item-usability changes before playtesting.
+- Beguiler, Soul Blade, and Ascendant are not implemented.
 
 ## Validation
 
@@ -92,4 +94,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, and WeiDU rollback of patched items and IDS resources.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, item restrictions, and WeiDU rollback of patched items and IDS resources.

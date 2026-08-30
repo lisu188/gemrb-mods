@@ -34,11 +34,13 @@ uninstall() {
 verify() {
   python3 "$repo_root/cipher/tests/verify_weidu_install.py" "$game" "$layout"
   python3 "$repo_root/cipher/tests/verify_item_usability.py" "$game"
+  python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game"
 }
 
 install
 verify
 uninstall
+python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game" --uninstalled
 test "$(baseline "$game/override/CIFHIT.ITM")" = "$hit_baseline"
 test "$(baseline "$game/override/CIFBOW.ITM")" = "$bow_baseline"
 test "$(baseline "$game/override/CIFMWEAP.ITM")" = "$mweap_baseline"

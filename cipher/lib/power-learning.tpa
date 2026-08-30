@@ -1,0 +1,22 @@
+// Reusable runtime-backed Cipher power-learning selector.
+//
+// The selector is learned once at level 1. Cipher.py derives earned powers-known
+// credits and the maximum unlocked tier from CIPHERKNOWN.2DA, while CIPICK.2DA
+// supplies harmless temporary CIL* choices. Selecting a proxy permanently learns
+// its real CI* power without manifesting it or spending Focus.
+
+LAF cipher_create_power
+  INT_VAR
+    ci_tier = 1
+    ci_target = 5
+    ci_range = 0x7fff
+    ci_projectile = ci_none_projectile
+  STR_VAR
+    ci_resref = ~CILRN~
+    ci_name = ~Learn Cipher Power~
+    ci_description = ~Choose one Cipher power to learn. A new power-known choice becomes available whenever a new Cipher tier unlocks. Choices may be spent on any currently unlocked unlearned power. Selecting a power learns it permanently without manifesting it or spending Focus.~
+    ci_icon = ~spwi105~
+END
+COPY_EXISTING ~CILRN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~CIPICK~ END
+BUT_ONLY
