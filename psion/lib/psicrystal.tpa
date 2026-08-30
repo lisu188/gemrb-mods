@@ -1,0 +1,116 @@
+// Persistent psicrystal subsystem resources. Personality ownership is stored by
+// Psicrystal.py in a private save-serialized actor effect; these SPL resources
+// provide selection, one-per-rest summoning, and level-scaled passive benefits.
+// No familiar tables, familiar globals, or protagonist-only familiar opcodes are
+// modified.
+
+ACTION_IF FILE_EXISTS_IN_GAME ~PSACON01.CRE~ THEN BEGIN
+  COPY_EXISTING ~PSACON01.CRE~ ~override/PSCRYST.CRE~
+    SAY NAME1 ~Psicrystal~
+    SAY NAME2 ~Psicrystal~
+  BUT_ONLY
+END ELSE BEGIN
+  FAIL ~Psicrystal creation requires the Psion Astral Construct body PSACON01.CRE.~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRYS~
+    ps_name = ~Choose Psicrystal Personality~
+    ps_description = ~Choose the permanent personality of this Psion's psicrystal. The choice is stored on this actor and does not use the Infinity Engine familiar subsystem.~
+    ps_icon = ~spwi123~
+END
+COPY_EXISTING ~PXCRYS.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSCRPICK~ END
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRSM~
+    ps_name = ~Manifest Psicrystal~
+    ps_description = ~Manifest your psicrystal for five turns. This ability has one charge and is restored only after resting; death, dismissal, or separation before then does not create a free replacement.~
+    ps_icon = ~spwi123~
+END
+COPY_EXISTING ~PXCRSM.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 67 target = 1 timing = 1 duration = 300 STR_VAR resource = ~PSCRYST~ END
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRHERO~
+    ps_name = ~Heroic Psicrystal~
+    ps_description = ~A bold, forceful psicrystal. Its resonance grants a level-scaled insight bonus to melee and ranged attack rolls.~
+    ps_icon = ~sppr101~
+END
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRNIMB~
+    ps_name = ~Nimble Psicrystal~
+    ps_description = ~An alert, quick-reacting psicrystal. Its resonance grants a level-scaled Armor Class bonus.~
+    ps_icon = ~spwi305~
+END
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCROBSV~
+    ps_name = ~Observant Psicrystal~
+    ps_description = ~A watchful, analytical psicrystal. Its resonance grants a level-scaled bonus to trap detection and situational awareness.~
+    ps_icon = ~sppr115~
+END
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRRESO~
+    ps_name = ~Resolute Psicrystal~
+    ps_description = ~A stubborn, disciplined psicrystal. Its resonance grants a level-scaled bonus to all saving throws.~
+    ps_icon = ~sppr101~
+END
+
+DEFINE_ACTION_FUNCTION psion_create_psicrystal_passive
+INT_VAR
+  pc_personality = 1
+  pc_tier = 1
+STR_VAR
+  pc_resref = ~~
+  pc_name = ~~
+  pc_description = ~~
+BEGIN
+  LAF psion_create_focus_action
+    STR_VAR
+      ps_resref = ~%pc_resref%~
+      ps_name = ~%pc_name%~
+      ps_description = ~%pc_description%~
+      ps_icon = ~sppr101~
+  END
+  COPY_EXISTING ~%pc_resref%.spl~ ~override~
+    FOR (pc_old_personality = 1; pc_old_personality <= 4; ++pc_old_personality) BEGIN
+      FOR (pc_old_tier = 1; pc_old_tier <= 3; ++pc_old_tier) BEGIN
+        SPRINT pc_old_resref ~PXCRP%pc_old_personality%%pc_old_tier%~
+        LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 timing = 1 STR_VAR resource = ~%pc_old_resref%~ END
+      END
+    END
+
+    PATCH_IF pc_personality = 1 BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 54 target = 1 resist_dispel = BIT1 parameter1 = pc_tier timing = 9 END
+    END ELSE PATCH_IF pc_personality = 2 BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 0 target = 1 resist_dispel = BIT1 parameter1 = (0 - pc_tier) timing = 9 END
+    END ELSE PATCH_IF pc_personality = 3 BEGIN
+      LPF ADD_SPELL_EFFECT INT_VAR opcode = 91 target = 1 resist_dispel = BIT1 parameter1 = (pc_tier * 10) timing = 9 END
+    END ELSE BEGIN
+      FOR (pc_save_opcode = 33; pc_save_opcode <= 37; ++pc_save_opcode) BEGIN
+        LPF ADD_SPELL_EFFECT INT_VAR opcode = pc_save_opcode target = 1 resist_dispel = BIT1 parameter1 = (0 - pc_tier) timing = 9 END
+      END
+    END
+  BUT_ONLY
+END
+
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 1 pc_tier = 1 STR_VAR pc_resref = ~PXCRP11~ pc_name = ~Heroic Psicrystal Resonance I~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 1 pc_tier = 2 STR_VAR pc_resref = ~PXCRP12~ pc_name = ~Heroic Psicrystal Resonance II~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 1 pc_tier = 3 STR_VAR pc_resref = ~PXCRP13~ pc_name = ~Heroic Psicrystal Resonance III~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 2 pc_tier = 1 STR_VAR pc_resref = ~PXCRP21~ pc_name = ~Nimble Psicrystal Resonance I~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 2 pc_tier = 2 STR_VAR pc_resref = ~PXCRP22~ pc_name = ~Nimble Psicrystal Resonance II~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 2 pc_tier = 3 STR_VAR pc_resref = ~PXCRP23~ pc_name = ~Nimble Psicrystal Resonance III~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 3 pc_tier = 1 STR_VAR pc_resref = ~PXCRP31~ pc_name = ~Observant Psicrystal Resonance I~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 3 pc_tier = 2 STR_VAR pc_resref = ~PXCRP32~ pc_name = ~Observant Psicrystal Resonance II~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 3 pc_tier = 3 STR_VAR pc_resref = ~PXCRP33~ pc_name = ~Observant Psicrystal Resonance III~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 4 pc_tier = 1 STR_VAR pc_resref = ~PXCRP41~ pc_name = ~Resolute Psicrystal Resonance I~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 4 pc_tier = 2 STR_VAR pc_resref = ~PXCRP42~ pc_name = ~Resolute Psicrystal Resonance II~ pc_description = ~Internal psicrystal passive.~ END
+LAF psion_create_psicrystal_passive INT_VAR pc_personality = 4 pc_tier = 3 STR_VAR pc_resref = ~PXCRP43~ pc_name = ~Resolute Psicrystal Resonance III~ pc_description = ~Internal psicrystal passive.~ END
