@@ -53,8 +53,6 @@ def main() -> None:
     ):
         assert fragment in progression, fragment
 
-    # Saving throws clone the active Mage table, changing only rows 1 (wands)
-    # and 4 (spells) by -2 while preserving all physical-save rows exactly.
     for fragment in (
         "COPY_EXISTING ~savewiz.2da~ ~override/savepsi.2da~",
         "COUNT_2DA_COLS ps_save_cols",
@@ -67,7 +65,6 @@ def main() -> None:
     ):
         assert fragment in class_saves, fragment
 
-    # Class-common owns chargen minima, proficiency limits and the campaign cap.
     for fragment in (
         "COPY_EXISTING ~weapprof.2da~ ~override~",
         "READ_2DA_ENTRY ps_i 0 ps_weapprof_cols ps_prof_name",
@@ -81,7 +78,9 @@ def main() -> None:
         "COPY_EXISTING ~abclasrq.2da~ ~override~",
         "PATCH_IF ps_abclasrq_cols = 7",
         "COPY_EXISTING ~xpcap.2da~ ~override~",
-        "OUTER_SET ps_xpcap_value = ps_cap",
+        "OUTER_SET ps_level20_xp_cap = 3750000",
+        "ACTION_IF ps_xpcap_value > ps_level20_xp_cap",
+        "OUTER_SET ps_xpcap_value = ps_level20_xp_cap",
         "could not locate the MAGE cap in XPCAP.2DA",
     ):
         assert fragment in class_common, fragment
@@ -96,9 +95,6 @@ def main() -> None:
         assert f"APPEND ~xpcap.2da~ ~{discipline} %ps_xpcap_value%~" in class_common
         assert f"APPEND_COL ~weapprof.2da~ ~$ $ {discipline}%ps_weapprof_values%~" in class_common
 
-    # Psion class rows use the dedicated save table and neutral legacy usability.
-    # Item-local opcode 319 rules are required because the Mage/Sorcerer bit also
-    # rejects legal Psion arms.
     assert "0x40000" not in class_layout
     assert "SAVEWIZ" not in class_layout
     assert class_layout.count(" SAVEPSI 0 0 ") >= 6
@@ -106,6 +102,7 @@ def main() -> None:
     assert "DEFINE_PATCH_FUNCTION ~ADD_ITEM_EQEFFECT~" in spell_helpers
     assert "ITM V1" in spell_helpers
     for fragment in (
+        "DEFINE_PATCH_FUNCTION PSION_ADD_CLASS_RESTRICTION",
         "COPY_EXISTING_REGEXP GLOB ~.*\\.itm~ ~override~",
         "READ_SHORT 0x1c ps_item_type",
         "READ_LONG 0x1e ps_item_usability",
@@ -122,14 +119,14 @@ def main() -> None:
         "ps_item_proficiency = 0x6a",
         "ps_item_proficiency = 0x6b",
         "ps_item_proficiency = 0x73",
+        "ps_has_restriction = 0",
     ):
         assert fragment in item_usability, fragment
     for variable in (
         "ps_seer_id", "ps_shaper_id", "ps_kineticist_id",
         "ps_egoist_id", "ps_nomad_id", "ps_telepath_id",
     ):
-        fragment = f"opcode = 319 target = 2 timing = 2 parameter1 = {variable} parameter2 = 5 power = 0"
-        assert fragment in item_usability, fragment
+        assert f"LPF PSION_ADD_CLASS_RESTRICTION INT_VAR class_id = {variable} END" in item_usability
 
     saves_pos = setup.index("INCLUDE ~psion/lib/class-saves.tpa~")
     layout_pos = setup.index("INCLUDE ~psion/lib/class-layout.tpa~")
@@ -137,6 +134,9 @@ def main() -> None:
     common_pos = setup.index("INCLUDE ~psion/lib/class-common.tpa~")
     usability_pos = setup.index("INCLUDE ~psion/lib/item-usability.tpa~")
     assert saves_pos < layout_pos < progression_pos < common_pos < usability_pos
+    assert "BEGIN ~Psion late item compatibility patch~" in setup
+    assert "DESIGNATED 100" in setup
+    assert setup.count("INCLUDE ~psion/lib/item-usability.tpa~") == 2
 
     for fragment in (
         '"normalized": 20',
@@ -184,7 +184,7 @@ def main() -> None:
     assert expected[19] == 10
     assert expected[-1] == 0
 
-    print("Psion XP, THAC0, saves, Lore, weapon, chargen, cap, and item usability validation passed.")
+    print("Psion XP cap, THAC0, saves, Lore, weapon, chargen, and item usability validation passed.")
 
 
 if __name__ == "__main__":

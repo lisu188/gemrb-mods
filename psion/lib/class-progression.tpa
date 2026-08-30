@@ -2,7 +2,8 @@
 //
 // XPLEVEL uses the active game's complete MAGE row so BG1-family 20-level
 // tables, BG2/EE extended tables, and converted campaigns all inherit the
-// intended mage XP thresholds without hard-coding a table width.
+// intended mage XP thresholds without hard-coding a table width. XPCAP applies
+// the Psion-specific level-20 ceiling separately.
 //
 // THAC0 follows the Psion design's half-rate attack progression:
 //     THAC0(level) = max(0, 20 - floor(level / 2))

@@ -80,57 +80,6 @@ COPY_EXISTING ~CIFGAIN.spl~ ~override~
   END
 BUT_ONLY
 
-DEFINE_PATCH_FUNCTION CIPHER_ADD_FOCUS_HIT_EFFECT
-BEGIN
-  PATCH_IF BUFFER_LENGTH >= 0x72 BEGIN
-    READ_ASCII 0 ci_signature (8)
-    PATCH_IF ~%ci_signature%~ STRING_EQUAL_CASE ~ITM V1  ~ BEGIN
-      READ_LONG 0x64 ci_header_offset
-      READ_SHORT 0x68 ci_header_count
-      READ_LONG 0x6a ci_effect_offset
-      READ_SHORT 0x6e ci_equipping_index
-      READ_SHORT 0x70 ci_equipping_count
-
-      FOR (ci_header_index = 0; ci_header_index < ci_header_count; ++ci_header_index) BEGIN
-        SET ci_header = ci_header_offset + (ci_header_index * 0x38)
-        READ_BYTE ci_header ci_attack_type
-        READ_BYTE (ci_header + 0x02) ci_location
-        PATCH_IF (ci_location = 1)
-          AND ((ci_attack_type = 1) OR (ci_attack_type = 2) OR (ci_attack_type = 3)) BEGIN
-          READ_SHORT (ci_header + 0x1e) ci_effect_count
-          READ_SHORT (ci_header + 0x20) ci_first_effect
-          SET ci_new_index = ci_first_effect + ci_effect_count
-          SET ci_new_effect = ci_effect_offset + (ci_new_index * 0x30)
-          INSERT_BYTES ci_new_effect 0x30
-
-          // ApplyEffectsList checks the struck target against the caster using
-          // CIPHER_HOSTILE. When it matches, CIFGAIN is applied with the weapon
-          // user as the spell caster; CIFGAIN's self-targeted effects therefore
-          // advance Focus on the attacker rather than on the victim.
-          WRITE_SHORT ci_new_effect 326
-          WRITE_BYTE (ci_new_effect + 0x02) 2
-          WRITE_LONG (ci_new_effect + 0x04) 0
-          WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot
-          WRITE_BYTE (ci_new_effect + 0x0c) 1
-          WRITE_ASCIIE (ci_new_effect + 0x14) ~CIFGAIN~ #8
-          WRITE_SHORT (ci_header + 0x1e) (ci_effect_count + 1)
-
-          FOR (ci_other = ci_header_index + 1; ci_other < ci_header_count; ++ci_other) BEGIN
-            SET ci_other_header = ci_header_offset + (ci_other * 0x38)
-            READ_SHORT (ci_other_header + 0x20) ci_other_first
-            WRITE_SHORT (ci_other_header + 0x20) (ci_other_first + 1)
-          END
-
-          PATCH_IF (ci_equipping_count > 0) AND (ci_new_index <= ci_equipping_index) BEGIN
-            SET ci_equipping_index = ci_equipping_index + 1
-            WRITE_SHORT 0x6e ci_equipping_index
-          END
-        END
-      END
-    END
-  END
-END
-
 COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~
   LPF CIPHER_ADD_FOCUS_HIT_EFFECT END
 BUT_ONLY

@@ -61,9 +61,11 @@ ACTION_IF ps_abclasrq_valid != 1 THEN BEGIN
   FAIL ~The Psion mod requires the standard six-ability ABCLASRQ.2DA layout.~
 END
 
-// Preserve the campaign's active experience ceiling. BG1/TotSC-family games
-// use a much lower cap than BG2/ToB, so a hard-coded 8,000,000 row would let a
-// custom Psion advance beyond the campaign's intended limit.
+// Preserve lower campaign XP ceilings, but never allow a Psion to advance past
+// level 20. All supported BG-family Mage XP tables reach level 20 at 3,750,000
+// XP; the runtime, PP table, feats, skills, and CLAB progression intentionally
+// end there.
+OUTER_SET ps_level20_xp_cap = 3750000
 OUTER_SET ps_xpcap_found = 0
 OUTER_SET ps_xpcap_value = 0
 COPY_EXISTING ~xpcap.2da~ ~override~
@@ -76,6 +78,9 @@ COPY_EXISTING ~xpcap.2da~ ~override~
         READ_2DA_ENTRY ps_i 1 ps_xpcap_cols ps_cap
         INNER_ACTION BEGIN
           OUTER_SET ps_xpcap_value = ps_cap
+          ACTION_IF ps_xpcap_value > ps_level20_xp_cap THEN BEGIN
+            OUTER_SET ps_xpcap_value = ps_level20_xp_cap
+          END
           OUTER_SET ps_xpcap_found = 1
         END
       END

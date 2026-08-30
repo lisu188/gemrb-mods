@@ -89,6 +89,7 @@ def main() -> None:
     roll_value = {"value": 20}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
+
     def get_player_stat(actor, stat, base=0):
         source = base_stats if base else stats
         return source.get((actor, stat), 0)
@@ -200,6 +201,32 @@ def main() -> None:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        real_begin_manifest = module.begin_manifest
+        callback_counts = {}
+
+        def gui_begin_manifest(actor, resref):
+            info = module.action_info(resref)
+            transactional = bool(
+                info
+                and (
+                    info["kind"] in ("center", "feat_choice", "skill_choice")
+                    or (info["kind"] == "power" and not info.get("selector", False))
+                )
+            )
+            result = real_begin_manifest(actor, resref)
+            if not transactional:
+                return result
+            key = (actor, str(resref).upper())
+            count = callback_counts.get(key, 0) + 1
+            if not result or count >= 2:
+                callback_counts.pop(key, None)
+                module.cancel_pending(actor)
+            else:
+                callback_counts[key] = count
+            return result
+
+        module.begin_manifest = gui_begin_manifest
+
         def speed_helper_blocked():
             return any(
                 effect["Param2"] == module.SPEED_BLOCK_MARKER
@@ -240,8 +267,6 @@ def main() -> None:
         stats[(1, 239)] = 0
         assert module.ensure_pool(1) == initial_cap
 
-        # A nonempty PP reserve is required for focus. Hitting zero clears focus,
-        # and refilling PP later does not silently refocus the character.
         assert module.ensure_focus(1, True)
         assert module._write_pool_state(1, 0) == 0
         assert module.ensure_pool(1) == 0
@@ -255,7 +280,6 @@ def main() -> None:
         resolve_center_mind(module.CENTER_RESOURCE)
         assert module.is_focused(1)
 
-        # Spending the last PP through an actual manifestation also clears focus.
         module._write_pool_state(1, 1)
         module._write_focus_state(1, True)
         assert module.begin_manifest(1, "PSMT01")
@@ -281,8 +305,6 @@ def main() -> None:
         assert module.is_focused(1)
         assert len(applied_spells) == before_resolution
 
-        # Skill points use the D&D 3.5 Psion formula: (2 + INT modifier) x4 at
-        # first level, then the same ordinary allotment once for each later level.
         stats[(1, 34)] = 1
         assert module.sync_skill_points(1) == 24
         assert module.skill_points_remaining(1) == 24
@@ -326,9 +348,6 @@ def main() -> None:
         assert module.is_focused(1)
         roll_value["value"] = 20
 
-        # Accounted levels are persistent. Moving from level 1 to 5 at INT 18
-        # adds four ordinary six-point allotments. Raising base INT before level 6
-        # changes only the new level's allotment.
         stats[(1, 34)] = 5
         assert module.sync_skill_points(1) == 44
         stats[(1, 38)] = 22
@@ -338,7 +357,6 @@ def main() -> None:
         stats[(1, 38)] = 18
         base_stats[(1, 38)] = 18
 
-        # Meditation is unavailable before Concentration 7, then requires WIS 13.
         assert not module.can_select_feat(1, module.PSIONIC_MEDITATION)
         for expected_rank in range(5, 8):
             assert module.begin_manifest(1, "PXSCONC")
@@ -351,8 +369,6 @@ def main() -> None:
         assert module.can_select_feat(1, module.PSIONIC_MEDITATION)
         assert module.feat_choice_info(module.PSIONIC_MEDITATION)["rank"] == 7
 
-        # Selecting Meditation consumes one class credit and swaps the known and
-        # memorized Center action from the full-round resource to the faster one.
         assert module.bonus_feat_spent(1) == 0
         assert module.begin_manifest(1, module.PSIONIC_MEDITATION)
         assert module.feat_rank(1, module.PSIONIC_MEDITATION) == 0
@@ -365,8 +381,6 @@ def main() -> None:
         assert module.MEDITATION_CENTER_RESOURCE in memorized_refs()
         assert module._center_resource_for_actor(1) == module.MEDITATION_CENTER_RESOURCE
 
-        # Old normal-Center quickslots become stale and are rejected. The
-        # Meditation action retains the same PP, focus, and Concentration rules.
         assert module.expend_focus(1)
         assert not module.begin_manifest(1, module.CENTER_RESOURCE)
         assert module.begin_manifest(1, module.MEDITATION_CENTER_RESOURCE)
@@ -375,8 +389,6 @@ def main() -> None:
         resolve_center_mind(module.MEDITATION_CENTER_RESOURCE)
         assert module.is_focused(1)
 
-        # Reset the feat after the dedicated selection/swap regression so the
-        # inherited five-credit feat progression remains directly comparable.
         module._write_feat_rank(1, module.PSIONIC_MEDITATION, 0)
         module._write_bonus_feat_spent(1, 0)
         assert module._sync_center_action(1)
@@ -385,8 +397,6 @@ def main() -> None:
         assert module.MEDITATION_CENTER_RESOURCE not in known_refs()
         assert module.MEDITATION_CENTER_RESOURCE not in memorized_refs()
 
-        # If the reusable training selector is depleted while points and legal
-        # ranks remain, opening/reconciling the innate bar restores it.
         for spell in memorized_innates:
             if spell["SpellResRef"] == "PXSKILL":
                 spell["Flags"] = 0
@@ -493,8 +503,6 @@ def main() -> None:
         assert module.refresh_innate_charges(1) == 0
         assert next(spell for spell in memorized_innates if spell["SpellResRef"] == "PXFSEL")["Flags"] == 0
 
-        # Retain low-level affordability and type-255 regressions. The reset above
-        # means the normal Center resource is again the only legal Center action.
         stats[(1, 34)] = 3
         for parent in ("PS1ERAY", "PS1MTHR", "PS1VIGR", "PS2AAFF"):
             assert module.power_info(parent)["selector"]

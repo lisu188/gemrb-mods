@@ -6,15 +6,27 @@ _pending = {}
 
 def begin(namespace, actor, transaction, legal, commit=lambda: True):
     key = (str(namespace), actor)
-    if _pending.get(key) == transaction:
+    state = _pending.get(key)
+    if state:
+        if state["transaction"] != transaction:
+            # A different action may only replace this lifecycle after an
+            # explicit GUI/action boundary calls cancel(). This prevents a late
+            # callback from an older cast from overwriting a newer reservation.
+            return False
+        if state["committed"]:
+            return True
         if not legal():
             _pending.pop(key, None)
             return False
-        _pending.pop(key, None)
-        return bool(commit())
+        committed = bool(commit())
+        if committed:
+            state["committed"] = True
+        else:
+            _pending.pop(key, None)
+        return committed
     if not legal():
         return False
-    _pending[key] = transaction
+    _pending[key] = {"transaction": transaction, "committed": False}
     return True
 
 
