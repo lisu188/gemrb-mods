@@ -30,6 +30,8 @@ Cipher 0.2 replaces the fixed pair of powers at each tier with a reusable **Lear
 
 The selector uses harmless `CIL*` proxy resources that preserve the chosen power's name, description, and icon but contain no live effects. The runtime converts the confirmed proxy into a permanently learned real `CI*` power. Canceling the selector does not consume a choice and learning never spends Focus or manifests the selected power. Existing saves from Cipher 0.1 keep all powers they already know; migration never removes powers, and an old character only receives the selector if its number of known powers is below the new level-based allowance.
 
+Detonate installs a short-lived death watcher before its primary damage. If that damage kills the target, the original Cipher fires an 8d6 crushing soul burst around the corpse. Soul Collapse installs a one-round GemRB HP-percentage condition and executes a target that is below 20 percent of maximum hit points during that window.
+
 ## Installation
 
 Cipher uses the repository's shared GemRB runtime infrastructure. A distributable/install tree must therefore contain both `cipher/` and its sibling `common/` directory:
@@ -76,8 +78,6 @@ Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in ei
 - The reduced 18-power catalogue grants one powers-known credit per tier unlock rather than reproducing Pillars' denser level-by-level power acquisition.
 - Reaping Knives grants its ally attack/damage enhancement but does not yet transfer Focus from that ally's attacks.
 - Amplified Wave represents knockdown with a one-round hold.
-- Detonate implements the direct psychic damage but not the on-death secondary explosion.
-- Soul Collapse omits the conditional execute below 20% HP.
 - Beguiler, Soul Blade, and Ascendant are not implemented.
 
 ## Validation
@@ -94,4 +94,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, item restrictions, and WeiDU rollback of patched items and IDS resources.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Soul Collapse high-tier helper resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
