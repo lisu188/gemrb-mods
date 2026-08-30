@@ -18,16 +18,22 @@ MODS = {
         "setup": "cipher/setup-cipher.tp2",
         "handler": "Cipher",
         "runtime": "cipher/guiscripts/Cipher.py",
+        "dependencies": ("cipher/guiscripts/CipherSubclass.py",),
     },
     "psion": {
         "setup": "psion/setup-psion.tp2",
         "handler": "Psionics",
         "runtime": "psion/guiscripts/Psionics.py",
+        "dependencies": (
+            "psion/guiscripts/Psicrystal.py",
+            "psion/guiscripts/PsionAI.py",
+        ),
     },
     "sorcerer-monk": {
         "setup": "sorcerer-monk/setup-sorcerer-monk.tp2",
         "handler": None,
         "runtime": None,
+        "dependencies": (),
     },
 }
 MANIFEST = "gemrb-mods-release.json"
@@ -143,7 +149,8 @@ def install(args) -> None:
             if not handler:
                 continue
             runtime = args.game / MODS[name]["runtime"]
-            gui_installer.install_handler(args.guiscripts, handler, runtime)
+            dependencies = tuple(args.game / path for path in MODS[name]["dependencies"])
+            gui_installer.install_handler(args.guiscripts, handler, runtime, dependencies)
             gui_installed.append(name)
     except Exception:
         for name in reversed(gui_installed):
