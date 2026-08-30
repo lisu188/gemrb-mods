@@ -24,15 +24,16 @@ INCLUDE ~cipher/lib/class-skills-fix.tpa~
 INCLUDE ~cipher/lib/class-thac0-fix.tpa~
 INCLUDE ~cipher/lib/powers.tpa~
 INCLUDE ~cipher/lib/power-learning.tpa~
+INCLUDE ~cipher/lib/power-thac0-fix.tpa~
+INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 
-// Selector entries are harmless copies of the real powers. They preserve UI
-// metadata but have no live effects, so choosing a power cannot manifest it for free.
+// Generate selector entries only after every power-specific patch has run, so
+// their name/description/icon metadata mirrors the final installed CI* resource.
+// The proxies keep no live effects, so choosing one cannot manifest the power.
 AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --override "override" --output ".cipher-learn-build"~
 COPY ~.cipher-learn-build~ ~override~
 AT_NOW ~python3 "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
 
-INCLUDE ~cipher/lib/power-thac0-fix.tpa~
-INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
