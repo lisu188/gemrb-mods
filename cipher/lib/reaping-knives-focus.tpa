@@ -8,6 +8,8 @@
 OUTER_SET ci_rk_owner_state_stat = 164
 OUTER_SET ci_rk_owner_state_index = 8
 OUTER_SET ci_rk_splprot_rows = 0
+OUTER_SET ci_rk_set_melee = 248
+OUTER_SET ci_rk_set_ranged = 249
 
 COPY_EXISTING ~splprot.2da~ ~override~
   COUNT_2DA_COLS ci_rk_splprot_cols
@@ -27,12 +29,6 @@ COPY_EXISTING ~splprot.2da~ ~override~
   WRITE_ASCIIE ci_rk_splprot_offset ~%ci_rk_splprot_append%~
   INNER_ACTION BEGIN OUTER_SET ci_rk_splprot_rows = ci_rk_splprot_count END
 BUT_ONLY
-
-OUTER_SET ci_rk_set_melee = IDS_OF_SYMBOL (~opcode~ ~SetMeleeEffect~)
-OUTER_SET ci_rk_set_ranged = IDS_OF_SYMBOL (~opcode~ ~SetRangedEffect~)
-ACTION_IF (ci_rk_set_melee < 0) OR (ci_rk_set_ranged < 0) THEN BEGIN
-  FAIL ~Cipher Reaping Knives requires GemRB SetMeleeEffect and SetRangedEffect opcodes.~
-END
 
 // The ordinary CIFS<n> setters are still authoritative whenever GUI/runtime
 // code writes Focus. Make them clear any Reaping-Knives-created state parent so
