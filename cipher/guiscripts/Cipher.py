@@ -14,6 +14,7 @@ INNATE_TYPE = 2
 INNATE_LEVEL = 0
 CIPHER_CLASS = "CIPHER"
 POWER_SELECTOR_RESOURCE = "CILRN"
+REAPING_KNIVES_RESOURCE = "CI8RKNI"
 TEMPORARY_SPELLINFO_TYPE = 255
 TRANSACTION_NAMESPACE = "Cipher"
 
@@ -271,6 +272,28 @@ def resolve_power_entry(spellbook, actor, raw_spell):
             if action_info(candidate.get("SpellResRef", "")):
                 return candidate
     return None
+
+
+def prepare_action_entry(spellbook, actor, entry):
+    selected = str(entry.get("SpellResRef", "")).upper()
+    if selected != REAPING_KNIVES_RESOURCE:
+        return entry
+    if actor < 1 or actor > 6:
+        GemRB.Log(2, "Cipher", "Reaping Knives owner is outside party slots: %s" % actor)
+        return False
+    replacement = "CI8RK%d" % actor
+    try:
+        source_ref = str(entry.get("SpellResRef", "")).upper()
+        book_type = int(entry["BookType"])
+        spell_level = int(entry["SpellLevel"])
+        spell_index = GemRB.PrepareSpontaneousCast(
+            actor, source_ref, book_type, spell_level, replacement
+        )
+        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))
+        return entry
+    except Exception as error:
+        GemRB.Log(2, "Cipher", "Reaping Knives cast preparation failed: %s" % error)
+        return False
 
 
 def filter_spellinfo(actor, resrefs):
