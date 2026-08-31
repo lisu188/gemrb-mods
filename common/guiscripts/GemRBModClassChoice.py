@@ -26,6 +26,7 @@ _class_rows = []
 _button_ids = []
 _script = None
 _bg2_style = False
+_last_offset = None
 
 
 def _available_buttons(window, candidates):
@@ -62,7 +63,11 @@ def _create_scrollbar(window, button_ids, maximum):
 
 
 def redraw():
+	global _last_offset
 	offset = GemRB.GetVar(TOP_INDEX_VAR) or 0
+	page_changed = _last_offset is not None and offset != _last_offset
+	selected_class = 0 if page_changed else GemRB.GetVar("Class") or 0
+	_last_offset = offset
 	for slot, control_id in enumerate(_button_ids):
 		button = _script["ClassWindow"].GetControl(control_id)
 		row_offset = offset + slot
@@ -81,6 +86,17 @@ def redraw():
 		button.SetState(IE_GUI_BUTTON_ENABLED)
 		button.OnPress(_psion_press if class_name == PSION_CLASSES[0] else _script["ClassPress"])
 		button.SetVarAssoc("Class", row_index + 1)
+	# Rebinding radio buttons must not pick a class as a side effect. Preserve a
+	# visible selection on same-page redraws, but clear stale selections when
+	# scrolling changes which classes the buttons represent.
+	GemRB.SetVar("Class", selected_class)
+	if page_changed:
+		done_button = _script.get("DoneButton")
+		if done_button:
+			done_button.SetState(IE_GUI_BUTTON_DISABLED)
+		text_area = _script.get("TextAreaControl")
+		if text_area:
+			text_area.SetText(17242)
 
 
 def _psion_press():
@@ -102,9 +118,10 @@ def skip_spell_selection():
 
 
 def on_load(script):
-	global _class_rows, _button_ids, _script, _bg2_style
+	global _class_rows, _button_ids, _script, _bg2_style, _last_offset
 	_script = script
 	_bg2_style = "BackPress" in script
+	_last_offset = None
 	my_char = GemRB.GetVar("Slot")
 
 	GemRB.SetVar("Class", 0)

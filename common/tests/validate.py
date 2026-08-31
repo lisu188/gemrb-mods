@@ -290,13 +290,28 @@ def test_class_choice_pagination():
             name.title() for name in names[9:21]
         ]
         assert window.GetControl(choices.BG1_BUTTON_IDS[-1]).text == "Sorcerer_Monk"
+        assert variables["Class"] == 0
 
+        variables["Class"] = names.index("SORCERER_MONK") + 1
+        window.GetControl(0).SetState(defines.IE_GUI_BUTTON_ENABLED)
+        window.GetControl(13).SetText("selected class description")
         variables[choices.TOP_INDEX_VAR] = 0
-        choices.redraw()
+        scrollbar.callback()
+        assert variables["Class"] == 0
+        assert window.GetControl(0).state == defines.IE_GUI_BUTTON_DISABLED
+        assert window.GetControl(13).text == 17242
         assert [window.GetControl(control_id).text for control_id in choices.BG1_BUTTON_IDS] == [
             name.title() for name in names[:12]
         ]
         assert window.GetControl(choices.BG1_BUTTON_IDS[-1]).assoc[:2] == ("Class", 12)
+
+        variables["Class"] = 1
+        window.GetControl(0).SetState(defines.IE_GUI_BUTTON_ENABLED)
+        window.GetControl(13).SetText("visible class description")
+        choices.redraw()
+        assert variables["Class"] == 1
+        assert window.GetControl(0).state == defines.IE_GUI_BUTTON_ENABLED
+        assert window.GetControl(13).text == "visible class description"
 
         variables["Slot"] = 1
         assert choices.skip_spell_selection()
