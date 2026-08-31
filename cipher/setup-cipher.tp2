@@ -37,6 +37,7 @@ COPY ~.cipher-learn-build~ ~override~
 AT_NOW ~python "cipher/tools/generate_learning_proxies.py" --output ".cipher-learn-build" --cleanup~
 
 INCLUDE ~cipher/lib/focus.tpa~
+INCLUDE ~cipher/lib/reaping-knives-focus.tpa~
 INCLUDE ~cipher/lib/focus-core.tpa~
 INCLUDE ~cipher/lib/critical-focus.tpa~
 INCLUDE ~cipher/lib/item-usability.tpa~
