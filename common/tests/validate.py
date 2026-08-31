@@ -27,7 +27,7 @@ def test_transactions():
     assert not calls
     assert transactions.begin("X", 1, ("A", 5), lambda: True, lambda: calls.append("commit") or True)
     assert calls == ["commit"]
-    assert transactions.begin("X", 1, ("B", 2), lambda: True)
+    assert not transactions.begin("X", 1, ("B", 2), lambda: True)
     transactions.cancel("X", 1)
     assert transactions.begin("X", 1, ("B", 2), lambda: True)
     transactions.cancel("X")
@@ -149,18 +149,214 @@ def test_dispatcher_import_errors():
         core.importlib.import_module = original_import
 
 
+def test_class_choice_pagination():
+    variables = {}
+    class_name = {"value": "PSION_SEER"}
+    next_script = {"value": None}
+
+    class Control:
+        def __init__(self, control_id):
+            self.control_id = control_id
+            self.text = None
+            self.state = None
+            self.callback = None
+            self.assoc = None
+            self.frame = {"x": 10, "y": control_id * 10, "w": 100, "h": 9}
+
+        def GetFrame(self):
+            return self.frame
+
+        def SetFlags(self, *args):
+            pass
+
+        def SetState(self, state):
+            self.state = state
+
+        def SetText(self, text):
+            self.text = text
+
+        def SetSize(self, width, height):
+            self.frame["w"] = width
+            self.frame["h"] = height
+
+        def OnPress(self, callback):
+            self.callback = callback
+
+        def SetVarAssoc(self, name, value, *bounds):
+            self.assoc = (name, value, bounds)
+            variables[name] = value
+
+        def OnChange(self, callback):
+            self.callback = callback
+
+        def MakeDefault(self):
+            pass
+
+    class Window:
+        def __init__(self):
+            ids = set(range(2, 10)) | set(range(20, 24)) | {0, 10, 11, 13, 14}
+            self.controls = {control_id: Control(control_id) for control_id in ids}
+            self.modal = None
+
+        def GetControl(self, control_id):
+            return self.controls.get(control_id)
+
+        def GetFrame(self):
+            return {"x": 0, "y": 0, "w": 640, "h": 480}
+
+        def CreateScrollBar(self, control_id, frame, sprites):
+            control = self.controls[control_id] = Control(control_id)
+            control.frame = frame
+            return control
+
+        def SetEventProxy(self, control):
+            self.proxy = control
+
+        def ShowModal(self, mode):
+            self.modal = mode
+            variables["GemRBModClassTopIndex"] = 0
+
+    class Table:
+        def __init__(self, names):
+            self.names = names
+
+        def GetRowCount(self):
+            return len(self.names)
+
+        def GetRowName(self, index):
+            return self.names[index]
+
+        def GetValue(self, row, column, *args):
+            if column == "MULTI":
+                return int(row.startswith("MULTI_") or row == "SORCERER_MONK")
+            if column == "LOWER":
+                return row.title()
+            return 1
+
+    names = [f"CLASS_{index}" for index in range(20)] + ["SORCERER_MONK", "MULTI_CLASS"]
+    window = Window()
+    gemrb = types.ModuleType("GemRB")
+    gemrb.GetVar = lambda name: variables.get(name)
+    gemrb.SetVar = lambda name, value: variables.__setitem__(name, value)
+    gemrb.GetPlayerStat = lambda actor, stat: 23
+    gemrb.SetNextScript = lambda name: next_script.__setitem__("value", name)
+    gemrb.LoadWindow = lambda *args: window
+    gemrb.LoadTable = lambda *args: Table(names)
+    gemrb.Log = lambda *args: None
+
+    common_tables = types.ModuleType("CommonTables")
+    common_tables.Classes = Table(names)
+    common_tables.ClassText = Table(names)
+    gui_common = types.ModuleType("GUICommon")
+    gui_common.GetRaceRowName = lambda actor: "HUMAN"
+    gui_common.GetClassRowName = lambda class_id, mode: class_name["value"]
+    chargen = types.ModuleType("CharGenCommon")
+    chargen.back = lambda window: None
+    defines = types.ModuleType("GUIDefines")
+    for name, value in {
+        "IE_GUI_BUTTON_RADIOBUTTON": 1,
+        "IE_GUI_BUTTON_DISABLED": 2,
+        "IE_GUI_BUTTON_ENABLED": 3,
+        "OP_OR": 4,
+        "GTV_INT": 5,
+        "MODAL_SHADOW_GRAY": 6,
+    }.items():
+        setattr(defines, name, value)
+    ie_stats = types.ModuleType("ie_stats")
+    ie_stats.IE_CLASS = 7
+
+    replacements = {
+        "GemRB": gemrb,
+        "CommonTables": common_tables,
+        "GUICommon": gui_common,
+        "CharGenCommon": chargen,
+        "GUIDefines": defines,
+        "ie_stats": ie_stats,
+    }
+    old = {name: sys.modules.get(name) for name in replacements}
+    sys.modules.update(replacements)
+    try:
+        choices = load("class_choice_test", GUI / "GemRBModClassChoice.py")
+        script = {
+            "ClassPress": lambda: None,
+            "MultiClassPress": lambda: None,
+            "SpecialistPress": lambda: None,
+            "NextPress": lambda: None,
+        }
+        choices.on_load(script)
+        scrollbar = window.GetControl(choices.SCROLLBAR_ID)
+        assert scrollbar.assoc == (choices.TOP_INDEX_VAR, 9, (0, 9))
+        assert [window.GetControl(control_id).text for control_id in choices.BG1_BUTTON_IDS] == [
+            name.title() for name in names[9:21]
+        ]
+        assert window.GetControl(choices.BG1_BUTTON_IDS[-1]).text == "Sorcerer_Monk"
+        assert variables["Class"] == 0
+
+        variables["Class"] = names.index("SORCERER_MONK") + 1
+        window.GetControl(0).SetState(defines.IE_GUI_BUTTON_ENABLED)
+        window.GetControl(13).SetText("selected class description")
+        variables[choices.TOP_INDEX_VAR] = 0
+        scrollbar.callback()
+        assert variables["Class"] == 0
+        assert window.GetControl(0).state == defines.IE_GUI_BUTTON_DISABLED
+        assert window.GetControl(13).text == 17242
+        assert [window.GetControl(control_id).text for control_id in choices.BG1_BUTTON_IDS] == [
+            name.title() for name in names[:12]
+        ]
+        assert window.GetControl(choices.BG1_BUTTON_IDS[-1]).assoc[:2] == ("Class", 12)
+
+        variables["Class"] = 1
+        window.GetControl(0).SetState(defines.IE_GUI_BUTTON_ENABLED)
+        window.GetControl(13).SetText("visible class description")
+        choices.redraw()
+        assert variables["Class"] == 1
+        assert window.GetControl(0).state == defines.IE_GUI_BUTTON_ENABLED
+        assert window.GetControl(13).text == "visible class description"
+
+        variables["Slot"] = 1
+        assert choices.skip_spell_selection()
+        assert next_script["value"] == "GUICG6"
+        class_name["value"] = "CIPHER"
+        assert choices.skip_spell_selection()
+        class_name["value"] = "SORCERER_MONK"
+        assert not choices.skip_spell_selection()
+    finally:
+        for name, previous in old.items():
+            if previous is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
+
+
 def fixture_texts():
     return {
         "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
         "MenuWindow.py": 'import GemRB\n\ndef Rest():\n\tinfo = GemRB.RestParty (15, 0, 0)\n\treturn info\n',
         "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",
+        "LUSpellSelection.py": '''import GameCheck
+
+def OpenSpellsWindow():
+	if True:
+		SpellsTextArea = SpellsWindow.GetControl (41 if GameCheck.IsAnyEE() else 27)
+	if GameCheck.IsBG2OrEE ():
+		GemRB.SetNextScript("GUICG6")
+
+def SpellsCancelPress():
+	if GameCheck.IsBG2OrEE ():
+		GemRB.SetNextScript("CharGen6")
+''',
+        "bg1/GUICG2.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
+        "bg2/GUICG2.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
+        "bg2/GUICG7.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
     }
 
 
 def write_fixture(folder, originals):
     for name, text in originals.items():
-        (folder / name).write_text(text, encoding="utf-8")
+        path = folder / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
 
 
 def exercise_order(first, second):
@@ -180,11 +376,26 @@ def exercise_order(first, second):
         spellbook = (folder / "Spellbook.py").read_text(encoding="utf-8")
         menu = (folder / "MenuWindow.py").read_text(encoding="utf-8")
         store = (folder / "GUISTORE.py").read_text(encoding="utf-8")
+        class_scripts = [
+            (folder / game_type / "GUICG2.py").read_text(encoding="utf-8")
+            for game_type in ("bg1", "bg2")
+        ]
+        spell_selection = (folder / "bg2" / "GUICG7.py").read_text(encoding="utf-8")
+        spell_window = (folder / "LUSpellSelection.py").read_text(encoding="utf-8")
         assert actions.count(installer.MARK_BEGIN) == 4
         assert spellbook.count(installer.MARK_BEGIN) == 1
         assert 'if not info["Error"]:' in menu
         assert "\t\tGemRBModCore.restore_party()" in menu
         assert "\tGemRBModCore.restore_party()" in store
+        assert all("import GemRBModClassChoice" in classes for classes in class_scripts)
+        assert all("GemRBModClassChoice.on_load(globals())" in classes for classes in class_scripts)
+        assert "import GemRBModClassChoice" in spell_selection
+        assert "GemRBModClassChoice.skip_spell_selection()" in spell_selection
+        assert "if not SpellsTextArea and GameCheck.IsBGEE():" in spell_window
+        assert "SpellsTextArea = SpellsWindow.GetControl (27)" in spell_window
+        assert spell_window.count(
+            "(GameCheck.IsBG2OrEE () or GameCheck.IsBGEE ())"
+        ) == 2
         assert "import GemRBModCore" in actions
         assert "GemRBModCore.begin_spell" in actions
         assert "GemRBModCore.action_info" in actions
@@ -261,6 +472,7 @@ def main():
     test_state_and_charges()
     test_dispatcher()
     test_dispatcher_import_errors()
+    test_class_choice_pagination()
     test_gui_lifecycle()
     print("Shared GemRB runtime and GUI lifecycle validation passed")
 

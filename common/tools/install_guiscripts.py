@@ -8,7 +8,15 @@ import shutil
 MARK_BEGIN = "# GEMRB MOD CORE BEGIN"
 MARK_END = "# GEMRB MOD CORE END"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
-COMMON_MODULES = ("GemRBModCore.py", "Transactions.py", "InnateCharges.py", "PersistentState.py", "Selectors.py")
+COMMON_MODULES = (
+    "GemRBModCore.py",
+    "GemRBModClassChoice.py",
+    "GemRBModPsionChoice.py",
+    "Transactions.py",
+    "InnateCharges.py",
+    "PersistentState.py",
+    "Selectors.py",
+)
 
 
 def _insert_import(text, path):
@@ -156,6 +164,65 @@ def render_patch(text, kind, path):
     return text
 
 
+def render_class_choice_patch(text, path):
+    if MARK_BEGIN in text:
+        return None
+    import_needle = "import GemRB\n"
+    function_needle = "def OnLoad():\n"
+    if import_needle not in text or function_needle not in text:
+        raise RuntimeError(f"{path.name} BG1 class screen layout not recognized")
+    text = text.replace(import_needle, import_needle + "import GemRBModClassChoice\n", 1)
+    wrapper = (
+        "def OnLoad():\n"
+        "\t" + MARK_BEGIN + "\n"
+        "\tGemRBModClassChoice.on_load(globals())\n"
+        "\t" + MARK_END + "\n\n"
+        "def _GemRBModCoreOriginalOnLoad():\n"
+    )
+    return text.replace(function_needle, wrapper, 1)
+
+
+def render_spell_selection_patch(text, path):
+    if MARK_BEGIN in text:
+        return None
+    import_needle = "import GemRB\n"
+    function_needle = "def OnLoad():\n"
+    if import_needle not in text or function_needle not in text:
+        raise RuntimeError(f"{path.name} BG2 spell-selection layout not recognized")
+    text = text.replace(import_needle, import_needle + "import GemRBModClassChoice\n", 1)
+    hook = (
+        function_needle
+        + "\t" + MARK_BEGIN + "\n"
+        + "\tif GemRBModClassChoice.skip_spell_selection():\n"
+        + "\t\treturn\n"
+        + "\t" + MARK_END + "\n"
+    )
+    return text.replace(function_needle, hook, 1)
+
+
+def render_spell_window_patch(text, path):
+    if MARK_BEGIN in text:
+        return None
+    needle = "\t\tSpellsTextArea = SpellsWindow.GetControl (41 if GameCheck.IsAnyEE() else 27)\n"
+    if needle not in text:
+        raise RuntimeError(f"{path.name} spell-description control layout not recognized")
+    bg2_or_ee = "GameCheck.IsBG2OrEE ()"
+    if bg2_or_ee not in text:
+        raise RuntimeError(f"{path.name} BG2 chargen routing layout not recognized")
+    replacement = (
+        needle
+        + "\t\t" + MARK_BEGIN + "\n"
+        + "\t\tif not SpellsTextArea and GameCheck.IsBGEE():\n"
+        + "\t\t\tSpellsTextArea = SpellsWindow.GetControl (27)\n"
+        + "\t\t" + MARK_END + "\n"
+    )
+    text = text.replace(needle, replacement, 1)
+    return text.replace(
+        bg2_or_ee,
+        "(GameCheck.IsBG2OrEE () or GameCheck.IsBGEE ())",
+    )
+
+
 def _legacy_clean(path):
     text = path.read_text(encoding="utf-8")
     changed = False
@@ -265,9 +332,35 @@ def install_handler(guiscripts, handler, runtime_source):
         if not path.exists():
             raise RuntimeError(f"Missing {path}")
 
+    class_choices = [
+        path
+        for path in (guiscripts / "bg1" / "GUICG2.py", guiscripts / "bg2" / "GUICG2.py")
+        if path.exists()
+    ]
+
     for path, _ in targets:
         _legacy_clean(path)
     prepared = [(path, render_patch(path.read_text(encoding="utf-8"), kind, path)) for path, kind in targets]
+    spell_window = guiscripts / "LUSpellSelection.py"
+    if not spell_window.exists():
+        raise RuntimeError(f"Missing {spell_window}")
+    prepared_spell_window = (
+        spell_window,
+        render_spell_window_patch(spell_window.read_text(encoding="utf-8"), spell_window),
+    )
+    prepared_class_choices = [
+        (path, render_class_choice_patch(path.read_text(encoding="utf-8"), path))
+        for path in class_choices
+    ]
+    spell_selection = guiscripts / "bg2" / "GUICG7.py"
+    prepared_spell_selection = None
+    if spell_selection.exists():
+        prepared_spell_selection = (
+            spell_selection,
+            render_spell_selection_patch(
+                spell_selection.read_text(encoding="utf-8"), spell_selection
+            ),
+        )
 
     runtime_target = guiscripts / (handler + ".py")
     _migrate_legacy_runtime_ownership(runtime_target, handler)
@@ -278,6 +371,11 @@ def install_handler(guiscripts, handler, runtime_source):
     install_owned_file(runtime_source, runtime_target, handler)
     for path, rendered in prepared:
         apply_patch(path, rendered)
+    apply_patch(*prepared_spell_window)
+    for path, rendered in prepared_class_choices:
+        apply_patch(path, rendered)
+    if prepared_spell_selection:
+        apply_patch(*prepared_spell_selection)
     _marker(guiscripts, handler).write_text("active\n", encoding="utf-8")
 
 
@@ -286,8 +384,11 @@ def uninstall_handler(guiscripts, handler):
     remove_owned_file(guiscripts / (handler + ".py"), handler)
     if _active_handlers(guiscripts):
         return
-    for name in ("ActionsWindow.py", "Spellbook.py", "MenuWindow.py", "GUISTORE.py"):
+    for name in ("ActionsWindow.py", "Spellbook.py", "MenuWindow.py", "GUISTORE.py", "LUSpellSelection.py"):
         remove_patch(guiscripts / name)
+    for game_type in ("bg1", "bg2"):
+        remove_patch(guiscripts / game_type / "GUICG2.py")
+    remove_patch(guiscripts / "bg2" / "GUICG7.py")
     for name in COMMON_MODULES:
         remove_owned_file(guiscripts / name, "core")
 
