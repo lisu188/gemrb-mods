@@ -34,6 +34,8 @@ jobs:
         run: python common/tests/validate_transactions.py
       - name: Validate Cipher sources and runtime
         run: python cipher/tests/validate.py
+      - name: Validate Reaping Knives runtime routing
+        run: python cipher/tests/validate_reaping_knives_runtime.py
       - name: Install official WeiDU release
         shell: bash
         env:
