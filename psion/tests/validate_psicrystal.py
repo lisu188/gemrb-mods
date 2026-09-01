@@ -8,15 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 COMMON = ROOT.parent / "common" / "guiscripts"
 sys.path.insert(0, str(COMMON))
 
-DISCIPLINE_CLABS = (
-    "clabpsee.2da",
-    "clabpsha.2da",
-    "clabpkin.2da",
-    "clabpego.2da",
-    "clabpnom.2da",
-    "clabptel.2da",
-)
-
 EXPECTED = {
     "ARTISTE": (1, "PXCART", "ECTOPLASMIC_CRAFT", 3),
     "FRIENDLY": (2, "PXCFRND", "INFLUENCE", 3),
@@ -68,13 +59,6 @@ def static_checks():
     assert len({value[0] for value in EXPECTED.values()}) == len(EXPECTED)
     assert all(len(value[1]) <= 8 for value in EXPECTED.values())
 
-    for filename in DISCIPLINE_CLABS:
-        data = rows(filename)
-        level1 = next(row for row in data if row[0] == "1")
-        assert level1.count("GA_PXCRYST") == 1, filename
-        for row in data[1:]:
-            assert "GA_PXCRYST" not in row, (filename, row[0])
-
     builder = (ROOT / "lib" / "psicrystal.tpa").read_text(encoding="utf-8")
     assert "ps_resref = ~PXCRYST~" in builder
     assert "opcode = 214" in builder
@@ -91,6 +75,7 @@ def static_checks():
         "def psicrystal_personality(actor):",
         "def available_psicrystal_choices(actor):",
         "def _ensure_psicrystal_selector_known(actor):",
+        "def _sync_psicrystal_selector(actor):",
         "def _choose_psicrystal(actor, resref):",
         "def psicrystal_skill_bonus(actor, skill):",
         '("PSICRYSTAL", key)',
@@ -101,6 +86,11 @@ def static_checks():
     powers = (ROOT / "lib" / "powers.tpa").read_text(encoding="utf-8")
     assert "pscryst.2da" in setup
     assert "psicrystal.tpa" in powers
+    for filename in (
+        "clabpsee.2da", "clabpsha.2da", "clabpkin.2da",
+        "clabpego.2da", "clabpnom.2da", "clabptel.2da",
+    ):
+        assert "GA_PXCRYST" not in (ROOT / "tables" / filename).read_text(encoding="utf-8")
 
 
 def dynamic_checks():
@@ -250,6 +240,7 @@ def dynamic_checks():
         assert module.psicrystal_skill_bonus(1, "CONCENTRATION") == 0
         assert module.skill_check_total(1, "ECTOPLASMIC_CRAFT", roll=10) == 17
 
+        assert module._ensure_psicrystal_selector_known(2)
         assert module.begin_manifest(2, "PXCSING")
         assert module.begin_manifest(2, "PXCSING")
         assert module.psicrystal_personality(2) == 5
@@ -265,7 +256,7 @@ def dynamic_checks():
         assert len(state_effects) == 1
         assert state_effects[0]["Param1"] == 1
         assert state_effects[0]["Resource1"] == module.PSICRYSTAL_PERSONALITY_RESOURCE
-        module._choose_psicrystal(1, "PXCART")
+        assert not module._choose_psicrystal(1, "PXCART")
         state_effects = [
             effect for effect in effects[1]
             if effect["Param2"] == module.PSICRYSTAL_PERSONALITY_MARKER
@@ -285,7 +276,7 @@ def dynamic_checks():
 def main():
     static_checks()
     dynamic_checks()
-    print("Psicrystal personality table, transaction, persistence, actor isolation, selector migration, and skill bonus validation passed.")
+    print("Psicrystal personality table, transaction, persistence, actor isolation, lazy selector migration, and skill bonus validation passed.")
 
 
 if __name__ == "__main__":
