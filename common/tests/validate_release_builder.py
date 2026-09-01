@@ -3,7 +3,6 @@ from pathlib import Path
 import hashlib
 import importlib.util
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -89,6 +88,20 @@ def run_driver(game, guiscripts, weidu, *args):
     return result.stdout
 
 
+def archive_names(archive):
+    with zipfile.ZipFile(archive, "r") as bundle:
+        return set(bundle.namelist())
+
+
+def assert_single_archive(archive, included, excluded):
+    names = archive_names(archive)
+    assert f"{included}/package.json" in names
+    assert f"{included}/setup-{included}.tp2" in names
+    assert not any(name.startswith(f"{excluded}/") for name in names), sorted(
+        name for name in names if name.startswith(f"{excluded}/")
+    )
+
+
 def assert_archive_shape(archive):
     with zipfile.ZipFile(archive, "r") as bundle:
         names = bundle.namelist()
@@ -133,6 +146,13 @@ def main():
         assert first_manifest == second_manifest
         assert sha256(first) == sha256(second), "same inputs did not produce identical ZIP bytes"
         assert_archive_shape(first)
+
+        cipher_only, cipher_manifest = builder.build_release(["cipher"], root / "cipher-only")
+        psion_only, psion_manifest = builder.build_release(["psion"], root / "psion-only")
+        assert [row["name"] for row in cipher_manifest["packages"]] == ["cipher"]
+        assert [row["name"] for row in psion_manifest["packages"]] == ["psion"]
+        assert_single_archive(cipher_only, "cipher", "psion")
+        assert_single_archive(psion_only, "psion", "cipher")
 
         game = root / "game"
         game.mkdir()
