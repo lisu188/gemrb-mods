@@ -42,6 +42,8 @@ jobs:
         run: python common/tests/validate_release_metadata.py
       - name: Validate unified package driver
         run: python common/tests/validate_package_driver.py
+      - name: Validate deterministic release packaging
+        run: python common/tests/validate_release_builder.py
       - name: Validate shared GUI lifecycle
         run: python common/tests/validate.py
       - name: Validate chargen string safety
