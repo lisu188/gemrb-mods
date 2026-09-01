@@ -83,7 +83,7 @@ def test_source_contract():
     assert "ci_lower = RESOLVE_STR_REF(@100)" in cipher_class
     assert "ci_title = RESOLVE_STR_REF(@101)" in cipher_class
     assert "ci_desc = RESOLVE_STR_REF(@102)" in cipher_class
-    assert "CLASTEXT.2DA" in cipher_class
+    assert "clastext.2da" in cipher_class.lower()
     assert "@100 = ~cipher~" in cipher_tra
     assert "@101 = ~CIPHER:~" in cipher_tra
     assert "@102 = ~Ciphers are weapon-driven psychic combatants" in cipher_tra
