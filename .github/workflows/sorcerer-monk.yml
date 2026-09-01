@@ -65,6 +65,8 @@ jobs:
           done
       - name: Real WeiDU install, reinstall and uninstall smoke test
         run: python sorcerer-monk/tests/weidu_smoke.py weidu
+      - name: Real WeiDU installed-data live oracle smoke test
+        run: python sorcerer-monk/tests/weidu_live_oracle_smoke.py weidu
       - name: Real WeiDU released and split layout smoke tests
         run: python sorcerer-monk/tests/weidu_layout_smoke.py weidu
       - name: Real WeiDU native EE CLASTEXT smoke tests
