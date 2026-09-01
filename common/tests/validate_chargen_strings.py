@@ -79,9 +79,14 @@ def test_source_contract():
             assert f"SetText ({value})" not in source
 
     cipher_class = (ROOT / "cipher" / "lib" / "class.tpa").read_text(encoding="utf-8")
-    assert "ADD_TRANSLATED_STRING ~Cipher~" in cipher_class
-    assert "ADD_TRANSLATED_STRING ~Focused mental combatant" in cipher_class
+    cipher_tra = (ROOT / "cipher" / "tra" / "english.tra").read_text(encoding="utf-8")
+    assert "ci_lower = RESOLVE_STR_REF(@100)" in cipher_class
+    assert "ci_title = RESOLVE_STR_REF(@101)" in cipher_class
+    assert "ci_desc = RESOLVE_STR_REF(@102)" in cipher_class
     assert "CLASTEXT.2DA" in cipher_class
+    assert "@100 = ~cipher~" in cipher_tra
+    assert "@101 = ~CIPHER:~" in cipher_tra
+    assert "@102 = ~Ciphers are weapon-driven psychic combatants" in cipher_tra
 
     sorcerer_monk = (ROOT / "sorcerer-monk" / "setup-sorcerer-monk.tp2").read_text(encoding="utf-8")
     assert "sm_lower = RESOLVE_STR_REF (@1)" in sorcerer_monk
