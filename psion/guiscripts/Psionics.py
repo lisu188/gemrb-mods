@@ -113,9 +113,6 @@ INNATE_TYPE = 2
 INNATE_LEVEL = 0
 TEMPORARY_SPELLINFO_TYPE = 255
 
-# BG-family GemRB games use MaximumAbility=25. Public Psion SPLs are authored
-# for the class minimum INT 15 (+2); save-bearing internal clones cover every
-# other reachable modifier without changing known-spell or PP state.
 DC_BASELINE_MODIFIER = 2
 DC_MODIFIER_SUFFIXES = {
     -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",
@@ -354,7 +351,6 @@ def available_power_choices(actor):
 
 
 def _ensure_power_selector_known(actor):
-    """Grant PXPLRN to migrated Psions that still have legal choices."""
     if not is_psion(actor) or not available_power_choices(actor):
         return False
     try:
@@ -472,15 +468,6 @@ def _spent_skill_points(actor):
 
 
 def sync_skill_points(actor):
-    """Initialize/mature the persistent Psion skill-point ledger.
-
-    Progression uses base Intelligence, so temporary buffs/debuffs cannot
-    permanently alter newly credited levels. A migrated character with no
-    ledger receives the normal level-1 x4 allotment plus one ordinary allotment
-    for every existing later Psion level, minus any already serialized ranks.
-    Once a level is accounted, later base-Intelligence changes affect only new
-    levels and never rewrite already credited levels.
-    """
     if not is_psion(actor):
         return 0
     level = manifester_level(actor)
@@ -557,7 +544,6 @@ def available_skill_choices(actor):
 
 
 def _ensure_skill_selector_known(actor):
-    """Grant PXSKILL to pre-v1.2 Psions once legal training exists."""
     if not is_psion(actor) or not available_skill_choices(actor):
         return False
     try:
@@ -663,7 +649,6 @@ def available_feat_choices(actor):
 
 
 def maximum_pool(actor):
-    """Return D&D 3.5e base PP, Intelligence bonus PP, and Psionic Talent."""
     level = manifester_level(actor)
     if not level:
         return 0
@@ -700,8 +685,6 @@ def _write_pool_state(actor, current):
         current, POOL_EFFECT_SOURCE,
     )
     cached = _write_pool_cache(actor, current)
-    # SRD focus requires a nonempty PP reserve. Spending the last point therefore
-    # clears focus immediately; raising the reserve later does not auto-refocus.
     if current == 0 and is_psion(actor):
         _write_focus_state(actor, False)
     return cached
@@ -823,7 +806,6 @@ def _center_resource_for_actor(actor):
 
 
 def _sync_center_action(actor):
-    """Replace ordinary Center Mind with the Meditation version when owned."""
     if not is_psion(actor):
         return False
     wanted = _center_resource_for_actor(actor)
@@ -1005,6 +987,7 @@ def power_info(resref):
     info["dc_variant"] = True
     return info
 
+
 def action_info(resref):
     key = (resref or "").upper()
     if key in CENTER_RESOURCES:
@@ -1060,12 +1043,6 @@ def _memorized_parent_entry(spellbook, actor, parent):
 
 
 def prepare_action_entry(spellbook, actor, entry):
-    """Substitute an exact-INT save-DC resource before ActionsWindow casts.
-
-    Normal powers replace themselves. Temporary augmentation choices (type 255)
-    replace their memorized parent power, converting the selector result to an
-    ordinary innate SpellCast while preserving the selected child for PP cost.
-    """
     selected = str(entry.get("SpellResRef", "")).upper()
     canonical = _dc_canonical_resref(selected)
     if canonical != selected:
@@ -1302,3 +1279,240 @@ def focus_text(actor):
 
 def skill_points_text(actor):
     return "%d skill points" % skill_points_remaining(actor)
+
+
+# Psicrystal personality subsystem. This extension intentionally leaves the
+# existing Psion runtime above unchanged and composes through its public/private
+# helper contracts.
+PSICRYSTAL_SELECTOR_RESOURCE = "PXCRYST"
+PSICRYSTAL_PERSONALITY_MARKER = 0x50534350
+PSICRYSTAL_PERSONALITY_RESOURCE = "PSCRPERS"
+PSICRYSTAL_EFFECT_SOURCE = "PSCRYST"
+
+_base_action_info = action_info
+_base_filter_spellinfo = filter_spellinfo
+_base_is_reusable_innate = _is_reusable_innate
+_base_refresh_innate_charges = refresh_innate_charges
+_base_restore_party = restore_party
+_base_begin_manifest = begin_manifest
+_base_skill_check_total = skill_check_total
+
+
+def _psicrystal_table():
+    try:
+        return GemRB.LoadTable("pscryst", False, True)
+    except Exception:
+        return None
+
+
+def psicrystal_choice_info(resref):
+    key = (resref or "").upper()
+    table = _psicrystal_table()
+    if not table:
+        return None
+    try:
+        for index in range(table.GetRowCount()):
+            personality = str(table.GetRowName(index)).upper()
+            if str(table.GetValue(personality, "ResRef")).upper() != key:
+                continue
+            return {
+                "kind": "psicrystal_choice",
+                "resref": key,
+                "parent": key,
+                "personality": personality,
+                "personality_id": int(table.GetValue(personality, "ID")),
+                "skill": str(table.GetValue(personality, "SKILL")).upper(),
+                "bonus": int(table.GetValue(personality, "BONUS")),
+                "selector": False,
+                "cost": 0,
+            }
+    except Exception:
+        return None
+    return None
+
+
+def psicrystal_personality(actor):
+    if not is_psion(actor):
+        return 0
+    found, value = _read_private_value(
+        actor, PSICRYSTAL_PERSONALITY_MARKER, PSICRYSTAL_PERSONALITY_RESOURCE,
+    )
+    return max(0, int(value)) if found else 0
+
+
+def psicrystal_personality_info(actor):
+    personality_id = psicrystal_personality(actor)
+    if not personality_id:
+        return None
+    table = _psicrystal_table()
+    if not table:
+        return None
+    try:
+        for index in range(table.GetRowCount()):
+            personality = str(table.GetRowName(index)).upper()
+            if int(table.GetValue(personality, "ID")) != personality_id:
+                continue
+            return {
+                "personality": personality,
+                "personality_id": personality_id,
+                "resref": str(table.GetValue(personality, "ResRef")).upper(),
+                "skill": str(table.GetValue(personality, "SKILL")).upper(),
+                "bonus": int(table.GetValue(personality, "BONUS")),
+            }
+    except Exception:
+        return None
+    return None
+
+
+def has_psicrystal_choice(actor):
+    return bool(psicrystal_personality(actor))
+
+
+def can_choose_psicrystal(actor, resref):
+    return bool(
+        is_psion(actor)
+        and not has_psicrystal_choice(actor)
+        and psicrystal_choice_info(resref)
+    )
+
+
+def available_psicrystal_choices(actor):
+    if not is_psion(actor) or has_psicrystal_choice(actor):
+        return []
+    table = _psicrystal_table()
+    if not table:
+        return []
+    choices = []
+    try:
+        for index in range(table.GetRowCount()):
+            personality = table.GetRowName(index)
+            resref = str(table.GetValue(personality, "ResRef")).upper()
+            if can_choose_psicrystal(actor, resref):
+                choices.append(resref)
+    except Exception:
+        return []
+    return choices
+
+
+def _ensure_psicrystal_selector_known(actor):
+    if not is_psion(actor) or has_psicrystal_choice(actor):
+        return False
+    try:
+        count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            if str(spell.get("SpellResRef", "")).upper() == PSICRYSTAL_SELECTOR_RESOURCE:
+                return True
+        result = GemRB.LearnSpell(actor, PSICRYSTAL_SELECTOR_RESOURCE, LS_MEMO)
+        return result in (0, 1)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "psicrystal selector migration failed: %s" % error)
+        return False
+
+
+def _sync_psicrystal_selector(actor):
+    if not is_psion(actor):
+        return False
+    if has_psicrystal_choice(actor):
+        try:
+            GemRB.RemoveSpell(actor, PSICRYSTAL_SELECTOR_RESOURCE)
+        except Exception as error:
+            GemRB.Log(2, "Psionics", "psicrystal selector cleanup failed: %s" % error)
+        return False
+    return _ensure_psicrystal_selector_known(actor)
+
+
+def _choose_psicrystal(actor, resref):
+    info = psicrystal_choice_info(resref)
+    if not info or not can_choose_psicrystal(actor, resref):
+        return False
+    _write_private_value(
+        actor,
+        PSICRYSTAL_PERSONALITY_MARKER,
+        PSICRYSTAL_PERSONALITY_RESOURCE,
+        info["personality_id"],
+        PSICRYSTAL_EFFECT_SOURCE,
+    )
+    _sync_psicrystal_selector(actor)
+    return True
+
+
+def psicrystal_skill_bonus(actor, skill):
+    info = psicrystal_personality_info(actor)
+    if not info or info["skill"] != (skill or "").upper():
+        return 0
+    return max(0, int(info["bonus"]))
+
+
+def skill_check_total(actor, skill, roll=None):
+    total = _base_skill_check_total(actor, skill, roll)
+    if total is None:
+        return None
+    return total + psicrystal_skill_bonus(actor, skill)
+
+
+def action_info(resref):
+    key = (resref or "").upper()
+    if key == PSICRYSTAL_SELECTOR_RESOURCE:
+        return {
+            "kind": "psicrystal_selector",
+            "resref": key,
+            "parent": key,
+            "cost": 0,
+            "selector": True,
+        }
+    choice = psicrystal_choice_info(key)
+    if choice:
+        return choice
+    return _base_action_info(key)
+
+
+def filter_spellinfo(actor, resrefs):
+    filtered = _base_filter_spellinfo(actor, resrefs)
+    result = []
+    for resref in filtered:
+        choice = psicrystal_choice_info(resref)
+        if not choice or can_choose_psicrystal(actor, resref):
+            result.append(resref)
+    return result
+
+
+def _is_reusable_innate(actor, resref):
+    key = (resref or "").upper()
+    if key == PSICRYSTAL_SELECTOR_RESOURCE:
+        return bool(available_psicrystal_choices(actor))
+    return _base_is_reusable_innate(actor, key)
+
+
+def refresh_innate_charges(actor):
+    if not is_psion(actor):
+        return 0
+    _sync_psicrystal_selector(actor)
+    return _base_refresh_innate_charges(actor)
+
+
+def restore_party():
+    _base_restore_party()
+    for actor in range(1, 7):
+        try:
+            _sync_psicrystal_selector(actor)
+        except Exception:
+            pass
+
+
+def begin_manifest(actor, resref):
+    info = action_info(resref)
+    if not info:
+        return True
+    if info["kind"] == "psicrystal_selector":
+        cancel_pending(actor)
+        return bool(available_psicrystal_choices(actor))
+    if info["kind"] == "psicrystal_choice":
+        key = info["resref"]
+        return _begin_simple_action(
+            actor,
+            ("PSICRYSTAL", key),
+            lambda: can_choose_psicrystal(actor, key),
+            lambda: _choose_psicrystal(actor, key),
+        )
+    return _base_begin_manifest(actor, resref)
