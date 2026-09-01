@@ -30,6 +30,8 @@ jobs:
           python-version: '3.13'
       - name: Validate shared GUI lifecycle
         run: python common/tests/validate.py
+      - name: Validate chargen string safety
+        run: python common/tests/validate_chargen_strings.py
       - name: Validate shared registration invariants
         run: python common/tests/validate_class_registration.py
       - name: Install official WeiDU release
