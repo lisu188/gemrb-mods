@@ -33,7 +33,7 @@ def main():
             output = Path(folder_name) / "acceptance"
             result = runner.main([
                 "--output", str(output),
-                "--screen", "class-selection",
+                "--screen", "soundset",
                 "--gemrb-commit", "fixture-commit",
                 "--game-type", "bgee",
                 "--fixture-id", "test-fixture",
@@ -41,10 +41,10 @@ def main():
                 "--",
                 sys.executable,
                 "-c",
-                "import time; time.sleep(60)",
+                "import time; print(\"GEMRB_MODS_SOUNDSET|family=bg1|count=3|slot=1|class=CIPHER|gender=1|sample=['a', 'b', 'c']\", flush=True); time.sleep(60)",
             ])
             assert result == 0
-            screenshot = output / "screenshots" / "01-class-selection.png"
+            screenshot = output / "screenshots" / "01-soundset.png"
             log_path = output / "gemrb.log"
             manifest_path = output / "manifest.json"
             assert screenshot.read_bytes() == b"fake-png"
@@ -58,9 +58,17 @@ def main():
             assert manifest["metadata"]["components"] == ["cipher"]
             assert manifest["screenshot_backend"] == "test-capture"
             assert manifest["engine_log"] == "gemrb.log"
-            assert manifest["captures"][0]["screen"] == "class-selection"
-            assert manifest["captures"][0]["screenshot"] == "screenshots/01-class-selection.png"
+            assert manifest["captures"][0]["screen"] == "soundset"
+            assert manifest["captures"][0]["screenshot"] == "screenshots/01-soundset.png"
             assert manifest["engine_returncode"] is not None
+            assert len(manifest["soundset_diagnostics"]) == 1
+            diagnostic = manifest["soundset_diagnostics"][0]
+            assert diagnostic["family"] == "bg1"
+            assert diagnostic["count"] == 3
+            assert diagnostic["slot"] == "1"
+            assert diagnostic["class"] == "CIPHER"
+            assert diagnostic["gender"] == "1"
+            assert diagnostic["sample"] == "['a', 'b', 'c']"
     finally:
         builtins.input = original_input
         runner.capture = original_capture
