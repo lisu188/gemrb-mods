@@ -1,0 +1,9 @@
+{
+  "id": "soundset-enumeration",
+  "description": "Require a diagnostic-patched BG1/BG2 chargen sound screen to enumerate CHR_SOUNDS without Python failures.",
+  "timeout_seconds": 300,
+  "expected_exit_codes": [0],
+  "expected_log_markers": ["GEMRB_MODS_SOUNDSET|"],
+  "forbidden_log_markers": [],
+  "supported_game_types": ["bgee", "bg2ee", "eet"]
+}
