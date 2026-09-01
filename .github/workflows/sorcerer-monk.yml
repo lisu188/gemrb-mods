@@ -5,11 +5,13 @@ on:
     paths:
       - sorcerer-monk/**
       - sorcerer-monk-cleric/**
+      - common/**
       - .github/workflows/sorcerer-monk.yml
   pull_request:
     paths:
       - sorcerer-monk/**
       - sorcerer-monk-cleric/**
+      - common/**
       - .github/workflows/sorcerer-monk.yml
   schedule:
     - cron: "17 5 * * *"
@@ -23,6 +25,8 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m unittest discover -s sorcerer-monk/tests -p "test_*.py"
+      - name: Validate shared chargen text safety
+        run: python common/tests/validate_chargen_strings.py
       - name: Validate current GemRB runtime contract
         run: |
           curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/core/Scriptable/Actor.cpp -o /tmp/Actor.cpp

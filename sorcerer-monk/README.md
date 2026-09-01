@@ -20,11 +20,25 @@ Original BG1 and TotSC are not included because they do not provide the Sorcerer
 ## Installation
 
 1. Run GemRB once against the target game installation.
-2. Copy the `sorcerer-monk` directory into the game directory.
-3. Run:
+2. Copy the matching `sorcerer-monk/` and `common/` directories from the same repository or release revision into the game directory.
+3. Install the WeiDU component:
 
 ```text
 weidu sorcerer-monk/setup-sorcerer-monk.tp2
+```
+
+4. Install the shared GemRB chargen GUI layer:
+
+```text
+python sorcerer-monk/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts
+```
+
+The GUI step is required for a standalone Sorcerer/Monk installation. It exposes the appended `SORCERER_MONK` row through the shared custom-class chooser and replaces game-family-specific fixed chargen help references with safe text only while a custom class is being created. Vanilla class text remains on GemRB's stock path. Cipher and Psion use the same shared layer, so any install order is supported and the patch stays active until the last owning class mod is removed.
+
+Before removing the final owning class mod, restore the original GemRB GUI scripts with:
+
+```text
+python sorcerer-monk/tools/install_guiscripts.py /path/to/GemRB/gemrb/GUIScripts --uninstall
 ```
 
 Use WeiDU 247 or newer.

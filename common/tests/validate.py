@@ -299,7 +299,7 @@ def test_class_choice_pagination():
         scrollbar.callback()
         assert variables["Class"] == 0
         assert window.GetControl(0).state == defines.IE_GUI_BUTTON_DISABLED
-        assert window.GetControl(13).text == 17242
+        assert window.GetControl(13).text == choices.GemRBModStrings.CHOOSE_CLASS
         assert [window.GetControl(control_id).text for control_id in choices.BG1_BUTTON_IDS] == [
             name.title() for name in names[:12]
         ]
@@ -329,6 +329,25 @@ def test_class_choice_pagination():
 
 
 def fixture_texts():
+    alignment = '''import GemRB
+import GUICommon
+
+def OnLoad():
+\tMyChar = GemRB.GetVar ("Slot")
+\tKitName = GUICommon.GetClassRowName (MyChar)
+\tBackButton.SetText(15416)
+\tDoneButton.SetText(11973)
+\tTextAreaControl.SetText(9602)
+'''
+    proficiencies = '''import GemRB
+import GUICommon
+
+def SetupProfsWindow (pc, proftype, window, callback):
+\tif proftype:
+\t\tProfsTextArea = window.GetControl(68)
+\t\tProfsTextArea.SetText (9588)
+\treturn
+'''
     return {
         "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
@@ -337,17 +356,20 @@ def fixture_texts():
         "LUSpellSelection.py": '''import GameCheck
 
 def OpenSpellsWindow():
-	if True:
-		SpellsTextArea = SpellsWindow.GetControl (41 if GameCheck.IsAnyEE() else 27)
-	if GameCheck.IsBG2OrEE ():
-		GemRB.SetNextScript("GUICG6")
+\tif True:
+\t\tSpellsTextArea = SpellsWindow.GetControl (41 if GameCheck.IsAnyEE() else 27)
+\tif GameCheck.IsBG2OrEE ():
+\t\tGemRB.SetNextScript("GUICG6")
 
 def SpellsCancelPress():
-	if GameCheck.IsBG2OrEE ():
-		GemRB.SetNextScript("CharGen6")
+\tif GameCheck.IsBG2OrEE ():
+\t\tGemRB.SetNextScript("CharGen6")
 ''',
+        "LUProfsSelection.py": proficiencies,
         "bg1/GUICG2.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
         "bg2/GUICG2.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
+        "bg1/GUICG3.py": alignment,
+        "bg2/GUICG3.py": alignment,
         "bg2/GUICG7.py": "import GemRB\n\ndef OnLoad():\n\tpass\n",
     }
 
@@ -380,6 +402,11 @@ def exercise_order(first, second):
             (folder / game_type / "GUICG2.py").read_text(encoding="utf-8")
             for game_type in ("bg1", "bg2")
         ]
+        alignment_scripts = [
+            (folder / game_type / "GUICG3.py").read_text(encoding="utf-8")
+            for game_type in ("bg1", "bg2")
+        ]
+        profs = (folder / "LUProfsSelection.py").read_text(encoding="utf-8")
         spell_selection = (folder / "bg2" / "GUICG7.py").read_text(encoding="utf-8")
         spell_window = (folder / "LUSpellSelection.py").read_text(encoding="utf-8")
         assert actions.count(installer.MARK_BEGIN) == 4
@@ -389,6 +416,8 @@ def exercise_order(first, second):
         assert "\tGemRBModCore.restore_party()" in store
         assert all("import GemRBModClassChoice" in classes for classes in class_scripts)
         assert all("GemRBModClassChoice.on_load(globals())" in classes for classes in class_scripts)
+        assert all("GemRBModStrings.CHOOSE_ALIGNMENT" in script for script in alignment_scripts)
+        assert "GemRBModStrings.CHOOSE_PROFICIENCIES" in profs
         assert "import GemRBModClassChoice" in spell_selection
         assert "GemRBModClassChoice.skip_spell_selection()" in spell_selection
         assert "if not SpellsTextArea and GameCheck.IsBGEE():" in spell_window
@@ -419,7 +448,6 @@ def exercise_legacy_runtime_upgrade(handler, legacy_tag):
     originals = fixture_texts()
     runtime_source = ROOT / ("psion" if handler == "Psionics" else "cipher") / "guiscripts" / (handler + ".py")
 
-    # Legacy replacement: preserve the true pre-mod runtime through migration.
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
         write_fixture(folder, originals)
@@ -439,7 +467,6 @@ def exercise_legacy_runtime_upgrade(handler, legacy_tag):
         assert runtime_target.read_text(encoding="utf-8") == "original user runtime\n"
         assert not backup.exists()
 
-    # Legacy creation: keep ownership as "created", so uninstall removes it.
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
         write_fixture(folder, originals)

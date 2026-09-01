@@ -3,6 +3,7 @@ import GemRB
 import CharGenCommon
 import CommonTables
 import GUICommon
+import GemRBModStrings
 from GUIDefines import *
 from ie_stats import IE_CLASS
 
@@ -38,8 +39,6 @@ def _create_scrollbar(window, button_ids, maximum):
 	top = min(frame["y"] for frame in frames)
 	bottom = max(frame["y"] + frame["h"] for frame in frames)
 	right = max(frame["x"] + frame["w"] for frame in frames)
-	# Reserve a narrow strip inside the existing list instead of drawing the
-	# scrollbar over the class-window border.
 	width = 16
 	gap = 4
 	for control_id in button_ids:
@@ -52,9 +51,6 @@ def _create_scrollbar(window, button_ids, maximum):
 		{"x": x, "y": top, "w": width, "h": bottom - top},
 		"GUISCRCW",
 	)
-	# Appended classes occupy the tail of the table. Start on that page so a
-	# newly installed class is visible immediately; users can scroll upward for
-	# the original BG1 classes.
 	scrollbar.SetVarAssoc(TOP_INDEX_VAR, maximum, 0, maximum)
 	GemRB.SetVar(TOP_INDEX_VAR, maximum)
 	scrollbar.OnChange(redraw)
@@ -86,9 +82,6 @@ def redraw():
 		button.SetState(IE_GUI_BUTTON_ENABLED)
 		button.OnPress(_psion_press if class_name == PSION_CLASSES[0] else _script["ClassPress"])
 		button.SetVarAssoc("Class", row_index + 1)
-	# Rebinding radio buttons must not pick a class as a side effect. Preserve a
-	# visible selection on same-page redraws, but clear stale selections when
-	# scrolling changes which classes the buttons represent.
 	GemRB.SetVar("Class", selected_class)
 	if page_changed:
 		done_button = _script.get("DoneButton")
@@ -96,7 +89,7 @@ def redraw():
 			done_button.SetState(IE_GUI_BUTTON_DISABLED)
 		text_area = _script.get("TextAreaControl")
 		if text_area:
-			text_area.SetText(17242)
+			text_area.SetText(GemRBModStrings.CHOOSE_CLASS)
 
 
 def _psion_press():
@@ -153,9 +146,6 @@ def on_load(script):
 		allowed = races.GetValue(class_name, race_name, GTV_INT)
 		if CommonTables.Classes.GetValue(class_name, "MULTI"):
 			has_multi = has_multi or allowed != 0
-			# Sorcerer/Monk is installed as a complete custom class and has its
-			# own direct character-generation flow. Keep ordinary BG1 multiclass
-			# combinations behind the Multi-Class button.
 			if class_name not in DIRECT_MULTI_CLASSES:
 				continue
 		if class_name in PSION_CLASSES:
@@ -181,25 +171,25 @@ def on_load(script):
 	redraw()
 
 	multi_button = class_window.GetControl(10)
-	multi_button.SetText(11993)
+	multi_button.SetText(GemRBModStrings.MULTI_CLASS)
 	if not has_multi:
 		multi_button.SetState(IE_GUI_BUTTON_DISABLED)
 
 	if "SpecialistPress" in script:
 		specialist_button = class_window.GetControl(11)
-		specialist_button.SetText(11994)
+		specialist_button.SetText(GemRBModStrings.SPECIALIST_MAGE)
 		if races.GetValue("MAGE", race_name, GTV_INT) == 0:
 			specialist_button.SetState(IE_GUI_BUTTON_DISABLED)
 		specialist_button.OnPress(script["SpecialistPress"])
 
 	back_button = class_window.GetControl(14)
-	back_button.SetText(15416)
+	back_button.SetText(GemRBModStrings.BACK)
 	done_button = class_window.GetControl(0)
-	done_button.SetText(11973)
+	done_button.SetText(GemRBModStrings.DONE)
 	done_button.MakeDefault()
 	done_button.SetState(IE_GUI_BUTTON_DISABLED)
 	text_area = class_window.GetControl(13)
-	text_area.SetText(17242)
+	text_area.SetText(GemRBModStrings.CHOOSE_CLASS)
 	script["DoneButton"] = done_button
 	script["TextAreaControl"] = text_area
 
@@ -212,8 +202,6 @@ def on_load(script):
 	else:
 		back_button.OnPress(lambda: CharGenCommon.back(class_window))
 		class_window.ShowModal(MODAL_SHADOW_GRAY)
-	# Showing or focusing a window initializes its scrollbar and can reset the
-	# associated variable. Reapply the tail page after the window is live.
 	if maximum:
 		GemRB.SetVar(TOP_INDEX_VAR, maximum)
 		redraw()
