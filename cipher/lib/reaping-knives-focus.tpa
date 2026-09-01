@@ -1,0 +1,180 @@
+// Reaping Knives needs to credit the originating Cipher rather than the ally
+// making the weapon attack. GemRB's SetMeleeEffect/SetRangedEffect hooks run
+// with the attacker as caster, so route each cast through a party-slot-specific
+// resource and persist the original owner's identity as a short-lived actor
+// marker. The hit effect then scans the party for that marker and advances the
+// marked actor's Focus state directly.
+
+OUTER_SET ci_rk_owner_state_stat = 164
+OUTER_SET ci_rk_owner_state_index = 8
+OUTER_SET ci_rk_splprot_rows = 0
+OUTER_SET ci_rk_set_melee = 248
+OUTER_SET ci_rk_set_ranged = 249
+
+COPY_EXISTING ~splprot.2da~ ~override~
+  COUNT_2DA_COLS ci_rk_splprot_cols
+  COUNT_2DA_ROWS ci_rk_splprot_cols ci_rk_splprot_count
+  SPRINT ci_rk_splprot_prefix ~~
+  READ_ASCII (BUFFER_LENGTH - 1) ci_rk_splprot_last (1)
+  PATCH_IF NOT (~%ci_rk_splprot_last%~ STRING_EQUAL ~%LNL%~) BEGIN
+    SPRINT ci_rk_splprot_prefix ~%LNL%~
+  END
+  SPRINT ci_rk_splprot_append ~%ci_rk_splprot_prefix%~
+  FOR (ci_rk_slot = 1; ci_rk_slot <= 6; ++ci_rk_slot) BEGIN
+    SPRINT ci_rk_splprot_append ~%ci_rk_splprot_append%CIPHER_RK_OWNER_%ci_rk_slot% %ci_rk_owner_state_stat% %ci_rk_slot% 1%LNL%~
+  END
+  SET ci_rk_splprot_offset = BUFFER_LENGTH
+  SET ci_rk_splprot_length = STRING_LENGTH ~%ci_rk_splprot_append%~
+  INSERT_BYTES ci_rk_splprot_offset ci_rk_splprot_length
+  WRITE_ASCIIE ci_rk_splprot_offset ~%ci_rk_splprot_append%~
+  INNER_ACTION BEGIN OUTER_SET ci_rk_splprot_rows = ci_rk_splprot_count END
+BUT_ONLY
+
+// The ordinary CIFS<n> setters are still authoritative whenever GUI/runtime
+// code writes Focus. Make them clear any Reaping-Knives-created state parent so
+// all paths continue to leave exactly one persistent Focus state effect.
+OUTER_FOR (ci_rk_unit = 0; ci_rk_unit <= 34; ++ci_rk_unit) BEGIN
+  OUTER_SPRINT ci_rk_normal_setter ~CIFS%ci_rk_unit%~
+  COPY_EXISTING ~%ci_rk_normal_setter%.spl~ ~override~
+    FOR (ci_rk_old = 1; ci_rk_old <= 34; ++ci_rk_old) BEGIN
+      SPRINT ci_rk_old_setter ~CIRKS%ci_rk_old%~
+      LPF ADD_SPELL_EFFECT
+        INT_VAR opcode = 321 target = 1 timing = 1 parameter2 = 0
+        STR_VAR resource = ~%ci_rk_old_setter%~
+      END
+    END
+  BUT_ONLY
+END
+
+// Preset-target setters are the counterpart to CIFS<n>: they are needed because
+// the attack is performed by an ally, while the actor whose state must change is
+// the original Cipher selected by the owner marker.
+OUTER_FOR (ci_rk_unit = 1; ci_rk_unit <= 34; ++ci_rk_unit) BEGIN
+  OUTER_SPRINT ci_rk_setter ~CIRKS%ci_rk_unit%~
+  LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_rk_setter%~ END
+  COPY_EXISTING ~%ci_rk_setter%.spl~ ~override~
+    FOR (ci_rk_old = 0; ci_rk_old <= 34; ++ci_rk_old) BEGIN
+      SPRINT ci_rk_old_normal ~CIFS%ci_rk_old%~
+      LPF ADD_SPELL_EFFECT
+        INT_VAR opcode = 321 target = 2 timing = 1 parameter2 = 0
+        STR_VAR resource = ~%ci_rk_old_normal%~
+      END
+    END
+    FOR (ci_rk_old = 1; ci_rk_old <= 34; ++ci_rk_old) BEGIN
+      SPRINT ci_rk_old_setter ~CIRKS%ci_rk_old%~
+      LPF ADD_SPELL_EFFECT
+        INT_VAR opcode = 321 target = 2 timing = 1 parameter2 = 0
+        STR_VAR resource = ~%ci_rk_old_setter%~
+      END
+    END
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 282 target = 2 timing = 9 parameter1 = ci_rk_unit parameter2 = 9
+      STR_VAR resource = ~CIFOCUS~
+    END
+  BUT_ONLY
+END
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKSTEP~ END
+COPY_EXISTING ~CIRKSTEP.spl~ ~override~
+  FOR (ci_rk_unit = 33; ci_rk_unit >= 0; --ci_rk_unit) BEGIN
+    SET ci_rk_focus_row = ci_splprot_rows + 2 + ci_rk_unit
+    SET ci_rk_next = ci_rk_unit + 1
+    SPRINT ci_rk_setter ~CIRKS%ci_rk_next%~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 326 target = 2 timing = 1 parameter2 = ci_rk_focus_row
+      STR_VAR resource = ~%ci_rk_setter%~
+    END
+  END
+BUT_ONLY
+
+DEFINE_ACTION_FUNCTION ~cipher_create_reaping_hit_effect~
+  INT_VAR
+    ci_rk_slot = 1
+    ci_rk_hostile_row = 0
+  STR_VAR
+    ci_rk_resref = ~~
+    ci_rk_gain = ~~
+BEGIN
+  CREATE ~eff~ ~%ci_rk_resref%~
+  COPY_EXISTING ~%ci_rk_resref%.eff~ ~override~
+    WRITE_LONG 0x10 326
+    WRITE_LONG 0x14 2
+    WRITE_LONG 0x18 8
+    WRITE_LONG 0x1c 0
+    WRITE_LONG 0x20 ci_rk_hostile_row
+    WRITE_SHORT 0x24 1
+    WRITE_SHORT 0x26 0
+    WRITE_LONG 0x28 0
+    WRITE_SHORT 0x2c 100
+    WRITE_SHORT 0x2e 0
+    WRITE_ASCIIE 0x30 ~%ci_rk_gain%~ #8
+  BUT_ONLY
+END
+
+OUTER_FOR (ci_rk_slot = 1; ci_rk_slot <= 6; ++ci_rk_slot) BEGIN
+  OUTER_SET ci_rk_owner_row = ci_rk_splprot_rows + ci_rk_slot - 1
+  OUTER_SPRINT ci_rk_gain ~CIRKG%ci_rk_slot%~
+  OUTER_SPRINT ci_rk_hit ~CIRKE%ci_rk_slot%~
+  OUTER_SPRINT ci_rk_carrier ~CIRKA%ci_rk_slot%~
+  OUTER_SPRINT ci_rk_cleanup ~CIRKC%ci_rk_slot%~
+  OUTER_SPRINT ci_rk_variant ~CI8RK%ci_rk_slot%~
+
+  LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_rk_gain%~ END
+  COPY_EXISTING ~%ci_rk_gain%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 326 target = 3 timing = 1 parameter2 = ci_rk_owner_row
+      STR_VAR resource = ~CIRKSTEP~
+    END
+  BUT_ONLY
+
+  LAF cipher_create_reaping_hit_effect
+    INT_VAR ci_rk_slot = ci_rk_slot ci_rk_hostile_row = ci_hostile_splprot
+    STR_VAR ci_rk_resref = ~%ci_rk_hit%~ ci_rk_gain = ~%ci_rk_gain%~
+  END
+
+  LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_rk_carrier%~ END
+  COPY_EXISTING ~%ci_rk_carrier%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 321 target = 2 timing = 1 parameter2 = 0
+      STR_VAR resource = ~%ci_rk_carrier%~
+    END
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = ci_rk_set_melee target = 2 timing = 0 duration = 30 parameter2 = 0 power = 8
+      STR_VAR resource = ~%ci_rk_hit%~
+    END
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = ci_rk_set_ranged target = 2 timing = 0 duration = 30 parameter2 = 0 power = 8
+      STR_VAR resource = ~%ci_rk_hit%~
+    END
+  BUT_ONLY
+
+  LAF cipher_create_internal_spell STR_VAR ci_resref = ~%ci_rk_cleanup%~ END
+  COPY_EXISTING ~%ci_rk_cleanup%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 321 target = 2 timing = 1 parameter2 = 0
+      STR_VAR resource = ~%ci_rk_carrier%~
+    END
+  BUT_ONLY
+
+  COPY_EXISTING ~CI8RKNI.spl~ ~override/%ci_rk_variant%.spl~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 282 target = 9 timing = 0 duration = 30 parameter1 = ci_rk_slot parameter2 = ci_rk_owner_state_index
+      STR_VAR resource = ~CIRKOWN~
+    END
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 146 target = 2 timing = 1 parameter2 = 1 power = 8
+      STR_VAR resource = ~%ci_rk_carrier%~
+    END
+    // A Cipher target already receives normal Soul Whip Focus from its own
+    // weapon hit. Remove only the transfer carrier in that case so Reaping
+    // Knives does not double-credit Focus while retaining its combat buff.
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 326 target = 2 timing = 1 parameter2 = ci_class_splprot power = 8
+      STR_VAR resource = ~%ci_rk_cleanup%~
+    END
+  BUT_ONLY
+END
+
+COPY_EXISTING ~CI8RKNI.spl~ ~override~
+  SAY UNIDENTIFIED_DESC ~An ally's attacks gain +2 to hit and 20 percent damage for five rounds. Successful weapon hits by a non-Cipher ally against hostile creatures transfer 5 Focus to the originating Cipher. Critical hits transfer the same 5 Focus once rather than an additional critical bonus. Costs 50 Focus.~
+BUT_ONLY

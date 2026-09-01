@@ -134,8 +134,12 @@ assert critical == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, critical)
 setter = spell_effects(spl_path("CIFS4"))
 removals = [effect for effect in setter if effect[0] == 321]
 state = [effect for effect in setter if effect[0] == 282]
-assert len(removals) == 35, (layout, len(removals))
-assert {effect[5] for effect in removals} == {f"CIFS{index}" for index in range(35)}, (layout, removals)
+expected_removals = (
+    {f"CIFS{index}" for index in range(35)}
+    | {f"CIRKS{index}" for index in range(1, 35)}
+)
+assert len(removals) == len(expected_removals), (layout, len(removals))
+assert {effect[5] for effect in removals} == expected_removals, (layout, removals)
 assert state == [(282, 1, 4, 9, 9, "CIFOCUS")], (layout, state)
 
 borrowed = [effect for effect in spell_effects(spl_path("CI5BINS")) if effect[0] == 54]

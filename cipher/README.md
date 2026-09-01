@@ -32,6 +32,8 @@ The selector uses harmless `CIL*` proxy resources that preserve the chosen power
 
 Detonate installs a short-lived death watcher before its primary damage. If that damage kills the target, the original Cipher fires an 8d6 crushing soul burst around the corpse. Amplified Wave uses GemRB's prone-capable helpless state to play the knockdown/get-up sequence for one round after a failed save. Soul Collapse installs a one-round GemRB HP-percentage condition and executes a target that is below 20 percent of maximum hit points during that window.
 
+Reaping Knives routes each cast through an internal owner-specific variant. Successful melee or ranged hits by a non-Cipher ally against hostile creatures grant 5 Focus to the originating Cipher. Critical hits grant the same single 5-Focus transfer rather than a second Reaping Knives critical bonus. The owner marker and ally attack hooks are ordinary timed actor effects, so multiple Ciphers do not cross-credit one another and the relationship survives normal save/load serialization. Casting Reaping Knives on a Cipher still grants the attack/damage buff but suppresses the transfer hook because that attacker already receives normal Soul Whip Focus.
+
 ## Installation
 
 Cipher uses the repository's shared GemRB runtime infrastructure. A distributable/install tree must therefore contain both `cipher/` and its sibling `common/` directory:
@@ -76,7 +78,6 @@ Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in ei
 
 - Soul Whip uses +1/+2/+3 weapon damage rather than PoE-style percentage weapon scaling because the supported BG-family effect model does not expose a portable weapon-source-only percentage modifier.
 - The reduced 18-power catalogue grants one powers-known credit per tier unlock rather than reproducing Pillars' denser level-by-level power acquisition.
-- Reaping Knives grants its ally attack/damage enhancement but does not yet transfer Focus from that ally's attacks.
 - Amplified Wave uses GemRB's prone-capable helpless state (including the knockdown/get-up animation) because BG-family data does not expose a separate portable PoE-style prone effect.
 - Beguiler, Soul Blade, and Ascendant are not implemented.
 
@@ -86,6 +87,7 @@ Static/runtime checks:
 
 ```bash
 python cipher/tests/validate.py
+python cipher/tests/validate_reaping_knives_runtime.py
 ```
 
 WeiDU parser checks, with WeiDU in `PATH`:
@@ -94,4 +96,4 @@ WeiDU parser checks, with WeiDU in `PATH`:
 bash cipher/tests/validate_weidu.sh
 ```
 
-CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal and critical Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
+CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal/critical/Reaping-Knives Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
