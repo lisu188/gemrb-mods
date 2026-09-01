@@ -12,6 +12,7 @@ COMMON_MODULES = (
     "GemRBModCore.py",
     "GemRBModClassChoice.py",
     "GemRBModPsionChoice.py",
+    "GemRBModStrings.py",
     "Transactions.py",
     "InnateCharges.py",
     "PersistentState.py",
@@ -26,6 +27,16 @@ def _insert_import(text, path):
     if needle not in text:
         raise RuntimeError(f"{path.name} GemRB import not found")
     return text.replace(needle, needle + "import GemRBModCore\n", 1)
+
+
+def _insert_named_import(text, path, module):
+    import_line = f"import {module}\n"
+    if import_line in text:
+        return text
+    needle = "import GemRB\n"
+    if needle not in text:
+        raise RuntimeError(f"{path.name} GemRB import not found")
+    return text.replace(needle, needle + import_line, 1)
 
 
 def _function_bounds(text, function_name):
@@ -223,6 +234,71 @@ def render_spell_window_patch(text, path):
     )
 
 
+def render_alignment_string_patch(text, path):
+    if MARK_BEGIN in text:
+        return None
+    text = _insert_named_import(text, path, "GemRBModStrings")
+    slot_match = re.search(
+        r'(?m)^([ \t]*)MyChar\s*=\s*GemRB\.GetVar\s*\(\s*"Slot"\s*\)\s*$',
+        text,
+    )
+    if not slot_match:
+        raise RuntimeError(f"{path.name} chargen actor lookup not recognized")
+    indent = slot_match.group(1)
+    hook = (
+        slot_match.group(0)
+        + "\n"
+        + indent + MARK_BEGIN + "\n"
+        + indent + "_GemRBModSafeStrings = GemRBModStrings.is_custom_class(GUICommon.GetClassRowName(MyChar))\n"
+        + indent + MARK_END
+    )
+    text = text[:slot_match.start()] + hook + text[slot_match.end():]
+    replacements = (
+        (
+            r'(?m)^([ \t]*)BackButton\.SetText\s*\(\s*15416\s*\)\s*$',
+            r'\1BackButton.SetText(GemRBModStrings.BACK if _GemRBModSafeStrings else 15416)',
+            "Back button",
+        ),
+        (
+            r'(?m)^([ \t]*)DoneButton\.SetText\s*\(\s*11973\s*\)\s*$',
+            r'\1DoneButton.SetText(GemRBModStrings.DONE if _GemRBModSafeStrings else 11973)',
+            "Done button",
+        ),
+        (
+            r'(?m)^([ \t]*)TextAreaControl\.SetText\s*\(\s*9602\s*\)\s*$',
+            r'\1TextAreaControl.SetText(GemRBModStrings.CHOOSE_ALIGNMENT if _GemRBModSafeStrings else 9602)',
+            "alignment help",
+        ),
+    )
+    for pattern, replacement, label in replacements:
+        text, count = re.subn(pattern, replacement, text, count=1)
+        if count != 1:
+            raise RuntimeError(f"{path.name} {label} layout not recognized")
+    return text
+
+
+def render_proficiency_string_patch(text, path):
+    if MARK_BEGIN in text:
+        return None
+    text = _insert_named_import(text, path, "GemRBModStrings")
+    start, end = _function_bounds(text, "SetupProfsWindow")
+    match = re.search(
+        r'(?m)^([ \t]*)ProfsTextArea\.SetText\s*\(\s*9588\s*\)\s*$',
+        text[start:end],
+    )
+    if not match:
+        raise RuntimeError(f"{path.name} chargen proficiency help layout not recognized")
+    absolute_start = start + match.start()
+    absolute_end = start + match.end()
+    indent = match.group(1)
+    replacement = (
+        indent + MARK_BEGIN + "\n"
+        + indent + "ProfsTextArea.SetText(GemRBModStrings.CHOOSE_PROFICIENCIES if GemRBModStrings.is_custom_class(GUICommon.GetClassRowName(pc)) else 9588)\n"
+        + indent + MARK_END
+    )
+    return text[:absolute_start] + replacement + text[absolute_end:]
+
+
 def _legacy_clean(path):
     text = path.read_text(encoding="utf-8")
     changed = False
@@ -337,10 +413,16 @@ def install_handler(guiscripts, handler, runtime_source):
         for path in (guiscripts / "bg1" / "GUICG2.py", guiscripts / "bg2" / "GUICG2.py")
         if path.exists()
     ]
+    alignment_screens = [
+        path
+        for path in (guiscripts / "bg1" / "GUICG3.py", guiscripts / "bg2" / "GUICG3.py")
+        if path.exists()
+    ]
 
     for path, _ in targets:
         _legacy_clean(path)
     prepared = [(path, render_patch(path.read_text(encoding="utf-8"), kind, path)) for path, kind in targets]
+
     spell_window = guiscripts / "LUSpellSelection.py"
     if not spell_window.exists():
         raise RuntimeError(f"Missing {spell_window}")
@@ -352,6 +434,21 @@ def install_handler(guiscripts, handler, runtime_source):
         (path, render_class_choice_patch(path.read_text(encoding="utf-8"), path))
         for path in class_choices
     ]
+    prepared_alignment_screens = [
+        (path, render_alignment_string_patch(path.read_text(encoding="utf-8"), path))
+        for path in alignment_screens
+    ]
+
+    proficiencies = guiscripts / "LUProfsSelection.py"
+    if not proficiencies.exists():
+        raise RuntimeError(f"Missing {proficiencies}")
+    prepared_proficiencies = (
+        proficiencies,
+        render_proficiency_string_patch(
+            proficiencies.read_text(encoding="utf-8"), proficiencies
+        ),
+    )
+
     spell_selection = guiscripts / "bg2" / "GUICG7.py"
     prepared_spell_selection = None
     if spell_selection.exists():
@@ -374,6 +471,9 @@ def install_handler(guiscripts, handler, runtime_source):
     apply_patch(*prepared_spell_window)
     for path, rendered in prepared_class_choices:
         apply_patch(path, rendered)
+    for path, rendered in prepared_alignment_screens:
+        apply_patch(path, rendered)
+    apply_patch(*prepared_proficiencies)
     if prepared_spell_selection:
         apply_patch(*prepared_spell_selection)
     _marker(guiscripts, handler).write_text("active\n", encoding="utf-8")
@@ -384,10 +484,18 @@ def uninstall_handler(guiscripts, handler):
     remove_owned_file(guiscripts / (handler + ".py"), handler)
     if _active_handlers(guiscripts):
         return
-    for name in ("ActionsWindow.py", "Spellbook.py", "MenuWindow.py", "GUISTORE.py", "LUSpellSelection.py"):
+    for name in (
+        "ActionsWindow.py",
+        "Spellbook.py",
+        "MenuWindow.py",
+        "GUISTORE.py",
+        "LUSpellSelection.py",
+        "LUProfsSelection.py",
+    ):
         remove_patch(guiscripts / name)
     for game_type in ("bg1", "bg2"):
         remove_patch(guiscripts / game_type / "GUICG2.py")
+        remove_patch(guiscripts / game_type / "GUICG3.py")
     remove_patch(guiscripts / "bg2" / "GUICG7.py")
     for name in COMMON_MODULES:
         remove_owned_file(guiscripts / name, "core")
