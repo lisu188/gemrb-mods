@@ -29,9 +29,9 @@ def main():
         ("psion", "cipher"),
     }
 
-    assert tool.weidu_command("weidu", "cipher", True)[-4:] == [
+    assert tool.weidu_command("weidu", "cipher", True)[-3:] == [
         "--force-install", "0", "--no-exit-pause",
-    ][-4:]
+    ]
     assert "--force-uninstall" in tool.weidu_command("weidu", "psion", False)
 
     with tempfile.TemporaryDirectory() as folder_name:
