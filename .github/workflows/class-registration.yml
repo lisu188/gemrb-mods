@@ -5,12 +5,14 @@ on:
     paths:
       - 'psion/**'
       - 'cipher/**'
+      - 'sorcerer-monk/**'
       - 'common/**'
       - '.github/workflows/class-registration.yml'
   pull_request:
     paths:
       - 'psion/**'
       - 'cipher/**'
+      - 'sorcerer-monk/**'
       - 'common/**'
       - '.github/workflows/class-registration.yml'
 
@@ -52,6 +54,8 @@ jobs:
           ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
           path: vendor/gemrb
           fetch-depth: 1
+      - name: Validate real GemRB chargen text patch
+        run: python common/tests/validate_chargen_gemrb_fixture.py vendor/gemrb
       - name: Seed missing Mage saving throw fixture
         run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
       - name: Validate native-9 and combined-plus-HPCLASS registration
