@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import argparse
-import datetime as dt
-import json
 import shutil
 import subprocess
 import sys
 import time
+
+TOOLS = Path(__file__).resolve().parent
+if str(TOOLS) not in sys.path:
+    sys.path.insert(0, str(TOOLS))
+
+from gemrb_acceptance import MANIFEST_SCHEMA_VERSION, terminate_process, utc_now, write_manifest
 
 DEFAULT_SCREENS = (
     "class-selection",
@@ -47,10 +51,16 @@ def capture(output):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
-        description="Launch GemRB and record live chargen text screenshots plus engine logs."
+        description="Launch GemRB and record live chargen screenshots plus engine logs."
     )
     parser.add_argument("--output", type=Path, default=Path("chargen-text-acceptance"))
     parser.add_argument("--screen", action="append", choices=tuple(SCREEN_INSTRUCTIONS))
+    parser.add_argument("--gemrb-version", default="")
+    parser.add_argument("--gemrb-commit", default="")
+    parser.add_argument("--game-type", default="")
+    parser.add_argument("--fixture-id", default="")
+    parser.add_argument("--component", action="append", default=[])
+    parser.add_argument("--install-order", action="append", default=[])
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
@@ -61,14 +71,7 @@ def parse_args(argv=None):
 
 
 def terminate(process):
-    if process.poll() is not None:
-        return process.returncode
-    process.terminate()
-    try:
-        return process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        return process.wait(timeout=5)
+    return terminate_process(process)
 
 
 def main(argv=None):
@@ -80,7 +83,7 @@ def main(argv=None):
     log_path = output / "gemrb.log"
     manifest_path = output / "manifest.json"
 
-    started = dt.datetime.now(dt.timezone.utc)
+    started = utc_now()
     records = []
     backend = None
     process = None
@@ -109,14 +112,28 @@ def main(argv=None):
                     "screen": screen,
                     "instruction": instruction,
                     "screenshot": str(target.relative_to(output)),
-                    "captured_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                    "captured_at": utc_now().isoformat(),
                 })
                 print(target)
         finally:
             returncode = terminate(process)
 
-    finished = dt.datetime.now(dt.timezone.utc)
+    finished = utc_now()
     manifest = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "scenario": {
+            "id": "chargen-manual-capture",
+            "description": "Interactive chargen screenshot and log capture.",
+            "source": str(Path(__file__).resolve()),
+        },
+        "metadata": {
+            "gemrb_version": args.gemrb_version,
+            "gemrb_commit": args.gemrb_commit,
+            "game_type": args.game_type,
+            "fixture_id": args.fixture_id,
+            "components": args.component,
+            "install_order": args.install_order,
+        },
         "command": args.command,
         "started_at": started.isoformat(),
         "finished_at": finished.isoformat(),
@@ -125,7 +142,7 @@ def main(argv=None):
         "engine_returncode": returncode,
         "captures": records,
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    write_manifest(manifest_path, manifest)
     print(manifest_path)
     return 0
 
