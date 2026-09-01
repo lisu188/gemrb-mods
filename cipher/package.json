@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "name": "cipher",
+  "version": "0.2.0",
+  "runtime_api": 1,
+  "handler": "Cipher",
+  "runtime_source": "cipher/guiscripts/Cipher.py",
+  "weidu": {
+    "tp2": "cipher/setup-cipher.tp2",
+    "component": 0,
+    "language": 0
+  }
+}
