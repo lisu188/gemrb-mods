@@ -4,19 +4,22 @@
 
 - Made Mage-progression extraction tolerant of stock BGEE's CRLF-formatted
   `XPLEVEL.2DA`, which WeiDU 251 otherwise miscounts as a single data row.
-- Extended the fixed Psion progression from the BG1-accessible level-1–9 class
-  rows to the complete class-level 1–20 powers-known table, ending at 36 unique
-  known powers per discipline.
+- Extended the Psion powers-known allowance from the BG1-accessible level-1–9
+  class rows to the complete class-level 1–20 table, ending at 36 known powers
+  per discipline.
 - Added 24 D&D 3.5e discipline powers at power levels 6–9: one Seer, Shaper,
   Kineticist, Egoist, Nomad and Telepath power at each new tier.
 - Expanded `psionpowers.2da` to 85 catalogue powers with the complete base-cost
   ladder of 1, 3, 5, 7, 9, 11, 13, 15 and 17 PP.
-- Filled all six CLAB tables through level 20. Each newly unlocked tier still
-  grants exactly one matching discipline power at class levels 1, 3, 5, 7, 9,
-  11, 13, 15 and 17.
-- Assigned the previously installed-but-unreachable lower-tier resources across
-  levels 10–20. CI now requires zero catalogue powers without a progression
-  route instead of pinning a known stranded set.
+- Filled all six CLAB tables through level 20 while keeping `psionknown.2da` as
+  the authoritative powers-known allowance and maximum-tier table.
+- Replaced fixed final power assignment with player-selected learning through
+  the reusable `PXPLRN` selector and harmless `PXL*` proxy resources. Existing
+  known powers count against the allowance; confirmed choices permanently learn
+  the real power without manifesting it or spending PP.
+- Assigned the previously installed-but-unreachable lower-tier resources to the
+  selectable catalogue. CI now requires zero catalogue powers that cannot be
+  reached by a legal discipline/general learning choice.
 - Added explicit portable Infinity Engine approximations for high-tier mechanics
   that require body swaps, persistent rebirth, movable force spheres, actor
   identity rewriting, arbitrary CRE merging, off-map information queries or
@@ -29,12 +32,11 @@
   one save on the parent, zero saves in the child, correct resource routing and
   exact 5+5 and 8+9 damage splits for Crisis of Life and Tornado Blast.
 - Extended core validation through power level 9: exact catalogue membership,
-  base PP costs, per-level powers-known totals, discipline unlocks, zero
-  unreachable powers, builder ownership, save penalties and display-name/table
-  consistency.
-- Rewrote the README around the current 85-power catalogue and complete 1–20
-  progression, including the high-tier power list and every documented engine
-  approximation.
+  base PP costs, per-level powers-known totals, legal discipline/general choices,
+  zero unreachable catalogue powers, builder ownership, save penalties and
+  display-name/table consistency.
+- Rewrote the README around the current 85-power catalogue, player-selected
+  learning, complete 1–20 allowance, and documented high-tier approximations.
 
 - Renamed four lower-tier powers to their Expanded Psionics Handbook names:
   Spatial Step to Dimension Slide, Spatial Disruption to Baleful Teleport,
@@ -65,11 +67,14 @@
 - Added power-level save-difficulty scaling. Save-bearing effects encode the
   tier term plus the +2 key-ability modifier guaranteed by the Intelligence 15
   chargen minimum.
-- Documented the remaining save-DC limitation: Intelligence above 15 increases
-  PP but cannot yet dynamically alter an installed SPL's save bonus without a
-  dedicated GemRB substitution/effect mechanism.
+- Added exact current-Intelligence save-DC substitution at manifestation time.
+  Generated internal resources cover reachable BG-family Intelligence modifiers;
+  `Psionics.prepare_action_entry()` selects the correct resource through
+  `GemRB.PrepareSpontaneousCast()` while the canonical selected power remains the
+  authority for PP cost and known-power identity.
 - Added validation requiring every save-bearing effect to carry the expected
-  save penalty.
+  power-level penalty and every generated exact-Intelligence variant to remain
+  structurally tied to its canonical power.
 
 - Relabelled the implementation as D&D 3.5e, matching the Expanded Psionics
   Handbook tables it has always used.
