@@ -44,6 +44,10 @@ jobs:
         run: python common/tests/validate_chargen_acceptance_runner.py
       - name: Validate real-engine acceptance harness
         run: python common/tests/validate_real_engine_acceptance.py
+      - name: Validate acceptance fixture preparation
+        run: python common/tests/validate_acceptance_fixture.py
+      - name: Validate shared runtime lifecycle orchestration
+        run: python common/tests/validate_shared_runtime_lifecycle.py
       - name: Validate shared registration invariants
         run: python common/tests/validate_class_registration.py
       - name: Install official WeiDU release
