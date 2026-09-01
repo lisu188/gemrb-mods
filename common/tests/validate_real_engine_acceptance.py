@@ -8,6 +8,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "common" / "tools" / "gemrb_acceptance.py"
 SMOKE = ROOT / "common" / "acceptance" / "scenarios" / "harness-smoke.json"
+SOUNDSET = ROOT / "common" / "acceptance" / "scenarios" / "soundset-enumeration.json"
 
 
 def load_harness():
@@ -42,6 +43,11 @@ def run_case(harness, root, name, code, scenario=None, extra=None):
 
 def main():
     harness = load_harness()
+    soundset = harness.load_scenario(SOUNDSET)
+    assert soundset["id"] == "soundset-enumeration"
+    assert soundset["expected_log_markers"] == ["GEMRB_MODS_SOUNDSET|"]
+    assert soundset["supported_game_types"] == ["bgee", "bg2ee", "eet"]
+
     with tempfile.TemporaryDirectory() as folder_name:
         root = Path(folder_name)
 

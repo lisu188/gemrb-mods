@@ -21,6 +21,16 @@ def main():
     runner = load_runner()
     original_input = builtins.input
     original_capture = runner.capture
+    original_parse = runner.parse_soundset_diagnostics
+    diagnostic = {
+        "raw": "GEMRB_MODS_SOUNDSET|family=bg1|count=3|slot=1|class=CIPHER|gender=1|sample=['a', 'b', 'c']",
+        "family": "bg1",
+        "count": 3,
+        "slot": "1",
+        "class": "CIPHER",
+        "gender": "1",
+        "sample": "['a', 'b', 'c']",
+    }
     try:
         builtins.input = lambda prompt="": ""
 
@@ -29,11 +39,12 @@ def main():
             return "test-capture"
 
         runner.capture = fake_capture
+        runner.parse_soundset_diagnostics = lambda path: [dict(diagnostic)]
         with tempfile.TemporaryDirectory() as folder_name:
             output = Path(folder_name) / "acceptance"
             result = runner.main([
                 "--output", str(output),
-                "--screen", "class-selection",
+                "--screen", "soundset",
                 "--gemrb-commit", "fixture-commit",
                 "--game-type", "bgee",
                 "--fixture-id", "test-fixture",
@@ -44,7 +55,7 @@ def main():
                 "import time; time.sleep(60)",
             ])
             assert result == 0
-            screenshot = output / "screenshots" / "01-class-selection.png"
+            screenshot = output / "screenshots" / "01-soundset.png"
             log_path = output / "gemrb.log"
             manifest_path = output / "manifest.json"
             assert screenshot.read_bytes() == b"fake-png"
@@ -58,12 +69,28 @@ def main():
             assert manifest["metadata"]["components"] == ["cipher"]
             assert manifest["screenshot_backend"] == "test-capture"
             assert manifest["engine_log"] == "gemrb.log"
-            assert manifest["captures"][0]["screen"] == "class-selection"
-            assert manifest["captures"][0]["screenshot"] == "screenshots/01-class-selection.png"
+            assert manifest["captures"][0]["screen"] == "soundset"
+            assert manifest["captures"][0]["screenshot"] == "screenshots/01-soundset.png"
             assert manifest["engine_returncode"] is not None
+            assert manifest["soundset_diagnostics"] == [diagnostic]
+
+            parser_log = output / "soundset-parser.log"
+            parser_log.write_text(
+                "prefix GEMRB_MODS_SOUNDSET|family=bg2|count=2|slot=4|class=FIGHTER|gender=2|sample=['v1', 'v2']\n",
+                encoding="utf-8",
+            )
+            parsed = original_parse(parser_log)
+            assert len(parsed) == 1
+            assert parsed[0]["family"] == "bg2"
+            assert parsed[0]["count"] == 2
+            assert parsed[0]["slot"] == "4"
+            assert parsed[0]["class"] == "FIGHTER"
+            assert parsed[0]["gender"] == "2"
+            assert parsed[0]["sample"] == "['v1', 'v2']"
     finally:
         builtins.input = original_input
         runner.capture = original_capture
+        runner.parse_soundset_diagnostics = original_parse
     print("Chargen live acceptance recorder validation passed")
 
 

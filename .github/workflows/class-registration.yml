@@ -48,6 +48,8 @@ jobs:
         run: python common/tests/validate_acceptance_fixture.py
       - name: Validate shared runtime lifecycle orchestration
         run: python common/tests/validate_shared_runtime_lifecycle.py
+      - name: Validate soundset diagnostic patcher
+        run: python common/tests/validate_soundset_diagnostic.py
       - name: Validate shared registration invariants
         run: python common/tests/validate_class_registration.py
       - name: Install official WeiDU release
@@ -68,6 +70,8 @@ jobs:
           ref: ${{ env.GEMRB_FIXTURE_COMMIT }}
           path: vendor/gemrb
           fetch-depth: 1
+      - name: Validate upstream soundset contract
+        run: python common/tests/validate_soundset_upstream.py vendor/gemrb
       - name: Validate real GemRB chargen text patch
         run: python common/tests/validate_chargen_gemrb_fixture.py vendor/gemrb
       - name: Seed missing Mage saving throw fixture
