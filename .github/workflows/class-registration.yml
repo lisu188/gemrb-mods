@@ -9,6 +9,8 @@ on:
       - 'cipher/**'
       - 'sorcerer-monk/**'
       - 'common/**'
+      - 'gemrb_mods.py'
+      - 'tools/**'
       - '.github/workflows/class-registration.yml'
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - 'cipher/**'
       - 'sorcerer-monk/**'
       - 'common/**'
+      - 'gemrb_mods.py'
+      - 'tools/**'
       - '.github/workflows/class-registration.yml'
 
 env:
@@ -36,6 +40,8 @@ jobs:
           python-version: '3.13'
       - name: Validate release metadata
         run: python common/tests/validate_release_metadata.py
+      - name: Validate unified package driver
+        run: python common/tests/validate_package_driver.py
       - name: Validate shared GUI lifecycle
         run: python common/tests/validate.py
       - name: Validate chargen string safety
