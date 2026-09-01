@@ -98,14 +98,16 @@ Fixture IDs are descriptive identifiers only; fixture paths and proprietary asse
 
 `common/tools/run_chargen_text_acceptance.py` remains the interactive screenshot frontend for manual chargen evidence. It emits the same manifest schema/version and run metadata fields as the deterministic harness while retaining screenshot-specific capture records.
 
+The recorder supports an explicit `soundset` capture. When the disposable GemRB `GUICG19.py` has been instrumented with `common/tools/patch_soundset_diagnostic.py`, the manifest also contains parsed `soundset_diagnostics` records with the `CHR_SOUNDS` count, bounded sample, actor slot, class row and gender. See [soundset-diagnostic.md](soundset-diagnostic.md) for the immutable-fixture Fighter/custom-class A/B procedure used by #65.
+
 Screenshots are evidence, not the primary oracle. New deterministic scenarios should prefer engine logs, installed resources and explicit actor/state assertions wherever a stable probe exists.
 
-## Planned scenario families
+## Remaining live scenario families
 
-Issue #50 tracks the remaining slices:
+The acceptance infrastructure from #50 is in place. Legal external BG-family fixtures are still required to produce real-engine evidence for:
 
-1. run the shared Cipher/Psion lifecycle matrix on legal BGEE and BG2EE-family fixtures;
+1. shared Cipher/Psion lifecycle execution on BGEE and BG2EE-family fixtures;
 2. Cipher, Psion and Sorcerer/Monk live class smoke tests;
 3. Focus/PP/rest/save-load/quickslot/minimal-combat state transitions;
 4. low/mid/high-level level-up coverage;
-5. soundset regression coverage from #65 after its baseline is classified.
+5. the #65 soundset A/B baseline and persistence check.
