@@ -2,6 +2,10 @@
 
 This mod adds a true Sorcerer/Monk multiclass to Infinity Engine games running through GemRB.
 
+**Current version: `2.0`**
+
+Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md). Version 2.0 has extensive source-contract and real-WeiDU lifecycle validation; full live GemRB campaign qualification is tracked separately in #51 and must not be inferred from the automated fixture coverage.
+
 Install it before creating the character and do not uninstall it while a save still contains Sorcerer/Monk characters.
 
 ## Supported games
@@ -101,3 +105,7 @@ The apparently misplaced backup directory is intentional in version 2.0. Version
 Sorcerer/Monk and Sorcerer/Monk/Cleric cannot be installed together. They historically use the same WeiDU backup directory and component number, so simultaneous installation would make uninstall restoration order-dependent. The old triple-class installer also hardcodes class ID 22, which can collide with Sorcerer/Monk on EE layouts with Shaman present. Both installers now reject the second installation before modifying game files.
 
 Install custom-class mods before starting a new game. Existing saves created without the class tables are not guaranteed to remain compatible after installing or uninstalling the mod.
+
+## Validation status
+
+Version 2.0 is covered by automated class-table, HLA, progression, item-usability, source-contract and real-WeiDU install/uninstall tests. Those tests establish installer/data correctness but are not a substitute for exercising spontaneous casting, Monk combat, component-level progression, HLA selection and save/reload in a live campaign. Issue #51 is the release qualification gate for that evidence.
