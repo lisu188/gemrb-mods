@@ -1,0 +1,26 @@
+{
+  "id": "cipher-psion-shared-runtime",
+  "description": "Exercise both Cipher/Psion install orders and both first-uninstall choices against one disposable fixture.",
+  "cases": [
+    {
+      "id": "cipher-psion__remove-cipher-first",
+      "install_order": ["cipher", "psion"],
+      "uninstall_order": ["cipher", "psion"]
+    },
+    {
+      "id": "cipher-psion__remove-psion-first",
+      "install_order": ["cipher", "psion"],
+      "uninstall_order": ["psion", "cipher"]
+    },
+    {
+      "id": "psion-cipher__remove-cipher-first",
+      "install_order": ["psion", "cipher"],
+      "uninstall_order": ["cipher", "psion"]
+    },
+    {
+      "id": "psion-cipher__remove-psion-first",
+      "install_order": ["psion", "cipher"],
+      "uninstall_order": ["psion", "cipher"]
+    }
+  ]
+}
