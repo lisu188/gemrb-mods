@@ -2,6 +2,7 @@
 
 ## 2.0
 
+- Marked 2.0 as automated/source-contract and real-WeiDU validated while keeping live GemRB campaign qualification as a separate release gate tracked in #51.
 - Ignored GemRB's trailing `CLSWPBON.2DA` documentation while scanning it,
   normalized nonzero `THIEFSCL.2DA` availability values, and seeded GemRB's
   shared `AVPREFC.2DA` baseline when the game KEY does not expose that resource.
