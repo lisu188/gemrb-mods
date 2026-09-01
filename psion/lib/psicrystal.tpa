@@ -1,0 +1,57 @@
+// Psicrystal personality selection.
+//
+// Ownership is stored by Psionics.py as one actor-local persistent numeric ID.
+// These SPLs are only the reusable selector and harmless temporary choices.
+// Summoning is intentionally a later slice so personality ownership never
+// depends on transient world-creature state or the generic familiar subsystem.
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRYST~
+    ps_name = ~Choose Psicrystal Personality~
+    ps_description = ~Choose the permanent personality fragment of your psicrystal. The current implementation exposes personalities whose owner benefit maps directly to Psion skill checks. Canceling the selector does not make a choice.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXCRYST.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~PSCRYST~ END
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCART~
+    ps_name = ~Artiste Psicrystal~
+    ps_description = ~A meticulous creative fragment. Grants a +3 personality bonus to Ectoplasmic Craft checks.~
+    ps_icon = ~spwi123~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCFRND~
+    ps_name = ~Friendly Psicrystal~
+    ps_description = ~An outgoing and cooperative fragment. Grants a +3 personality bonus to Influence checks.~
+    ps_icon = ~spwi104~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCOBS~
+    ps_name = ~Observant Psicrystal~
+    ps_description = ~A watchful fragment. Grants a +3 personality bonus to Awareness checks.~
+    ps_icon = ~sppr114~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCSAGE~
+    ps_name = ~Sage Psicrystal~
+    ps_description = ~A scholarly fragment. This bounded implementation fixes the Sage knowledge choice to Psionic Knowledge and grants +3 to those checks.~
+    ps_icon = ~spwi110~
+END
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCSING~
+    ps_name = ~Single-minded Psicrystal~
+    ps_description = ~A relentlessly focused fragment. Grants a +3 personality bonus to Concentration checks.~
+    ps_icon = ~sppr101~
+END
