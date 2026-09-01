@@ -42,6 +42,22 @@ Install uses WeiDU first and then delegates GUI mutation to `common/tools/instal
 
 The existing class-specific WeiDU and `tools/install_guiscripts.py` commands remain supported as low-level compatibility entry points.
 
+## Release archives
+
+Build a Cipher-only, Psion-only, or combined release with the deterministic allowlisted builder:
+
+```text
+python common/tools/build_release.py cipher
+python common/tools/build_release.py psion
+python common/tools/build_release.py cipher psion
+```
+
+Archives are written to `dist/` by default. They contain only the public driver, license/readme files, matching shared runtime files, shared WeiDU helpers, and the selected class runtime/installer resources. Repository tests, backup directories, caches, unrelated mods and CI files are excluded.
+
+Every ZIP contains `release-manifest.json` with the shared runtime API/revision, selected package versions, and SHA-256 plus size for every packaged file. ZIP member ordering and timestamps are normalized so two builds from identical repository inputs produce identical archive bytes.
+
+The archive has no enclosing repository directory. Extract it directly into the target game directory, then run the unified commands above. Public CI validates a clean extracted Cipher+Psion bundle by installing both handlers, uninstalling Cipher while Psion remains active, uninstalling Psion last, and requiring byte-for-byte restoration of the synthetic GemRB GUI fixture.
+
 ## Installation layout
 
-WeiDU does not handle arbitrary repository nesting as a user-facing installation layout. Keep each selected class directory and its matching `common/` sibling at the game root. The unified driver and the forthcoming release archive builder use the same layout, so installed packages do not depend on paths outside the extracted bundle.
+WeiDU does not handle arbitrary repository nesting as a user-facing installation layout. Keep each selected class directory and its matching `common/` sibling at the game root. The unified driver and release archive builder use the same layout, so installed packages do not depend on paths outside the extracted bundle.
