@@ -3,6 +3,7 @@ import GemRB
 import CharGenCommon
 import CommonTables
 import GUICG2
+import GemRBModStrings
 from GUIDefines import *
 from ie_stats import IE_KIT
 
@@ -45,7 +46,7 @@ def OnLoad():
 	CharGenCommon.PositionCharGenWin(DisciplineWindow)
 	title = DisciplineWindow.GetControl(0xfffffff)
 	if title:
-		title.SetText("PSION DISCIPLINE")
+		title.SetText(GemRBModStrings.PSION_DISCIPLINE)
 
 	for slot, control_id in enumerate(BUTTON_IDS):
 		button = DisciplineWindow.GetControl(control_id)
@@ -61,16 +62,16 @@ def OnLoad():
 		button.OnPress(DisciplinePress)
 
 	back_button = DisciplineWindow.GetControl(8)
-	back_button.SetText(15416)
+	back_button.SetText(GemRBModStrings.BACK)
 	back_button.MakeEscape()
 	back_button.OnPress(BackPress)
 	DoneButton = DisciplineWindow.GetControl(7)
-	DoneButton.SetText(11973)
+	DoneButton.SetText(GemRBModStrings.DONE)
 	DoneButton.MakeDefault()
 	DoneButton.SetState(IE_GUI_BUTTON_DISABLED)
 	DoneButton.OnPress(NextPress)
 	TextAreaControl = DisciplineWindow.GetControl(5)
-	TextAreaControl.SetText("Choose a Psion discipline.")
+	TextAreaControl.SetText(GemRBModStrings.CHOOSE_PSION_DISCIPLINE)
 	GemRB.SetVar(CHOICE_VAR, -1)
 	DisciplineWindow.Focus()
 
