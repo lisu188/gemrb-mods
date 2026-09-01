@@ -78,10 +78,20 @@ def test_source_contract():
             assert f"SetText({value})" not in source
             assert f"SetText ({value})" not in source
 
-    class_source = (ROOT / "cipher" / "lib" / "class.tpa").read_text(encoding="utf-8")
-    assert "ADD_TRANSLATED_STRING ~Cipher~" in class_source
-    assert "ADD_TRANSLATED_STRING ~Focused mental combatant" in class_source
-    assert "CLASTEXT.2DA" in class_source
+    cipher_class = (ROOT / "cipher" / "lib" / "class.tpa").read_text(encoding="utf-8")
+    assert "ADD_TRANSLATED_STRING ~Cipher~" in cipher_class
+    assert "ADD_TRANSLATED_STRING ~Focused mental combatant" in cipher_class
+    assert "CLASTEXT.2DA" in cipher_class
+
+    sorcerer_monk = (ROOT / "sorcerer-monk" / "setup-sorcerer-monk.tp2").read_text(encoding="utf-8")
+    assert "sm_lower = RESOLVE_STR_REF (@1)" in sorcerer_monk
+    assert "sm_desc = RESOLVE_STR_REF (@2)" in sorcerer_monk
+    assert "SORCERER_MONK" in sorcerer_monk
+
+    wrapper = (ROOT / "sorcerer-monk" / "tools" / "install_guiscripts.py").read_text(encoding="utf-8")
+    assert '"SorcererMonkUI"' in wrapper
+    assert "main_for_handler" in wrapper
+    assert (ROOT / "sorcerer-monk" / "guiscripts" / "SorcererMonkUI.py").is_file()
 
 
 def test_renderers():
@@ -165,13 +175,22 @@ def write_fixture(folder, originals):
         path.write_text(text, encoding="utf-8")
 
 
+def runtime_paths():
+    return {
+        "Psionics": ROOT / "psion" / "guiscripts" / "Psionics.py",
+        "Cipher": ROOT / "cipher" / "guiscripts" / "Cipher.py",
+        "SorcererMonkUI": ROOT / "sorcerer-monk" / "guiscripts" / "SorcererMonkUI.py",
+    }
+
+
+def marker(folder, handler):
+    return folder / (".gemrbmodcore.%s.active" % handler.lower())
+
+
 def exercise_lifecycle(first, second):
     installer = load(f"chargen_lifecycle_{first}_{second}", TOOLS / "install_guiscripts.py")
     originals = fixture_texts()
-    runtime = {
-        "Psionics": ROOT / "psion" / "guiscripts" / "Psionics.py",
-        "Cipher": ROOT / "cipher" / "guiscripts" / "Cipher.py",
-    }
+    runtime = runtime_paths()
     with tempfile.TemporaryDirectory() as folder_name:
         folder = Path(folder_name)
         write_fixture(folder, originals)
@@ -186,18 +205,41 @@ def exercise_lifecycle(first, second):
         assert "GemRBModStrings.CHOOSE_PROFICIENCIES" in profs
         assert profs.count(installer.MARK_BEGIN) == 1
         assert (folder / "GemRBModStrings.py").exists()
+        assert marker(folder, first).exists()
+        assert marker(folder, second).exists()
 
         installer.uninstall_handler(folder, first)
         assert installer.MARK_BEGIN in (folder / "bg1" / "GUICG3.py").read_text(encoding="utf-8")
+        assert marker(folder, second).exists()
         installer.uninstall_handler(folder, second)
         for name, text in originals.items():
             assert (folder / name).read_text(encoding="utf-8") == text
         assert not (folder / "GemRBModStrings.py").exists()
 
 
+def exercise_single_sorcerer_monk():
+    installer = load("chargen_lifecycle_sorcerer_monk", TOOLS / "install_guiscripts.py")
+    originals = fixture_texts()
+    with tempfile.TemporaryDirectory() as folder_name:
+        folder = Path(folder_name)
+        write_fixture(folder, originals)
+        runtime = runtime_paths()["SorcererMonkUI"]
+        installer.install_handler(folder, "SorcererMonkUI", runtime)
+        assert marker(folder, "SorcererMonkUI").exists()
+        assert "GemRBModClassChoice.on_load(globals())" in (folder / "bg1" / "GUICG2.py").read_text(encoding="utf-8")
+        assert "GemRBModStrings.CHOOSE_ALIGNMENT" in (folder / "bg1" / "GUICG3.py").read_text(encoding="utf-8")
+        assert "GemRBModStrings.CHOOSE_PROFICIENCIES" in (folder / "LUProfsSelection.py").read_text(encoding="utf-8")
+        installer.uninstall_handler(folder, "SorcererMonkUI")
+        for name, text in originals.items():
+            assert (folder / name).read_text(encoding="utf-8") == text
+
+
 def test_lifecycle():
     exercise_lifecycle("Psionics", "Cipher")
     exercise_lifecycle("Cipher", "Psionics")
+    exercise_lifecycle("SorcererMonkUI", "Cipher")
+    exercise_lifecycle("Psionics", "SorcererMonkUI")
+    exercise_single_sorcerer_monk()
 
 
 def main():
