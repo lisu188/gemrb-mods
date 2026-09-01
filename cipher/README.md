@@ -2,6 +2,10 @@
 
 A Pillars of Eternity-inspired single class for BG-family games running under GemRB.
 
+**Current version: `0.2.0`**
+
+Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md).
+
 ## Combat loop
 
 Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, critical hits add another 5 Focus for 10 total, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
@@ -97,3 +101,5 @@ bash cipher/tests/validate_weidu.sh
 ```
 
 CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal/critical/Reaping-Knives Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
+
+These automated checks are the current release evidence; the real-engine cross-mod acceptance suite is tracked separately in #50.

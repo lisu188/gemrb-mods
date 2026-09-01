@@ -2,6 +2,10 @@
 
 This mod adds a point-based D&D 3.5e Psion class to BG-family campaigns running through GemRB.
 
+**Current version: `1.3.0`**
+
+Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md).
+
 The six discipline classes are:
 
 - **Seer** — Clairsentience
@@ -13,15 +17,15 @@ The six discipline classes are:
 
 ## Development status
 
-Version 1.0.0 is the first merged release. Current post-1.0 development extends the fixed class progression through character level 20 and power level 9 while retaining the 1.0 installer version until the next release is cut.
+Version 1.3.0 contains the current level-1–20 Psion implementation, including the 85-power catalogue, player-selected powers known, persistent PP/focus/feat/skill state, augmentation selectors, and exact current-Intelligence save-DC substitution.
 
 The current catalogue contains **85 powers**:
 
 - 61 powers at levels 1–5;
 - 24 discipline powers at levels 6–9;
-- one new discipline power for every specialization whenever tiers 6, 7, 8 and 9 unlock.
+- one level-6, -7, -8 and -9 discipline power for each specialization.
 
-Every catalogue power has at least one progression route. The sixteen level-1–5 resources that were installed but unreachable in 1.0 development are now assigned across CLAB rows 10–20.
+`psionknown.2da` defines how many powers the character may know and the highest power level available at each Psion level. The runtime exposes legal learning choices through **Learn Psion Power** rather than granting a fixed final power list through the CLAB tables. Existing known powers count against the allowance, so migrated characters keep what they already know and receive only the choices still owed by their current level.
 
 ## Core rules
 
@@ -38,7 +42,7 @@ Every catalogue power has at least one progression route. The sixteen level-1–
 
 ## Powers known
 
-`psionknown.2da` is authoritative. The fixed progression is:
+`psionknown.2da` is authoritative for the **allowance**, not a fixed learned-power sequence:
 
 | Psion level | Powers known | Maximum power level |
 | ---: | ---: | ---: |
@@ -63,7 +67,7 @@ Every catalogue power has at least one progression route. The sixteen level-1–
 | 19 | 34 | 9 |
 | 20 | 36 | 9 |
 
-At every new tier—class levels 1, 3, 5, 7, 9, 11, 13, 15 and 17—the newly gained set contains exactly one power from the character's chosen discipline at the newly unlocked maximum power level.
+The selector filters the catalogue to powers at or below the current maximum power level, excludes already-known powers, and permits only general powers or powers belonging to the character's chosen discipline. Learning uses harmless `PXL*` proxy resources and commits the real known power only after the choice is confirmed. Cancelling the selector does not consume a learning credit and does not manifest the selected power.
 
 ## Power catalogue
 
@@ -152,9 +156,11 @@ The current selector subsystem supports:
 
 ## Save difficulty
 
-D&D 3.5 uses `10 + power level + Intelligence modifier`. The Infinity Engine does not expose a runtime caster-stat DC field for an installed SPL. This mod therefore preserves the power-level spread in each effect's `savebonus` and bakes in the +2 modifier guaranteed by the Intelligence 15 character-creation minimum.
+D&D 3.5 uses `10 + power level + Intelligence modifier`. Psion 1.3 implements the current Intelligence modifier exactly at manifestation time.
 
-Intelligence above 15 currently increases bonus PP but does **not** further increase power save difficulty. Implementing exact runtime Intelligence scaling would require a dedicated GemRB substitution/effect mechanism or a large family of per-Intelligence resources.
+Public power resources keep the baseline save structure used by the catalogue. The build generates internal save-bearing variants for the reachable BG-family Intelligence modifiers. When a non-selector power or augmentation child is confirmed, `Psionics.prepare_action_entry()` resolves the actor's current modifier through `_dc_modifier()` and `_dc_variant_resref()`, then uses `GemRB.PrepareSpontaneousCast()` to substitute the matching internal resource before `ActionsWindow` executes the cast. The selected canonical resource remains the authority for PP cost and selector ownership, so save-DC substitution cannot change what the character knows or how much PP is charged.
+
+The internal DC variants are implementation details and are not extra known powers. If a generated variant is unavailable, the runtime safely falls back to the canonical resource rather than inventing a second save-DC formula.
 
 ## High-level portable approximations
 
@@ -231,22 +237,24 @@ Original BG1/TotSC are excluded because the implementation depends on later clas
 GitHub Actions validates:
 
 - all table shapes and exact 85-resource catalogue membership;
-- exact powers-known totals at every character level from 1 through 20;
-- one matching discipline power at every newly unlocked tier;
+- powers-known allowances and maximum tiers at every character level from 1 through 20;
+- selector legality for general/discipline powers and already-known-power exclusion;
 - zero globally unreachable catalogue powers;
 - base PP costs through power level 9;
 - purpose-built SPL ownership and key high-tier opcodes;
-- power-level save penalties through level 9 and save-bearing effect coverage;
+- power-level save penalties and generated exact-Intelligence DC variants;
 - display-name/table-name consistency across every catalogue power;
 - generated augmentation tables and the 20-PP ceiling;
 - XP, THAC0, saving throws, Lore, proficiencies, ability requirements and item usability;
-- fake-GemRB PP persistence, selectors, quickslots, transactions and reusable innate charges;
+- fake-GemRB PP persistence, player-selected power learning, selectors, quickslots, transactions and reusable innate charges;
 - shared GUI patch install, idempotence, ownership migration, uninstall, indentation and failure preflight;
 - official WeiDU parsing of the complete installer and every included TPA;
 - install, verification, uninstall and reinstall across normalized, native EE and legacy class-table layouts;
 - BG2/ToB startup-table lifecycles and semantic item restoration;
 - binary SPL bounds and preservation of original TLK/table data after uninstall.
 
+These automated checks do not by themselves claim live-game qualification. The real-engine cross-mod acceptance gate is tracked in #50.
+
 ## Next work
 
-The main remaining design systems are player-selected power learning, psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+The main remaining design systems are psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
