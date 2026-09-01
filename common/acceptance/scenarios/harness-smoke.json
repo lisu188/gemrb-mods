@@ -1,0 +1,9 @@
+{
+  "id": "harness-smoke",
+  "description": "Synthetic public-CI scenario proving command execution, log assertions and manifest output without proprietary game data.",
+  "timeout_seconds": 10,
+  "expected_exit_codes": [0],
+  "expected_log_markers": ["GEMRB_ACCEPTANCE_READY"],
+  "forbidden_log_markers": ["GEMRB_ACCEPTANCE_FATAL"],
+  "supported_game_types": ["synthetic"]
+}
