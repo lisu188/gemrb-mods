@@ -34,6 +34,10 @@ def main():
             result = runner.main([
                 "--output", str(output),
                 "--screen", "class-selection",
+                "--gemrb-commit", "fixture-commit",
+                "--game-type", "bgee",
+                "--fixture-id", "test-fixture",
+                "--component", "cipher",
                 "--",
                 sys.executable,
                 "-c",
@@ -46,6 +50,12 @@ def main():
             assert screenshot.read_bytes() == b"fake-png"
             assert log_path.is_file()
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            assert manifest["schema_version"] == 1
+            assert manifest["scenario"]["id"] == "chargen-manual-capture"
+            assert manifest["metadata"]["gemrb_commit"] == "fixture-commit"
+            assert manifest["metadata"]["game_type"] == "bgee"
+            assert manifest["metadata"]["fixture_id"] == "test-fixture"
+            assert manifest["metadata"]["components"] == ["cipher"]
             assert manifest["screenshot_backend"] == "test-capture"
             assert manifest["engine_log"] == "gemrb.log"
             assert manifest["captures"][0]["screen"] == "class-selection"
