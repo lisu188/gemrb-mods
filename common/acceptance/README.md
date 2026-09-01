@@ -44,9 +44,46 @@ acceptance-out/
 
 The command exits non-zero for a timeout, unexpected exit code, missing expected log marker, forbidden log marker, process launch failure or invalid scenario configuration.
 
+## Preparing a disposable real fixture
+
+`prepare_acceptance_fixture.py` copies an existing legal game fixture and an existing GemRB `GUIScripts` tree into a disposable workspace, then copies the requested repository packages into the game copy. The source directories are never modified.
+
+```text
+python common/tools/prepare_acceptance_fixture.py \
+  --source-game /fixtures/BGEE \
+  --source-guiscripts /opt/gemrb/GUIScripts \
+  --output /tmp/gemrb-acceptance-bgee \
+  --fixture-id bgee-local-clean \
+  --game-type bgee \
+  --mod cipher \
+  --mod psion
+```
+
+The resulting `fixture.json` stores only the fixture identifier, game type, relative prepared paths and copied package list. It deliberately does not persist the original fixture paths.
+
+Preparation fails before mutation if a source directory or repository package is missing or if the destination already exists. It also rejects a source game copy that already contains one of the packages being injected, because lifecycle acceptance must start from a clean baseline.
+
+## Cipher/Psion shared-runtime lifecycle matrix
+
+`common/acceptance/matrices/cipher-psion-lifecycle.json` contains four cases: both class install orders crossed with both first-uninstall choices. Run the complete matrix against a prepared fixture with:
+
+```text
+python common/tools/run_shared_runtime_lifecycle.py \
+  --fixture /tmp/gemrb-acceptance-bgee/fixture.json \
+  --matrix common/acceptance/matrices/cipher-psion-lifecycle.json \
+  --output /tmp/gemrb-acceptance-bgee/lifecycle \
+  --weidu weidu
+```
+
+Each case performs component-0 WeiDU install, then delegates GUI mutation to the existing class `tools/install_guiscripts.py` wrapper. On uninstall it removes the GUI handler and then force-uninstalls WeiDU component 0. After every GUI transition it checks the exact `.gemrbmodcore.<handler>.active` set.
+
+The runner snapshots all shared GUI patch targets and installed common/runtime modules before each case. After the last handler is removed, every watched file must match the baseline SHA-256 or original non-existence state. This acceptance layer does not duplicate `_patch_*` or ownership logic from `common/tools/install_guiscripts.py`.
+
+Per-command logs and `lifecycle-manifest.json` are written under the selected output directory. A command failure, handler-marker mismatch, dirty initial runtime, timeout or restoration mismatch fails the matrix.
+
 ## Metadata
 
-For real runs, pass the exact evidence needed to reproduce failures:
+For deterministic scenario runs, pass the exact evidence needed to reproduce failures:
 
 - `--gemrb-version`
 - `--gemrb-commit`
@@ -59,7 +96,7 @@ Fixture IDs are descriptive identifiers only; fixture paths and proprietary asse
 
 ## Interactive chargen recorder
 
-`common/tools/run_chargen_text_acceptance.py` remains the interactive screenshot frontend for manual chargen evidence. It now emits the same manifest schema/version and run metadata fields as the deterministic harness while retaining screenshot-specific capture records.
+`common/tools/run_chargen_text_acceptance.py` remains the interactive screenshot frontend for manual chargen evidence. It emits the same manifest schema/version and run metadata fields as the deterministic harness while retaining screenshot-specific capture records.
 
 Screenshots are evidence, not the primary oracle. New deterministic scenarios should prefer engine logs, installed resources and explicit actor/state assertions wherever a stable probe exists.
 
@@ -67,7 +104,7 @@ Screenshots are evidence, not the primary oracle. New deterministic scenarios sh
 
 Issue #50 tracks the remaining slices:
 
-1. shared Cipher/Psion install and uninstall lifecycle in both orders;
+1. run the shared Cipher/Psion lifecycle matrix on legal BGEE and BG2EE-family fixtures;
 2. Cipher, Psion and Sorcerer/Monk live class smoke tests;
 3. Focus/PP/rest/save-load/quickslot/minimal-combat state transitions;
 4. low/mid/high-level level-up coverage;
