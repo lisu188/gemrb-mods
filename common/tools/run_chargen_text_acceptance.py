@@ -25,7 +25,10 @@ SCREEN_INSTRUCTIONS = {
     "alignment": "Advance a custom class to the alignment screen without selecting an alignment yet.",
     "proficiencies": "Advance a custom class to the weapon-proficiency screen before opening a proficiency description.",
     "psion-discipline": "Open the Psion discipline chooser and leave its introductory help visible.",
+    "soundset": "Advance to the Sound screen with the soundset list visible; use the diagnostic-patched GUICG19.py for #65 evidence.",
 }
+
+SOUNDSET_PREFIX = "GEMRB_MODS_SOUNDSET|"
 
 
 def screenshot_command(output):
@@ -47,6 +50,28 @@ def capture(output):
     if not output.is_file() or output.stat().st_size == 0:
         raise RuntimeError(f"Screenshot utility produced no image: {output}")
     return command[0]
+
+
+def parse_soundset_diagnostics(log_path):
+    records = []
+    for line in Path(log_path).read_text(encoding="utf-8", errors="replace").splitlines():
+        position = line.find(SOUNDSET_PREFIX)
+        if position < 0:
+            continue
+        payload = line[position:].strip()
+        record = {"raw": payload}
+        for field in payload.split("|")[1:]:
+            if "=" not in field:
+                continue
+            key, value = field.split("=", 1)
+            record[key] = value
+        if "count" in record:
+            try:
+                record["count"] = int(record["count"])
+            except ValueError:
+                pass
+        records.append(record)
+    return records
 
 
 def parse_args(argv=None):
@@ -119,6 +144,7 @@ def main(argv=None):
             returncode = terminate(process)
 
     finished = utc_now()
+    soundset_diagnostics = parse_soundset_diagnostics(log_path)
     manifest = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "scenario": {
@@ -141,6 +167,7 @@ def main(argv=None):
         "engine_log": str(log_path.relative_to(output)),
         "engine_returncode": returncode,
         "captures": records,
+        "soundset_diagnostics": soundset_diagnostics,
     }
     write_manifest(manifest_path, manifest)
     print(manifest_path)
