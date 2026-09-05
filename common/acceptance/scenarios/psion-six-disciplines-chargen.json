@@ -1,0 +1,30 @@
+{
+  "id": "psion-six-disciplines-chargen",
+  "description": "Real chargen identity and initial action/learning state for all six Psion disciplines.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [0],
+  "supported_game_types": ["bgee", "bg2ee", "eet"],
+  "prerequisites": [
+    "A disposable real-game fixture with Psion installed and six distinct legal character-creation flows.",
+    "Independent installed class, PP and power-learning table oracles; Intelligence and campaign-start level recorded per actor."
+  ],
+  "instructions": [
+    "Create each discipline through the real class and specialization choices, then confirm actual actor identity in gameplay.",
+    "Open the real innate bar and observe serialized PP, known powers, learning limits and legal choices without invoking initialization helpers as assertions.",
+    "Capture the resulting UI and preserve each actor in a private save. This scenario does not replace combat or progression acceptance."
+  ],
+  "required_checkpoints": [
+    "chargen.psion.seer.identity",
+    "chargen.psion.shaper.identity",
+    "chargen.psion.kineticist.identity",
+    "chargen.psion.egoist.identity",
+    "chargen.psion.nomad.identity",
+    "chargen.psion.telepath.identity",
+    "psion.seer.initial",
+    "psion.shaper.initial",
+    "psion.kineticist.initial",
+    "psion.egoist.initial",
+    "psion.nomad.initial",
+    "psion.telepath.initial"
+  ]
+}

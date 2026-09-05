@@ -4,11 +4,11 @@ import subprocess
 import sys
 import tempfile
 
-from weidu_layout_smoke import make_released_clskills
+from weidu_layout_smoke import make_released_ee_layout
 from weidu_smoke import build_fixture, find_row, run_weidu
 
 
-ERROR = "Could not derive Sorcerer/Monk Sorcerer spell metadata from CLSKILLS.2DA"
+ERROR = "Could not derive Sorcerer spell metadata from CLSKILLS.2DA"
 
 
 def snapshot(override):
@@ -46,7 +46,7 @@ def run_rejected(weidu, game):
         "--noautoupdate",
         "--force-install-list", "0",
     ]
-    return subprocess.run(
+    result = subprocess.run(
         command,
         cwd=game,
         check=False,
@@ -54,16 +54,19 @@ def run_rejected(weidu, game):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+    assert result.returncode != 0, result.stdout
+    return result
 
 
 def exercise_layout(weidu, legacy):
     label = "legacy" if legacy else "current"
     with tempfile.TemporaryDirectory(prefix=f"sorcerer-monk-clskills-spells-{label}-") as tmp:
         game = Path(tmp)
-        build_fixture(game)
-        override = game / "override"
         if legacy:
-            make_released_clskills(override)
+            make_released_ee_layout(game)
+        else:
+            build_fixture(game)
+        override = game / "override"
         rewrite_sorcerer_fields(override, "MODSRC99", 7)
         originals = snapshot(override)
 

@@ -82,7 +82,7 @@ def _power_pick_table():
 
 def _known_power_table():
     try:
-        return GemRB.LoadTable("cipherknown", False, True)
+        return GemRB.LoadTable("ciknown", False, True)
     except Exception:
         return None
 
@@ -92,7 +92,7 @@ def power_info(resref):
     if not key.startswith("CI"):
         return None
     try:
-        table = GemRB.LoadTable("cipherpowers", False, True)
+        table = GemRB.LoadTable("cipowers", False, True)
         return {
             "kind": "power",
             "resref": key,
@@ -225,7 +225,7 @@ def _learn_power(actor, resref):
 
 def restore_party():
     cancel_pending()
-    for actor in range(1, 7):
+    for actor in range(1, GemRB.GetPartySize() + 1):
         try:
             if is_cipher(actor):
                 set_focus(actor, STARTING_FOCUS)
@@ -246,6 +246,12 @@ def can_manifest(actor, resref):
 
 def action_info(resref):
     key = str(resref or "").upper()
+    owner_suffix = key[5:] if key.startswith("CI8RK") else ""
+    if owner_suffix.isdecimal() and owner_suffix == str(int(owner_suffix)) and 1 <= int(owner_suffix) <= REAPING_OWNER_LAST:
+        info = power_info(REAPING_KNIVES_RESOURCE)
+        if info:
+            info["internal_resref"] = key
+        return info
     if key == POWER_SELECTOR_RESOURCE:
         return {
             "kind": "power_selector",
@@ -324,14 +330,10 @@ def prepare_action_entry(spellbook, actor, entry):
         GemRB.Log(2, "Cipher", "Reaping Knives owner is outside party slots: %s" % actor)
         return False
     try:
-        replacement = "CI8RK%d" % _reaping_owner_token(actor)
-        source_ref = str(entry.get("SpellResRef", "")).upper()
-        book_type = int(entry["BookType"])
-        spell_level = int(entry["SpellLevel"])
-        spell_index = GemRB.PrepareSpontaneousCast(
-            actor, source_ref, book_type, spell_level, replacement
-        )
-        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))
+        # Persist the save-owned identity, not a mutable party slot. Internal
+        # resources are not learned: the shared explicit-resource path avoids
+        # depleting the parent while merely choosing a target.
+        entry["CastResRef"] = "CI8RK%d" % _reaping_owner_token(actor)
         return entry
     except Exception as error:
         GemRB.Log(2, "Cipher", "Reaping Knives cast preparation failed: %s" % error)

@@ -96,7 +96,7 @@ END
 // 146 applies this resource to an individual creature.
 LAF psion_create_level9_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 0
     ps_projectile = psion_none_projectile
     ps_flags = psion_level9_hostile_flags
@@ -160,7 +160,7 @@ BUT_ONLY
 // portable restorative package and deliberately bypasses further saves and MR.
 LAF psion_create_level9_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR

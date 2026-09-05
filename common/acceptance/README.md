@@ -16,11 +16,86 @@ Scenario files live in `common/acceptance/scenarios/` and use a small JSON contr
   "expected_exit_codes": [0],
   "expected_log_markers": ["EXPECTED_MARKER"],
   "forbidden_log_markers": ["KNOWN_FAILURE"],
+  "required_checkpoints": ["actor.after-action"],
+  "prerequisites": ["Required fixture and independently derived expected values."],
+  "instructions": ["Perform the real UI action and record its observed result."],
   "supported_game_types": ["bgee", "bg2ee"]
 }
 ```
 
-`Traceback (most recent call last):` is always forbidden. Scenario-specific forbidden markers are additive.
+`Traceback (most recent call last):` and `[GUIScript/ERROR]: Runtime Error:` are
+always forbidden, including GUI failures that provide no Python traceback.
+Scenario-specific forbidden markers are additive.
+
+`required_checkpoints`, `prerequisites` and `instructions` are optional, so existing log-marker scenarios retain their behavior. Required checkpoint IDs must be unique. The manifest retains schema version 1 and adds parsed `checkpoints`, required assertions and the scenario's prerequisite/instruction lists.
+
+## Structured gameplay checkpoints
+
+Copy `common/acceptance/GemRBAcceptance.py` into the **disposable** fixture's GUIScripts root. The helper only observes state and emits evidence; it never casts, levels an actor, grants XP or repairs a failed state. After performing an action through the real engine UI, emit an observation from its console or a temporary fixture probe:
+
+```python
+import GemRBAcceptance as Acceptance
+from ie_stats import IE_CLASS, IE_KIT
+
+actual = Acceptance.capture_actor(1, {"class": IE_CLASS, "kit": IE_KIT})
+# Set these from the installed class tables before observing the actor.
+expected = {"actor": 1, "stats": {"class": installed_class_id, "kit": installed_kit_id}, "variables": {}}
+Acceptance.checkpoint("chargen.cipher.identity", actual, expected,
+                      {"oracle": "installed class tables", "screenshot": "screenshots/cipher-record.png"})
+```
+
+`capture_actor(actor, stats, variables=(), base=False)` reads named GemRB stat IDs and optional GUI variables. `base=True` selects unmodified stats. More specific read-only engine queries, such as known powers or current pool accessors, can provide `actual` directly to `checkpoint`. Use independently derived installed-rule values or a previously recorded baseline for `expected`; assigning the current observation to both fields proves nothing. Screenshots and logs must establish the claimed UI actions and resource transitions. A successful checkpoint alone does not authenticate that a real engine or real UI action produced it.
+
+The stdout protocol is one JSON object per line, optionally prefixed by the engine's log label:
+
+```text
+GEMRB_ACCEPTANCE_CHECKPOINT|{"id":"pool.after-cast","actual":7,"expected":7,"context":{"before":10,"installed_cost":3}}
+```
+
+Only `id`, `actual`, `expected` and optional object-valued `context` are allowed. The runner compares canonical JSON values, including list order and JSON types (`true` does not equal `1`). It records each observation, source line and computed status in `manifest.json`. It rejects invalid JSON, duplicate object fields, non-finite numbers, missing fields, extra success flags, duplicate checkpoint IDs and missing required checkpoints. All emitted mismatches fail, even for optional checkpoint IDs. Engine termination, forbidden log markers and timeouts remain independent failure gates.
+
+The checked-in manual scenarios cover:
+
+- `chargen-three-classes`: Fighter baseline, Cipher, Sorcerer/Monk and all six Psion disciplines.
+- `psion-six-disciplines-chargen`: six real Psion identity flows and initial action/learning state; separate from combat and progression.
+- `psion-gameplay-progression`: learning, PP, augmentation, current-INT DC selection, discipline access and progression/persistence.
+
+- `cipher-gameplay-progression`: Focus gain/spending, two-Cipher Reaping Knives ownership and tier/progression/persistence.
+- `sorcerer-monk-gameplay-progression`: casting, Monk actions, equipment, component-level progression and persistence.
+- `sorcerer-monk-tob-hla`: real ToB merged HLA selection and save/reload, a separate required gate for ToB qualification.
+
+When inspecting rule tables from the live console, use the documented
+[eight-character runtime resource names](../../docs/runtime-resource-names.md),
+not the longer authoring filenames. The resource-name regression is
+`python3 common/tests/validate_runtime_resrefs.py`.
+
+Run each scenario independently on the required game families. Their prerequisite and instruction lists describe the real session procedure; they are not automated gameplay scripts. Four-hour timeouts allow interactive runs, but the engine must exit normally. Missing or blocked checkpoints fail the scenario and must remain recorded as incomplete coverage. Public synthetic checkpoint tests validate the recorder only, not any class or campaign.
+
+## Optional private live console
+
+`common/tools/live_console.py` prepares an explicitly disposable GUI tree with a
+local file mailbox. It installs `LiveControl.py` and the checkpoint helper, backs
+up `bg2/Start.py`, and adds an opt-in startup hook:
+
+```text
+python common/tools/live_console.py --session /tmp/private-gemrb-session \
+  --prepare /tmp/disposable-fixture/GUIScripts
+```
+
+Launch the real engine with `GEMRB_ACCEPTANCE_SESSION` set to that same directory.
+Then `--session /tmp/private-gemrb-session --expression 'GemRB.GetCurrentArea()'`
+observes the running engine; requests and results remain in the mailbox. This
+POSIX-only console executes arbitrary Python expressions on the GUI thread with
+the engine's privileges. It is **not** a sandbox or a production mod component.
+Both endpoints reject symlink, shared-permission and differently owned session
+directories. Newly prepared mailboxes use mode `0700`; existing directories must
+already be private. Never expose the mailbox to untrusted writers.
+
+Use `LiveControl.controls(...)` to observe current control geometry and drive
+the real UI using mouse/keyboard input. Observations must not invoke mutating
+helpers or replace the gameplay transition being tested. Controlled fixture/XP
+preparation is separate and must be recorded. Keep mailboxes, screenshots, saves
+and game assets local; they may contain private paths or proprietary content.
 
 ## Synthetic smoke run
 

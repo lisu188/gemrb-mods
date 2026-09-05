@@ -92,6 +92,14 @@ ACTION_IF ps_xpcap_found != 1 THEN BEGIN
   FAIL ~The Psion mod could not locate the MAGE cap in XPCAP.2DA.~
 END
 
+// APPEND cannot read GemRB's external unhardcoded tables even when
+// FILE_EXISTS_IN_GAME can. Materialize that resource before extending it.
+ACTION_IF FILE_EXISTS_IN_GAME ~avprefc.2da~ THEN BEGIN
+  COPY_EXISTING ~avprefc.2da~ ~override/avprefc.2da~
+END ELSE BEGIN
+  COPY ~common/weidu/baselines/avprefc.2da~ ~override/avprefc.2da~
+END
+
 APPEND ~class.ids~ ~%ps_seer_id% PSION_SEER~ UNLESS ~PSION_SEER~
 APPEND ~alignmnt.2da~ ~PSION_SEER 1 1 1 1 1 1 1 1 1~ UNLESS ~PSION_SEER~
 APPEND ~abclasrq.2da~ ~PSION_SEER 0 0 0 15 0 0~ UNLESS ~PSION_SEER~

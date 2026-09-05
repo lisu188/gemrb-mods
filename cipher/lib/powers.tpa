@@ -1,7 +1,7 @@
 DEFINE_ACTION_FUNCTION cipher_create_power
 INT_VAR
   ci_tier = 1
-  ci_target = 2
+  ci_target = 1 // SPL TARGET_CREA, not effect target 2
   ci_range = 30
   ci_speed = 3
   ci_projectile = 1

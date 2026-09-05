@@ -41,7 +41,7 @@ OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 // components. Component 0 is the authority because it creates CIPHER_HOSTILE.
 // Use text replacement here because WeiDU's 2DA column APIs exclude row labels;
 // trying to address the apparent second column would patch the version token.
-COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~
+COPY ~cipher/tables/cipherfocus.2da~ ~override/cifocus.2da~
   REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~
 
 // Every setter owns one permanent ScriptingState effect. Before installing the

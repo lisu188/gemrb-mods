@@ -143,6 +143,8 @@ def ActionInnatePressed ():
 def SpellPressed ():
 \tpc = GemRB.GameGetFirstSelectedActor ()
 \tSpell = GemRB.GetVar ("Spell")
+\tType = GemRB.GetVar ("Type")
+\tGemRB.SpellCast (pc, Type, Spell)
 ''',
         "Spellbook.py": '''import GemRB
 

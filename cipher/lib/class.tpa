@@ -132,8 +132,8 @@ ACTION_IF ci_qslots_rows != (ci_class_id - 1) THEN BEGIN
   FAIL ~Cipher cannot align QSLOTS.2DA with its allocated class ID.~
 END
 
+// This is a renamed clone: BUT_ONLY would suppress the unchanged destination.
 COPY_EXISTING ~savewiz.2da~ ~override/saveciph.2da~
-BUT_ONLY
 
 ACTION_IF ci_split = 1 THEN BEGIN
   ACTION_IF (ci_text_cols != 6) AND (ci_text_cols != 9) AND (ci_text_cols != 10) THEN BEGIN FAIL @4 END
@@ -156,6 +156,13 @@ APPEND ~class.ids~ ~%ci_class_id% CIPHER~ UNLESS ~CIPHER~
 APPEND ~alignmnt.2da~ ~CIPHER 1 1 1 1 1 1 1 1 1~ UNLESS ~CIPHER~
 APPEND ~abclasrq.2da~ ~CIPHER 0 0 0 13 0 0~ UNLESS ~CIPHER~
 APPEND ~profs.2da~ ~CIPHER 2 4~ UNLESS ~CIPHER~
+// APPEND cannot read GemRB's external unhardcoded tables even when
+// FILE_EXISTS_IN_GAME can. Materialize that resource before extending it.
+ACTION_IF FILE_EXISTS_IN_GAME ~avprefc.2da~ THEN BEGIN
+  COPY_EXISTING ~avprefc.2da~ ~override/avprefc.2da~
+END ELSE BEGIN
+  COPY ~common/weidu/baselines/avprefc.2da~ ~override/avprefc.2da~
+END
 APPEND ~avprefc.2da~ ~CIPHER 0x600~ UNLESS ~CIPHER~
 APPEND ~qslots.2da~ ~CIPHER 3 4 5 2 8 9 11 12 13~ UNLESS ~CIPHER~
 

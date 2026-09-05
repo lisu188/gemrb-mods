@@ -206,6 +206,25 @@ class LiveOracleTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "identity mismatch"):
                 self.tool.build_oracle(game)
 
+    def test_oracle_accepts_native_2da_signature_whitespace(self):
+        for signature in ("2DA                 V1.0", "2DA\tV1.0"):
+            with self.subTest(signature=signature), tempfile.TemporaryDirectory() as folder_name:
+                game = make_game(Path(folder_name))
+                path = game / "override" / "CLSWPBON.2DA"
+                lines = path.read_text(encoding="utf-8").splitlines()
+                lines[0] = signature
+                path.write_bytes(("\r\n".join(lines) + "\r\n").encode("utf-8"))
+                oracle = self.tool.build_oracle(game)
+                self.assertEqual(oracle["installed"]["clswpbon"]["values"], ["1", "3", "2"])
+
+    def test_invalid_2da_version_is_rejected(self):
+        for signature in ("2DA V1.1", "2DA V1.0-extra"):
+            with self.subTest(signature=signature), tempfile.TemporaryDirectory() as folder_name:
+                path = Path(folder_name) / "invalid.2da"
+                path.write_text(f"{signature}\n*\nVALUE\nROW 1\n", encoding="utf-8")
+                with self.assertRaisesRegex(RuntimeError, "unsupported 2DA header"):
+                    self.tool.parse_2da(path)
+
     def test_missing_generated_hla_resource_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder_name:
             game = make_game(Path(folder_name))

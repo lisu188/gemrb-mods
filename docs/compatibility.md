@@ -2,6 +2,12 @@
 
 This matrix is the repository-level source of truth for the currently maintained custom classes. Class READMEs contain class-specific rules and installation details; installer `VERSION` values remain authoritative for release numbers.
 
+Development-branch prerequisite: Psion/Cipher class powers require the companion
+GemRB `SetSpellCastCheck` API, not merely a matching version string. See
+[cast accounting and its current limitations](cast-runtime.md). The released
+engine and full gameplay qualification must not be inferred from installer or
+startup checks.
+
 | Mod | Version | Supported game families under GemRB | Runtime / GUI requirement | Automated validation | Real-engine acceptance |
 | --- | --- | --- | --- | --- | --- |
 | Cipher | 0.2.0 | Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE, EET | matching sibling `common/`; shared `GemRBModCore` GUI hooks | static, fake-GemRB, WeiDU parse/install/uninstall/reinstall and pinned GemRB fixture contracts | pending cross-mod acceptance suite in #50 |

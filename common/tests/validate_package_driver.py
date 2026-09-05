@@ -118,6 +118,28 @@ def main():
         assert state["state"] == "runtime only/inconsistent", state
         assert state["weidu_installed"] is True
 
+    for mod, other in (("psion", "cipher"), ("cipher", "psion")):
+        with tempfile.TemporaryDirectory() as folder_name:
+            game = Path(folder_name) / "game"
+            game.mkdir()
+            write_package_root(game, mod=mod)
+            guiscripts = Path(folder_name) / "GUIScripts"
+            guiscripts.mkdir()
+            context = driver.load_package_context(game, mod)
+            # WeiDU retains commented history when uninstalling underneath
+            # another component; only uncommented entries mean installed.
+            history = f"// Recently Uninstalled: ~{mod}/setup-{mod}.tp2~ #0 #0\n"
+            active_other = f"~{other}/setup-{other}.tp2~ #0 #0 // installed\n"
+            log = game / "WeiDU.log"
+            log.write_text(history + active_other, encoding="utf-8")
+            state = driver.status_for_context(game, guiscripts, context)
+            assert state["state"] == "not installed", state
+            assert state["weidu_installed"] is False
+
+            log.write_text(history + f"  ~{mod}/setup-{mod}.tp2~ #0 #0 // reinstalled\n",
+                           encoding="utf-8")
+            assert driver.weidu_component_installed(game, context)
+
     with tempfile.TemporaryDirectory() as folder_name:
         game = Path(folder_name) / "game"
         game.mkdir()

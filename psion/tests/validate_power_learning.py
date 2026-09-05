@@ -39,6 +39,7 @@ def main():
     header = struct.unpack_from("<I", proxy, 0x64)[0]
     assert proxy[header + 0x04:header + 0x0C] == b"SPWI112B"
     assert proxy[header + 0x0C] == 5
+    assert proxy[header + 0x0D] == 1
     assert struct.unpack_from("<H", proxy, header + 0x1E)[0] == 0
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp)

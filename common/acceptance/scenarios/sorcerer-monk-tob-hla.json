@@ -1,0 +1,22 @@
+{
+  "id": "sorcerer-monk-tob-hla",
+  "description": "Legal merged Sorcerer/Monk HLA selection in a real ToB campaign.",
+  "timeout_seconds": 7200,
+  "expected_exit_codes": [0],
+  "supported_game_types": ["bg2ee", "eet"],
+  "prerequisites": [
+    "Real ToB-capable game data and an active ToB campaign, not a fabricated public fixture.",
+    "Disposable Sorcerer/Monk installation with merged HLA tables and a legal actor at the HLA threshold.",
+    "Installed HLA tables provide the independent eligibility and credit oracle."
+  ],
+  "instructions": [
+    "Open the real level-up screen and compare the displayed merged Sorcerer/Monk choices with legal entries from the installed table.",
+    "Choose legal abilities and complete level-up; compare known abilities and remaining credits with the expected result.",
+    "Save/reload and verify selected abilities persist; quit the engine normally."
+  ],
+  "required_checkpoints": [
+    "sorcerer-monk.hla.eligible",
+    "sorcerer-monk.hla.selected",
+    "sorcerer-monk.hla.save-reload"
+  ]
+}

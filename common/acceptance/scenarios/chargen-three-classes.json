@@ -1,0 +1,33 @@
+{
+  "id": "chargen-three-classes",
+  "description": "Real UI character creation with a Fighter baseline, Cipher, Sorcerer/Monk and all six Psion disciplines.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [0],
+  "supported_game_types": ["bgee", "bg2ee", "eet"],
+  "prerequisites": [
+    "Disposable legal game fixture with the three current packages and their shared GUI handlers installed.",
+    "Fresh screenshots of class help, restrictions and selectors; installed class tables provide the independent identity oracle.",
+    "GemRBAcceptance.py copied into the disposable GUIScripts root; private 1280x720 display and AudioDriver=none."
+  ],
+  "instructions": [
+    "Create each required actor through the real class, ability, alignment, proficiency and spell/power selectors. Include a Fighter to expose shared GUI regressions.",
+    "For each identity checkpoint, compare the engine's class row, class ID and kit/discipline with the installed tables after completing creation. Attach screenshot references in checkpoint context.",
+    "For chargen.restrictions compare observed race/alignment and ability restrictions with the installed rules for all three custom classes.",
+    "For chargen.initial-spellbooks and chargen.action-bars compare known spells/powers and available buttons for each completed custom class with the installed rules.",
+    "Quit the engine normally after all actors and observations; an absent checkpoint is incomplete coverage."
+  ],
+  "required_checkpoints": [
+    "chargen.fighter.identity",
+    "chargen.cipher.identity",
+    "chargen.sorcerer-monk.identity",
+    "chargen.psion.seer.identity",
+    "chargen.psion.shaper.identity",
+    "chargen.psion.kineticist.identity",
+    "chargen.psion.egoist.identity",
+    "chargen.psion.nomad.identity",
+    "chargen.psion.telepath.identity",
+    "chargen.restrictions",
+    "chargen.initial-spellbooks",
+    "chargen.action-bars"
+  ]
+}

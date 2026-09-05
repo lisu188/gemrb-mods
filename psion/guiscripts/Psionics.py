@@ -156,14 +156,14 @@ def manifester_level(actor):
 
 def _feat_table():
     try:
-        return GemRB.LoadTable("psionfeatpick", False, True)
+        return GemRB.LoadTable("psfeatpk", False, True)
     except Exception:
         return None
 
 
 def _skill_table():
     try:
-        return GemRB.LoadTable("psionskills", False, True)
+        return GemRB.LoadTable("psskills", False, True)
     except Exception:
         return None
 
@@ -184,7 +184,7 @@ def _power_pick_table():
 
 def _known_power_table():
     try:
-        return GemRB.LoadTable("psionknown", False, True)
+        return GemRB.LoadTable("psknown", False, True)
     except Exception:
         return None
 
@@ -654,7 +654,7 @@ def maximum_pool(actor):
         return 0
     intelligence = GemRB.GetPlayerStat(actor, INT_STAT)
     modifier = max(0, (intelligence - 10) // 2)
-    table = GemRB.LoadTable("psionpool", False, True)
+    table = GemRB.LoadTable("pspool", False, True)
     base = int(table.GetValue(str(level), "BASE_POOL"))
     return max(0, base + (modifier * level) // 2 + psionic_talent_bonus(actor))
 
@@ -856,7 +856,7 @@ def _grant_feat(actor, resref):
 
 def restore_party():
     cancel_pending()
-    for actor in range(1, 7):
+    for actor in range(1, GemRB.GetPartySize() + 1):
         try:
             ensure_pool(actor, True)
             ensure_focus(actor, True)
@@ -869,7 +869,7 @@ def restore_party():
 
 
 def _base_power_info(key):
-    table = GemRB.LoadTable("psionpowers", False, True)
+    table = GemRB.LoadTable("pspowers", False, True)
     try:
         return {
             "kind": "power",
@@ -887,7 +887,7 @@ def _base_power_info(key):
 
 def _augment_table():
     try:
-        return GemRB.LoadTable("psionaugment", False, True)
+        return GemRB.LoadTable("psaugmnt", False, True)
     except Exception:
         return None
 
@@ -1043,6 +1043,13 @@ def _memorized_parent_entry(spellbook, actor, parent):
 
 
 def prepare_action_entry(spellbook, actor, entry):
+    """Bind an installed exact-INT resource without changing memorization.
+
+    Internal DC resources are not learned powers. PrepareSpontaneousCast only
+    searches known spells and would deplete the parent before failing to find
+    them. The shared cast adapter instead uses GemRB's explicit-resource path
+    while retaining the selected power/augmentation as the PP-cost authority.
+    """
     selected = str(entry.get("SpellResRef", "")).upper()
     canonical = _dc_canonical_resref(selected)
     if canonical != selected:
@@ -1055,24 +1062,12 @@ def prepare_action_entry(spellbook, actor, entry):
     if replacement == canonical or not _dc_resource_exists(replacement):
         return entry
 
-    source = entry
     if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:
-        source = _memorized_parent_entry(spellbook, actor, info.get("parent"))
-        if not source:
+        if not _memorized_parent_entry(spellbook, actor, info.get("parent")):
             return False
 
-    try:
-        source_ref = str(source.get("SpellResRef", "")).upper()
-        book_type = int(source["BookType"])
-        spell_level = int(source["SpellLevel"])
-        spell_index = GemRB.PrepareSpontaneousCast(
-            actor, source_ref, book_type, spell_level, replacement
-        )
-        GemRB.SetVar("Spell", int(spell_index) + 1000 * (1 << book_type))
-        return entry
-    except Exception as error:
-        GemRB.Log(2, "Psionics", "exact save-DC cast preparation failed: %s" % error)
-        return False
+    entry["CastResRef"] = replacement
+    return entry
 
 
 def _meets_base_requirements(actor, info):
@@ -1495,7 +1490,7 @@ def refresh_innate_charges(actor):
 
 def restore_party():
     _base_restore_party()
-    for actor in range(1, 7):
+    for actor in range(1, GemRB.GetPartySize() + 1):
         try:
             _sync_psicrystal_selector(actor)
         except Exception:

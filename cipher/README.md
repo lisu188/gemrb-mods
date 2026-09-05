@@ -6,6 +6,10 @@ A Pillars of Eternity-inspired single class for BG-family games running under Ge
 
 Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md).
 
+This development revision requires GemRB `SetSpellCastCheck` support for class
+powers. See [the engine prerequisite and cast-accounting boundary](../docs/cast-runtime.md),
+including cancellation after a command has already been queued.
+
 ## Combat loop
 
 Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, critical hits add another 5 Focus for 10 total, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.

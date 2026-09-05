@@ -60,11 +60,16 @@ class ReapingIdentityTests(unittest.TestCase):
         self.saved_globals[name] = value
 
     def prepare(self, actor, source, book, level, replacement):
-        self.prepared.append((self.party[actor - 1], source, book, level, replacement))
-        return 12
+        self.fail("preparing an internal resource must not deplete a learned spell")
 
     def prepare_for(self, name):
-        return self.runtime.prepare_action_entry(None, self.party.index(name) + 1, dict(ENTRY))
+        entry = self.runtime.prepare_action_entry(None, self.party.index(name) + 1, dict(ENTRY))
+        if entry is not False:
+            # Observe the actual prepared metadata. This fixture models owner
+            # persistence; native cast routing is tested separately.
+            self.prepared.append((name, entry["SpellResRef"], entry["BookType"],
+                                  entry["SpellLevel"], entry["CastResRef"]))
+        return entry
 
     def model_resolved_cast(self, owner, ally):
         self.assertIsNot(self.prepare_for(owner), False)
@@ -92,7 +97,7 @@ class ReapingIdentityTests(unittest.TestCase):
         self.assertEqual(self.saved_globals, {"CIRKNEXT": 7})
         self.assertEqual(self.effects["B"][0]["Timing"], 9)
         self.assertEqual(self.effects["B"][0]["Param1"], 7)
-        self.assertEqual(self.variables["Spell"], 4012)
+        self.assertEqual(self.variables, {})
 
     def test_overlapping_casts_reorder_and_recast_have_one_correct_recipient(self):
         self.assertEqual(self.model_resolved_cast("A", "ally1"), 7)

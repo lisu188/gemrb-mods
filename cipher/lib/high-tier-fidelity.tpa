@@ -87,7 +87,7 @@ END
 // feedback. The one-tick duration prevents a nonlethal target from exploding
 // later for unrelated reasons.
 LAF cipher_create_power
-  INT_VAR ci_tier = 5 ci_target = 2 ci_range = 30 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
+  INT_VAR ci_tier = 5 ci_target = 1 ci_range = 30 ci_projectile = ci_area_projectile ci_flags = ci_hostile_flags
   STR_VAR ci_resref = ~CI5DBST~ ci_name = ~Detonate: Soul Burst~ ci_description = ~Internal Detonate death-burst helper.~ ci_icon = ~spwi512~
 END
 COPY_EXISTING ~CI5DBST.spl~ ~override~

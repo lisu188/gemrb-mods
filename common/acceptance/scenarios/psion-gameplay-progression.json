@@ -1,0 +1,46 @@
+{
+  "id": "psion-gameplay-progression",
+  "description": "Psion learning, resource spending, combat and persistence through low/middle/high progression in the real engine.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [0],
+  "supported_game_types": ["bgee", "bg2ee", "eet"],
+  "prerequisites": [
+    "Disposable legal fixture with Psion and the read-only checkpoint helper; six legally created discipline actors or their local saves.",
+    "Controlled hostile and friendly combat targets, ordinary and temple rest access, and a second area.",
+    "Local XP grants are permitted for preparation; all subsequent level-up, learning, casting and persistence transitions must execute in GemRB.",
+    "Expected PP, learning credits, power eligibility, DC resources and progression values are derived independently from current rules and installed resources."
+  ],
+  "instructions": [
+    "Record before/after learning credits and known powers for confirm and cancel, and compare each discipline's visible eligible powers at each unlocked tier.",
+    "Observe PP before and after a legal manifestation, insufficient-PP attempt, target cancellation and legal/over-limit augmentation. Include actual values, not a claimed pass flag.",
+    "For DC selection change current Intelligence through a controlled game effect, cast again and record the actual selected resource against its installed INT-specific oracle.",
+    "Exercise focus, Center Mind, feats, skills and quickslots through their real UI actions; observe combat effects and resource changes.",
+    "Level through the real screens at low, middle and level 17+ checkpoints, including high-tier access for every discipline.",
+    "Observe ordinary rest, temple rest, area transition and save/reload against recorded baselines or the applicable reset rule. Quit normally."
+  ],
+  "required_checkpoints": [
+    "psion.learning.confirm",
+    "psion.learning.cancel",
+    "psion.discipline-access",
+    "psion.tier-restrictions",
+    "psion.pp.spend",
+    "psion.pp.insufficient",
+    "psion.pp.cancel",
+    "psion.augmentation.legal",
+    "psion.augmentation.limit",
+    "psion.dc.current-int-resource",
+    "psion.focus",
+    "psion.center-mind",
+    "psion.feats",
+    "psion.skills",
+    "psion.quickslot",
+    "psion.combat",
+    "psion.level.low",
+    "psion.level.middle",
+    "psion.level.17-plus",
+    "psion.rest.ordinary",
+    "psion.rest.temple",
+    "psion.area-transition",
+    "psion.save-reload"
+  ]
+}

@@ -58,17 +58,17 @@ def main() -> None:
     base_stats = dict(stats)
     effects = {1: []}
     tables = {
-        name: fake_table(name + ".2da")
-        for name in (
-            "psionpool",
-            "psionpowers",
-            "psionaugment",
-            "psionfeatpick",
-            "psionknown",
-            "pspick",
-            "psionskills",
-            "psskill",
-        )
+        name: fake_table(source + ".2da")
+        for name, source in {
+            "pspool": "psionpool",
+            "pspowers": "psionpowers",
+            "psaugmnt": "psionaugment",
+            "psfeatpk": "psionfeatpick",
+            "psknown": "psionknown",
+            "pspick": "pspick",
+            "psskills": "psionskills",
+            "psskill": "psskill",
+        }.items()
     }
     known_innates = [
         {"SpellResRef": "PS1ERAY"},
@@ -103,7 +103,8 @@ def main() -> None:
 
     gemrb.GetPlayerStat = get_player_stat
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
-    gemrb.LoadTable = lambda name, *_: tables[name.lower()]
+    # GemRB resolves native resources through an eight-character ResRef.
+    gemrb.LoadTable = lambda name, *_: tables[name.lower()[:8]]
     gemrb.DisplayString = lambda *_: None
     gemrb.Log = lambda *_: None
     gemrb.Roll = lambda dice, sides, bonus: roll_value["value"] + bonus
@@ -239,13 +240,14 @@ def main() -> None:
             "SpellIndex": 4007,
         }
         assert module.prepare_action_entry(FakeSpellbook, 1, normal_entry) is normal_entry
-        assert prepared_casts[-1][-1] == "PS1CHAR4"
-        assert gemrb_vars["Spell"] == 17 + 1000 * (1 << module.INNATE_TYPE)
+        assert normal_entry["CastResRef"] == "PS1CHAR4"
+        assert not prepared_casts  # no premature depletion/known-only lookup
+        assert "Spell" not in gemrb_vars
 
         temporary_entry = {"SpellResRef": "PSMT03", "SpellIndex": 255000}
         assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry
-        assert prepared_casts[-1][1] == "PS1MTHR"
-        assert prepared_casts[-1][-1] == "PSMT034"
+        assert temporary_entry["CastResRef"] == "PSMT034"
+        assert not prepared_casts
 
         real_begin_manifest = module.begin_manifest
         callback_counts = {}

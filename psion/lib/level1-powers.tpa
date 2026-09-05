@@ -51,7 +51,7 @@ OUTER_SET psion_level1_save_penalty = psion_key_ability_save_penalty
 // Energy Ray: one ranged touch-equivalent packet of psychic/force damage.
 LAF psion_create_level1_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_hostile_flags
@@ -76,7 +76,7 @@ BUT_ONLY
 // Mind Thrust: a Will-equivalent save is represented by save vs spell.
 LAF psion_create_level1_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_hostile_flags
@@ -178,16 +178,21 @@ COPY_EXISTING ~PS1PREC.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 37 target = 1 resist_dispel = BIT1 parameter1 = (0 - 1) timing = 0 duration = 18 END
 BUT_ONLY
 
-// Astral Construct: clone a universally available wolf body and summon it
-// through opcode 67. Later versions will replace its animation and statistics.
+// Astral Construct: clone the campaign's normal wolf body and summon it
+// through opcode 67. BG2EE names that resource WOLF01 rather than WOLF.
+// Later versions will replace its animation and statistics.
+OUTER_SPRINT ps_construct_body ~~
 ACTION_IF FILE_EXISTS_IN_GAME ~WOLF.CRE~ THEN BEGIN
-  COPY_EXISTING ~WOLF.CRE~ ~override/PSACON01.CRE~
-    SAY NAME1 ~Astral Construct~
-    SAY NAME2 ~Astral Construct~
-  BUT_ONLY
+  OUTER_SPRINT ps_construct_body ~WOLF.CRE~
+END ELSE ACTION_IF FILE_EXISTS_IN_GAME ~WOLF01.CRE~ THEN BEGIN
+  OUTER_SPRINT ps_construct_body ~WOLF01.CRE~
 END ELSE BEGIN
-  FAIL ~The Psion mod requires WOLF.CRE as the level-1 Astral Construct body.~
+  FAIL ~The Psion mod requires WOLF.CRE or WOLF01.CRE as the level-1 Astral Construct body.~
 END
+COPY_EXISTING ~%ps_construct_body%~ ~override/PSACON01.CRE~
+  SAY NAME1 ~Astral Construct~
+  SAY NAME2 ~Astral Construct~
+BUT_ONLY
 LAF psion_create_level1_power
   STR_VAR
     ps_resref = ~PS1ACON~
@@ -217,7 +222,7 @@ BUT_ONLY
 // the SRD's own.
 LAF psion_create_level1_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_hostile_flags
@@ -262,7 +267,7 @@ BUT_ONLY
 // Psionic Charm: humanoid restriction is inherited from opcode 5 mode 1.
 LAF psion_create_level1_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_hostile_flags
