@@ -1,0 +1,40 @@
+name: Reaping Knives review validation
+
+on:
+  push:
+    branches:
+      - fix/reaping-owner-identity
+    paths:
+      - .review-reaping.py
+      - .github/workflows/reaping-review-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: gemrb/gemrb
+          ref: 8c853a764ab489eee7e990a713eeb24dc8cc2d53
+          path: vendor/gemrb
+      - name: Inspect engine state contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root = Path('vendor/gemrb/gemrb')
+          for filename, symbols in (
+              ('plugins/GUIScript/GUIScript.cpp', ('static PyObject* GemRB_ExecuteString(', 'static PyObject* GemRB_GetGameVar(')),
+              ('core/GameScript/GameScript.cpp', ('void GameScript::ExecuteString(',)),
+              ('plugins/FXOpcodes/FXOpcodes.cpp', ('int fx_scripting_state(',)),
+          ):
+              text = (root / filename).read_text()
+              for symbol in symbols:
+                  index = text.find(symbol)
+                  print('\nCONTRACT', filename, symbol, 'offset', index)
+                  if index >= 0:
+                      print(text[index:index + 2300])
+          PY
