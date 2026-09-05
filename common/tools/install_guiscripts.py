@@ -63,12 +63,14 @@ def _patch_spell_pressed(text):
         "\tif GemRB.GetVar(\"SettingButtons\"):\n"
         "\t\tGemRBModCore.cancel_pending(pc)\n"
         "\telse:\n"
+        "\t\traw_spell = None\n"
         "\t\ttry:\n"
         "\t\t\traw_spell = GemRB.GetVar(\"Spell\")\n"
         "\t\t\tif not GemRBModCore.begin_spell(Spellbook, pc, raw_spell):\n"
         "\t\t\t\treturn\n"
         "\t\texcept Exception as error:\n"
-        "\t\t\tGemRB.Log(2, \"GemRBModCore\", str(error))\n"
+        "\t\t\tif not GemRBModCore.spell_error(Spellbook, pc, raw_spell, error):\n"
+        "\t\t\t\treturn\n"
         "\t" + MARK_END + "\n\n"
     )
     return _insert_before(text, "SpellPressed", '\tSpell = GemRB.GetVar ("Spell")', hook)
@@ -77,9 +79,9 @@ def _patch_spell_pressed(text):
 def _patch_quickspell(text):
     hook = (
         "\t" + MARK_BEGIN + "\n"
+        "\tquickResRef = \"\"\n"
         "\ttry:\n"
         "\t\tpcStats = GemRB.GetPCStats(pc)\n"
-        "\t\tquickResRef = \"\"\n"
         "\t\tif pcStats and 0 <= which < len(pcStats[\"QuickSpells\"]):\n"
         "\t\t\tquickResRef = pcStats[\"QuickSpells\"][which]\n"
         "\t\tquickInfo = GemRBModCore.action_info(quickResRef)\n"
@@ -99,7 +101,9 @@ def _patch_quickspell(text):
         "\t\t\tSpellPressed()\n"
         "\t\t\treturn\n"
         "\texcept Exception as error:\n"
-        "\t\tGemRB.Log(2, \"GemRBModCore\", \"quickspell routing failed: %s\" % error)\n"
+        "\t\tGemRBModCore.abort_action(pc, error)\n"
+        "\t\tif not quickResRef or GemRBModCore.is_managed_action(quickResRef):\n"
+        "\t\t\treturn\n"
         "\t" + MARK_END + "\n\n"
     )
     start, end = _function_bounds(text, "ActionQSpellPressed")
@@ -158,7 +162,12 @@ def _patch_rest(text, path):
 
 def render_patch(text, kind, path):
     if MARK_BEGIN in text:
-        return None
+        if kind != "actions" or "GemRBModCore.spell_error(" in text:
+            return None
+        pattern = r"(?ms)^\t" + re.escape(MARK_BEGIN) + r"\n.*?^\t" + re.escape(MARK_END) + r"\n"
+        text, count = re.subn(pattern, "", text)
+        if count < 3:
+            raise RuntimeError(f"{path.name} legacy action hooks not recognized")
     text = _insert_import(text, path)
     if kind == "actions":
         text = _patch_spell_pressed(text)

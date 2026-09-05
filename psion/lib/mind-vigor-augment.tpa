@@ -76,7 +76,7 @@ BEGIN
       END
       LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 resist_dispel = BIT1 STR_VAR resource = ~PSVG%ps_strip_index%~ END
     END
-    LPF ADD_SPELL_EFFECT INT_VAR opcode = 18 target = 1 resist_dispel = BIT1 parameter1 = ps_vigor_hp timing = 0 duration = 60 END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 18 target = 1 resist_dispel = BIT1 parameter1 = ps_vigor_hp parameter2 = 3 timing = 0 duration = 60 END
     LPF ADD_SPELL_EFFECT INT_VAR opcode = 17 target = 1 parameter1 = ps_vigor_hp timing = 1 END
   BUT_ONLY
 END
