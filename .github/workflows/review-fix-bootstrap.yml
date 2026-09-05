@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   apply-and-validate:
+    if: "!contains(github.event.head_commit.message, 'Fix fail-open casting')"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,11 +33,11 @@ jobs:
           python psion/tests/validate_runtime.py
           python psion/tests/validate.py
           python psion/tests/validate_patcher.py
-      - name: Commit only the validated patch and remove bootstrap files
+      - name: Commit the validated source patch
         run: |
           set -euo pipefail
-          git add common/guiscripts/GemRBModCore.py common/tools/install_guiscripts.py psion/guiscripts/Psionics.py psion/lib/mind-vigor-augment.tpa .github/workflows/class-registration.yml
-          git rm .review-apply.py .github/workflows/review-fix-bootstrap.yml
+          git add common/guiscripts/GemRBModCore.py common/tools/install_guiscripts.py psion/guiscripts/Psionics.py psion/lib/mind-vigor-augment.tpa
+          git rm .review-apply.py
           git diff --cached --check
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Fix fail-open casting, installed hook upgrades and duplicate Psion HP grants'
           git push origin "HEAD:${GITHUB_REF_NAME}"
