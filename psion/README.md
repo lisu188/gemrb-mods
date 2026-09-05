@@ -258,3 +258,13 @@ These automated checks do not by themselves claim live-game qualification. The r
 ## Next work
 
 The main remaining design systems are psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+
+### Psicrystal personality availability
+
+Personality selection only offers bonuses for skills available to the Psion's
+current discipline. All disciplines may choose Sage or Single-Minded. Artiste
+requires Shaper, Friendly requires Telepath, and Observant requires Seer.
+The same rule is checked again when the choice commits; a blocked choice does
+not consume the selector or grant cross-discipline skill access. The personality
+and owner benefit are the current slice, not a completed summoned-psicrystal
+lifecycle.

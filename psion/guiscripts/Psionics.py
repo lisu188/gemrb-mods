@@ -1369,10 +1369,12 @@ def has_psicrystal_choice(actor):
 
 
 def can_choose_psicrystal(actor, resref):
+    info = psicrystal_choice_info(resref)
     return bool(
-        is_psion(actor)
+        info
+        and is_psion(actor)
         and not has_psicrystal_choice(actor)
-        and psicrystal_choice_info(resref)
+        and _skill_access_allowed(actor, skill_rule_info(info["skill"]))
     )
 
 
