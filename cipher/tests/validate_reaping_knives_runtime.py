@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import importlib.util
+import subprocess
 import sys
 import types
 
@@ -41,6 +42,7 @@ def load_runtime():
     spec = importlib.util.spec_from_file_location("cipher_reaping_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module._reaping_owner_token = lambda actor: actor + 6
     return module, prepared, variables, logs
 
 
@@ -53,7 +55,7 @@ def test_prepare_reaping_knives():
         "SpellIndex": 17,
     }
     assert runtime.prepare_action_entry(None, 3, entry) is entry
-    assert prepared == [(3, "CI8RKNI", 2, 0, "CI8RK3")]
+    assert prepared == [(3, "CI8RKNI", 2, 0, "CI8RK9")]
     assert variables["Spell"] == 4012
     assert not logs
 
@@ -92,8 +94,8 @@ def test_installer_source_contract():
     assert "cipher/lib/reaping-knives-focus.tpa" in setup
     assert setup.index("cipher/lib/focus.tpa") < setup.index("cipher/lib/reaping-knives-focus.tpa")
     assert "CIPHER_RK_OWNER_" in source
-    assert "SetMeleeEffect" in source
-    assert "SetRangedEffect" in source
+    assert "OUTER_SET ci_rk_set_melee = 248" in source
+    assert "OUTER_SET ci_rk_set_ranged = 249" in source
     assert "CREATE ~eff~" in source
     assert "CIRKSTEP" in source
     assert "target = 3" in source
@@ -108,6 +110,7 @@ def main():
     test_non_reaping_spell_is_unchanged()
     test_invalid_owner_slot_fails_closed()
     test_installer_source_contract()
+    subprocess.run([sys.executable, str(CIPHER / "tests" / "validate_reaping_identity.py")], check=True)
     print("Cipher Reaping Knives runtime validation passed")
 
 

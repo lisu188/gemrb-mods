@@ -103,3 +103,20 @@ bash cipher/tests/validate_weidu.sh
 CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal/critical/Reaping-Knives Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
 
 These automated checks are the current release evidence; the real-engine cross-mod acceptance suite is tracked separately in #50.
+
+### Reaping Knives owner identity
+
+New casts use an owner token saved on the Cipher, not the actor's current party
+slot. The game-global allocation counter and actor effect survive save/reload.
+Party reordering, dismissal and rejoining do not transfer an existing token to a
+different Cipher. Recasting reuses the same identity, including when older buffs
+remain on other allies. Allocation is immediate and validated before preparing
+the cast; failures stop casting rather than falling back to a portrait slot.
+
+The generated resource bank supports 249 distinct Reaping Knives owners per
+save (tokens 7–255). This is a lifetime-owner limit, not a cast limit. Exhaustion
+fails closed, while already registered owners can continue casting. Tokens 1–6
+are reserved for pre-upgrade resources and never allocated by the new runtime.
+Allow existing pre-upgrade Reaping Knives effects to expire before testing the
+new routing. Imported or manually edited character/save combinations require
+separate qualification; corrupted or inconsistent identity records are rejected.
