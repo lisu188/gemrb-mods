@@ -25,16 +25,17 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           root = Path('vendor/gemrb/gemrb')
-          for filename, symbols in (
-              ('plugins/GUIScript/GUIScript.cpp', ('static PyObject* GemRB_ExecuteString(', 'static PyObject* GemRB_GetGameVar(')),
-              ('core/GameScript/GameScript.cpp', ('void GameScript::ExecuteString(',)),
-              ('plugins/FXOpcodes/FXOpcodes.cpp', ('int fx_scripting_state(',)),
-          ):
-              text = (root / filename).read_text()
-              for symbol in symbols:
-                  index = text.find(symbol)
-                  print('\nCONTRACT', filename, symbol, 'offset', index)
-                  if index >= 0:
-                      print(text[index:index + 2300])
+          text = (root / 'plugins/GUIScript/GUIScript.cpp').read_text()
+          for symbol in re.findall(r'static PyObject\* (GemRB_\w+)\(', text):
+              if any(word in symbol for word in ('Global', 'Var', 'ActorID', 'PlayerID')):
+                  index = text.find('static PyObject* ' + symbol + '(')
+                  print('\nAPI', symbol, '\n', text[index:index + 1900])
+          text = (root / 'plugins/FXOpcodes/FXOpcodes.cpp').read_text()
+          for symbol in ('int fx_scripting_state(', 'int fx_modify_local_variable(', 'int fx_local_variable('):
+              index = text.rfind(symbol)
+              print('\nEFFECT', symbol, 'offset', index)
+              if index >= 0:
+                  print(text[index:index + 2200])
           PY
