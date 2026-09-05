@@ -1,0 +1,39 @@
+name: Psicrystal review correction
+
+on:
+  push:
+    branches:
+      - issue-56-psicrystal-personality
+    paths:
+      - .review-psicrystal.py
+      - .github/workflows/review-psicrystal-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: "!contains(github.event.head_commit.message, 'Fix psicrystal skill access')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply correction
+        run: python .review-psicrystal.py
+      - name: Validate personality matrix and existing runtime
+        run: |
+          set -euo pipefail
+          python psion/tests/validate_psicrystal.py
+          python psion/tests/validate.py
+          python psion/tests/validate_runtime.py
+          python common/tests/validate.py
+      - name: Publish tested source changes
+        run: |
+          set -euo pipefail
+          git add psion/guiscripts/Psionics.py psion/tests/validate_psicrystal.py psion/README.md
+          git rm .review-psicrystal.py
+          git diff --cached --check
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Fix psicrystal skill access and test all 30 discipline-personality combinations'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
