@@ -82,6 +82,8 @@ def begin_spell(spellbook, actor, raw_spell):
 
 
 def action_info(resref):
+    if not is_managed_action(resref):
+        return None
     for handler in _handlers():
         function = getattr(handler, "action_info", None) or getattr(handler, "power_info", None)
         if not function:
@@ -95,3 +97,38 @@ def action_info(resref):
         result["innate_type"] = int(getattr(handler, "INNATE_TYPE", 2))
         return result
     return None
+
+
+def is_managed_action(resref):
+    return str(resref or "").upper().startswith(("PS", "PX", "CI"))
+
+
+def abort_action(actor, error):
+    import GemRB
+    import Transactions
+    for namespace in _HANDLER_NAMES:
+        Transactions.cancel(namespace, actor)
+    try:
+        GemRB.Log(2, "GemRBModCore", "Casting cancelled; check the custom-class runtime installation: %s" % error)
+    except Exception:
+        pass
+
+
+def spell_error(spellbook, actor, raw_spell, error):
+    abort_action(actor, error)
+    try:
+        import GemRB
+        encoded_type, index = divmod(int(raw_spell), 1000)
+        if encoded_type == 255:
+            resrefs = [GemRB.GetSpelldata(actor)[index]]
+        else:
+            books = [i for i in range(16) if encoded_type & (1 << i)] or range(16)
+            resrefs = [
+                entry.get("SpellResRef", "")
+                for book in books
+                for entry in spellbook.GetUsableMemorizedSpells(actor, book)
+                if entry.get("SpellIndex", -1) % 1000 == index
+            ]
+        return bool(resrefs) and all(resref and not is_managed_action(resref) for resref in resrefs)
+    except Exception:
+        return False

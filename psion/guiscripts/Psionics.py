@@ -844,7 +844,7 @@ def _apply_body_hp(actor, amount):
     amount = max(0, int(amount))
     if not amount:
         return
-    GemRB.ApplyEffect(actor, "MaximumHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
+    GemRB.ApplyEffect(actor, "MaximumHPModifier", amount, 3, "", "", "", "PXFBODY", 9)
     GemRB.ApplyEffect(actor, "CurrentHPModifier", amount, 0, "", "", "", "PXFBODY", 9)
 
 
