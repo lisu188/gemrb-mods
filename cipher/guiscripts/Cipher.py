@@ -15,6 +15,12 @@ INNATE_LEVEL = 0
 CIPHER_CLASS = "CIPHER"
 POWER_SELECTOR_RESOURCE = "CILRN"
 REAPING_KNIVES_RESOURCE = "CI8RKNI"
+REAPING_OWNER_FIRST = 7
+REAPING_OWNER_LAST = 255
+REAPING_OWNER_COUNTER = "CIRKNEXT"
+REAPING_OWNER_MARKER = 0x43495249
+REAPING_OWNER_RESOURCE = "CIRKID"
+REAPING_OWNER_OPCODE = "Protection:Spell"
 TEMPORARY_SPELLINFO_TYPE = 255
 TRANSACTION_NAMESPACE = "Cipher"
 
@@ -274,6 +280,42 @@ def resolve_power_entry(spellbook, actor, raw_spell):
     return None
 
 
+def _read_reaping_owner(actor):
+    identities = [
+        int(effect.get("Param1", 0))
+        for effect in GemRB.GetEffects(actor, REAPING_OWNER_OPCODE)
+        if int(effect.get("Param2", -1)) == REAPING_OWNER_MARKER
+        and str(effect.get("Resource1", "")).upper() == REAPING_OWNER_RESOURCE
+    ]
+    if len(identities) > 1:
+        raise RuntimeError("duplicate Reaping Knives owner identity")
+    return identities[0] if identities else None
+
+
+def _reaping_owner_token(actor):
+    last = int(GemRB.GetGameVar(REAPING_OWNER_COUNTER))
+    if not 0 <= last <= REAPING_OWNER_LAST:
+        raise RuntimeError("invalid Reaping Knives owner registry")
+    token = _read_reaping_owner(actor)
+    if token is not None:
+        if not REAPING_OWNER_FIRST <= token <= last:
+            raise RuntimeError("Reaping Knives owner identity does not match this save")
+        return token
+    token = max(last + 1, REAPING_OWNER_FIRST)
+    if token > REAPING_OWNER_LAST:
+        raise RuntimeError("Reaping Knives owner registry is full; refusing to reuse an identity")
+    GemRB.SetGlobal(REAPING_OWNER_COUNTER, "GLOBAL", token)
+    if int(GemRB.GetGameVar(REAPING_OWNER_COUNTER)) != token:
+        raise RuntimeError("Reaping Knives owner registry was not saved")
+    GemRB.ApplyEffect(
+        actor, REAPING_OWNER_OPCODE, token, REAPING_OWNER_MARKER,
+        REAPING_OWNER_RESOURCE, "", "", "CIRKMOD", 9,
+    )
+    if _read_reaping_owner(actor) != token:
+        raise RuntimeError("Reaping Knives owner identity was not saved")
+    return token
+
+
 def prepare_action_entry(spellbook, actor, entry):
     selected = str(entry.get("SpellResRef", "")).upper()
     if selected != REAPING_KNIVES_RESOURCE:
@@ -281,8 +323,8 @@ def prepare_action_entry(spellbook, actor, entry):
     if actor < 1 or actor > 6:
         GemRB.Log(2, "Cipher", "Reaping Knives owner is outside party slots: %s" % actor)
         return False
-    replacement = "CI8RK%d" % actor
     try:
+        replacement = "CI8RK%d" % _reaping_owner_token(actor)
         source_ref = str(entry.get("SpellResRef", "")).upper()
         book_type = int(entry["BookType"])
         spell_level = int(entry["SpellLevel"])

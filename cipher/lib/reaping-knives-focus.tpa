@@ -1,10 +1,9 @@
-// Reaping Knives needs to credit the originating Cipher rather than the ally
-// making the weapon attack. GemRB's SetMeleeEffect/SetRangedEffect hooks run
-// with the attacker as caster, so route each cast through a party-slot-specific
-// resource and persist the original owner's identity as a short-lived actor
-// marker. The hit effect then scans the party for that marker and advances the
-// marked actor's Focus state directly.
+// Reaping Knives routes ally weapon hits through save-persistent owner tokens.
+// Tokens are assigned once per actor by Cipher.py, independently of party order.
+// Legacy slot resources 1..6 remain available for existing timed effects; new
+// identities use 7..255 and are never reassigned to another actor in the save.
 
+OUTER_SET ci_rk_owner_token_limit = 255
 OUTER_SET ci_rk_owner_state_stat = 164
 OUTER_SET ci_rk_owner_state_index = 8
 OUTER_SET ci_rk_splprot_rows = 0
@@ -20,7 +19,7 @@ COPY_EXISTING ~splprot.2da~ ~override~
     SPRINT ci_rk_splprot_prefix ~%LNL%~
   END
   SPRINT ci_rk_splprot_append ~%ci_rk_splprot_prefix%~
-  FOR (ci_rk_slot = 1; ci_rk_slot <= 6; ++ci_rk_slot) BEGIN
+  FOR (ci_rk_slot = 1; ci_rk_slot <= ci_rk_owner_token_limit; ++ci_rk_slot) BEGIN
     SPRINT ci_rk_splprot_append ~%ci_rk_splprot_append%CIPHER_RK_OWNER_%ci_rk_slot% %ci_rk_owner_state_stat% %ci_rk_slot% 1%LNL%~
   END
   SET ci_rk_splprot_offset = BUFFER_LENGTH
@@ -111,7 +110,7 @@ BEGIN
   BUT_ONLY
 END
 
-OUTER_FOR (ci_rk_slot = 1; ci_rk_slot <= 6; ++ci_rk_slot) BEGIN
+OUTER_FOR (ci_rk_slot = 1; ci_rk_slot <= ci_rk_owner_token_limit; ++ci_rk_slot) BEGIN
   OUTER_SET ci_rk_owner_row = ci_rk_splprot_rows + ci_rk_slot - 1
   OUTER_SPRINT ci_rk_gain ~CIRKG%ci_rk_slot%~
   OUTER_SPRINT ci_rk_hit ~CIRKE%ci_rk_slot%~

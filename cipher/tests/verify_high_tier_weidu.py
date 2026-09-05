@@ -154,7 +154,7 @@ def verify_reaping_knives(override: Path) -> None:
     assert any(effect["opcode"] == 321 and effect["resource"] == "CIFS0" for effect in setter)
     assert any(effect["opcode"] == 321 and effect["resource"] == "CIRKS34" for effect in setter)
 
-    for slot in range(1, 7):
+    for slot in range(1, 256):
         variant = features(locate(override, f"CI8RK{slot}"))
         assert any(
             effect["opcode"] == 282
