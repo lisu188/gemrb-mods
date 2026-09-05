@@ -6,6 +6,7 @@ on:
       - fix/reaping-owner-identity
     paths:
       - .review-reaping.py
+      - .review-reaping-extra.py
       - .github/workflows/reaping-review-bootstrap.yml
 
 permissions:
@@ -21,7 +22,9 @@ jobs:
         with:
           python-version: '3.13'
       - name: Apply bounded source changes
-        run: python .review-reaping.py
+        run: |
+          python .review-reaping.py
+          python .review-reaping-extra.py
       - name: Validate ownership and existing runtime
         run: |
           set -euo pipefail
@@ -51,8 +54,8 @@ jobs:
       - name: Publish validated source patch
         run: |
           set -euo pipefail
-          git add cipher/guiscripts/Cipher.py cipher/lib/reaping-knives-focus.tpa cipher/tests/validate_reaping_knives_runtime.py cipher/README.md
-          git rm .review-reaping.py
+          git add cipher/guiscripts/Cipher.py cipher/lib/reaping-knives-focus.tpa cipher/tests/validate_reaping_knives_runtime.py cipher/tests/verify_high_tier_weidu.py cipher/README.md
+          git rm .review-reaping.py .review-reaping-extra.py
           git diff --cached --check
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'Fix Reaping Knives owner identity across party changes and save reload'
           git push origin "HEAD:${GITHUB_REF_NAME}"
