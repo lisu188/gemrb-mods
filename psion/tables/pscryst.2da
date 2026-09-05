@@ -1,0 +1,8 @@
+2DA V1.0
+****
+               ID ResRef  Type SKILL                BONUS
+ARTISTE        1  PXCART  3    ECTOPLASMIC_CRAFT   3
+FRIENDLY       2  PXCFRND 3    INFLUENCE           3
+OBSERVANT      3  PXCOBS  3    AWARENESS           3
+SAGE           4  PXCSAGE 3    PSIONIC_KNOWLEDGE   3
+SINGLE_MINDED  5  PXCSING 3    CONCENTRATION       3

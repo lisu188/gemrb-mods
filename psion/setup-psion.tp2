@@ -15,6 +15,7 @@ COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
 COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
 COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
 COPY ~psion/tables/psskill.2da~ ~override/psskill.2da~
+COPY ~psion/tables/pscryst.2da~ ~override/pscryst.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
 COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~

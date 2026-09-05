@@ -17,4 +17,5 @@ INCLUDE ~psion/lib/mind-vigor-augment.tpa~
 INCLUDE ~psion/lib/swarm-augment.tpa~
 INCLUDE ~psion/lib/animal-affinity.tpa~
 INCLUDE ~psion/lib/focus-feats.tpa~
+INCLUDE ~psion/lib/psicrystal.tpa~
 INCLUDE ~psion/lib/skills.tpa~
