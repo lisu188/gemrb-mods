@@ -58,11 +58,15 @@ def validate(game, engine):
         if name.startswith("PS") and name[-1] in "VWXYZ0134567" and name[:-1] in files:
             assert signatures[name] == signatures[name[:-1]], (name, "DC clone changed target")
             inherited += 1
-        if re.fullmatch(r"CI8RK[1-6]", name):
+        owner = re.fullmatch(r"CI8RK([0-9]{1,3})", name)
+        if owner:
+            assert 1 <= int(owner[1]) <= 255, (name, "invalid owner token")
             assert signatures[name] == signatures["CI8RKNI"], (name, "owner clone changed target")
             inherited += 1
         if re.fullmatch(r"(?:PXL|CIL)\d{4}", name):
             assert signatures[name] == [(definitions["TARGET_SELF"], 1)], (name, "learning proxy target")
+    if "CI8RKNI" in files:
+        assert all(f"CI8RK{token}" in files for token in range(1, 256)), "incomplete legacy/persistent owner variants"
     # Header creature=1 must not corrupt effect target=2 (the effect recipient).
     for name, opcode in (("CI1WHSP", 5), ("PSRF01", 12)):
         if name not in files:

@@ -23,8 +23,9 @@ Scenario files live in `common/acceptance/scenarios/` and use a small JSON contr
 }
 ```
 
-`Traceback (most recent call last):` and `[GUIScript/ERROR]: Runtime Error:` are
-always forbidden, including GUI failures that provide no Python traceback.
+`Traceback (most recent call last):`, `[GUIScript/ERROR]: Runtime Error:`, and
+`[GUIScript/ERROR]: Unhandled target type` are always forbidden, including GUI
+failures that provide no Python traceback or cannot enter targeting at all.
 Scenario-specific forbidden markers are additive.
 
 `required_checkpoints`, `prerequisites` and `instructions` are optional, so existing log-marker scenarios retain their behavior. Required checkpoint IDs must be unique. The manifest retains schema version 1 and adds parsed `checkpoints`, required assertions and the scenario's prerequisite/instruction lists.
@@ -58,11 +59,63 @@ The checked-in manual scenarios cover:
 
 - `chargen-three-classes`: Fighter baseline, Cipher, Sorcerer/Monk and all six Psion disciplines.
 - `psion-six-disciplines-chargen`: six real Psion identity flows and initial action/learning state; separate from combat and progression.
-- `psion-gameplay-progression`: learning, PP, augmentation, current-INT DC selection, discipline access and progression/persistence.
-
-- `cipher-gameplay-progression`: Focus gain/spending, two-Cipher Reaping Knives ownership and tier/progression/persistence.
-- `sorcerer-monk-gameplay-progression`: casting, Monk actions, equipment, component-level progression and persistence.
+- `psion-gameplay-progression-{bgee,bg2ee}`: learning, PP, augmentation, current-INT DC selection, discipline access and progression/persistence.
+- `cipher-gameplay-progression-{bgee,bg2ee}`: Focus gain/spending, campaign-appropriate tiers and progression/persistence; BG2EE additionally requires two-Cipher Reaping Knives ownership.
+- `sorcerer-monk-gameplay-progression-{bgee,bg2ee}`: casting, Monk actions, equipment, component-level progression and persistence.
 - `sorcerer-monk-tob-hla`: real ToB merged HLA selection and save/reload, a separate required gate for ToB qualification.
+
+### Required campaign matrix
+
+[`matrices/three-class-acceptance.json`](matrices/three-class-acceptance.json)
+lists the required scenario and lifecycle manifests. Each entry has a unique
+run ID, game family, source scenario/matrix and output path relative to a
+private evidence root. It is an inventory for review, not a gameplay runner or
+an aggregate success result. It requires these runs:
+
+| Scenario group | BGEE | BG2EE/ToB |
+| --- | --- | --- |
+| Three-class chargen with Fighter control and positive/negative restrictions | Required | Required |
+| All six Psion disciplines and initial state | Required | Required |
+| Psion gameplay | Low/middle/campaign cap | Low/middle/17+, all discipline tiers |
+| Cipher gameplay | Low/middle/campaign cap and locked-tier rejection | Low/middle/16/19 and two-Cipher Reaping Knives |
+| Sorcerer/Monk gameplay | Low/middle/campaign cap, component-level fists | Low/middle/high, component-level fists |
+| Sorcerer/Monk HLA | Not applicable | Required in an actual ToB campaign |
+| Cipher/Psion install/uninstall matrix | All four cases | All four cases |
+
+Derive legal progression from the installed `XPCAP` and `XPLEVEL` resources,
+retaining their hashes with the oracle. BGEE uses `.level.cap` checkpoints;
+the expected result includes the installed cap and attainable class/component
+levels. Do not raise or bypass the campaign XP cap to satisfy a high-level
+checkpoint. BG2EE retains the explicit Psion 17+ and Cipher 16/19 gates and
+Reaping Knives ownership, transfer, expiry and persistence checks. Missing
+BGEE high-tier access is tested as a rejection, not fabricated as a success.
+
+For example, supply these arguments for the BGEE Psion entry, together with
+the ordinary exact-engine/fixture metadata and engine command:
+
+```text
+--scenario common/acceptance/scenarios/psion-gameplay-progression-bgee.json
+--game-type bgee
+--output <private-evidence>/bgee/psion-gameplay-progression-bgee
+```
+
+Family-specific scenarios reject the wrong `--game-type`. Always provide it.
+
+The unsuffixed gameplay scenarios remain unchanged for existing consumers;
+their broad game-type declarations do not establish campaign qualification.
+Use the explicit family variants for the required matrix. EET is outside this
+matrix and requires independent evidence; a legacy scenario accepting `eet`
+does not qualify it.
+
+Every required run needs its own complete successful manifest, independent
+expected values, exact build/fixture provenance, and retained real UI/log
+evidence. Chargen must test permitted and rejected race/alignment/ability
+combinations for each custom class; initial identity and action bars alone do
+not satisfy restrictions. Preserve separate Sorcerer/Monk first/last-owner
+and standalone installation evidence alongside both lifecycle matrices.
+Do not combine checkpoints from failed/interrupted runs into a passing
+manifest. Scoped regression retries supplement the full matrix and do not
+replace it. Missing or unsupported required runs keep acceptance open.
 
 When inspecting rule tables from the live console, use the documented
 [eight-character runtime resource names](../../docs/runtime-resource-names.md),

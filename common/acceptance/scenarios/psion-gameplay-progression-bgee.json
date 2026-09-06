@@ -1,0 +1,51 @@
+{
+  "id": "psion-gameplay-progression-bgee",
+  "description": "Psion learning, resource spending, combat and persistence through low/middle/high progression in the real engine on BGEE through the installed campaign XP cap.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [
+    0
+  ],
+  "supported_game_types": [
+    "bgee"
+  ],
+  "prerequisites": [
+    "Disposable legal fixture with Psion and the read-only checkpoint helper; six legally created discipline actors or their local saves.",
+    "Controlled hostile and friendly combat targets, ordinary and temple rest access, and a second area.",
+    "Local XP grants are permitted for preparation; all subsequent level-up, learning, casting and persistence transitions must execute in GemRB.",
+    "Expected PP, learning credits, power eligibility, DC resources and progression values are derived independently from current rules and installed resources.",
+    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it."
+  ],
+  "instructions": [
+    "Record before/after learning credits and known powers for confirm and cancel, and compare each discipline's visible eligible powers at each unlocked tier.",
+    "Observe PP before and after a legal manifestation, insufficient-PP attempt, target cancellation and legal/over-limit augmentation. Include actual values, not a claimed pass flag.",
+    "For DC selection change current Intelligence through a controlled game effect, cast again and record the actual selected resource against its installed INT-specific oracle.",
+    "Exercise focus, Center Mind, feats, skills and quickslots through their real UI actions; observe combat effects and resource changes.",
+    "Use actual level-up screens at low and middle levels and the maximum level permitted by installed XPCAP/XPLEVEL. Record cap XP and expected/observed level in psion.level.cap. Compare all six disciplines at every campaign-accessible tier; rejected higher tiers belong in psion.tier-restrictions. Level 17+ access is required separately on BG2EE/ToB, not enabled by altering BGEE caps.",
+    "Observe ordinary rest, temple rest, area transition and save/reload against recorded baselines or the applicable reset rule. Quit normally."
+  ],
+  "required_checkpoints": [
+    "psion.learning.confirm",
+    "psion.learning.cancel",
+    "psion.discipline-access",
+    "psion.tier-restrictions",
+    "psion.pp.spend",
+    "psion.pp.insufficient",
+    "psion.pp.cancel",
+    "psion.augmentation.legal",
+    "psion.augmentation.limit",
+    "psion.dc.current-int-resource",
+    "psion.focus",
+    "psion.center-mind",
+    "psion.feats",
+    "psion.skills",
+    "psion.quickslot",
+    "psion.combat",
+    "psion.level.low",
+    "psion.level.middle",
+    "psion.level.cap",
+    "psion.rest.ordinary",
+    "psion.rest.temple",
+    "psion.area-transition",
+    "psion.save-reload"
+  ]
+}

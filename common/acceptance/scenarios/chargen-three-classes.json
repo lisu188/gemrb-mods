@@ -12,7 +12,7 @@
   "instructions": [
     "Create each required actor through the real class, ability, alignment, proficiency and spell/power selectors. Include a Fighter to expose shared GUI regressions.",
     "For each identity checkpoint, compare the engine's class row, class ID and kit/discipline with the installed tables after completing creation. Attach screenshot references in checkpoint context.",
-    "For chargen.restrictions compare observed race/alignment and ability restrictions with the installed rules for all three custom classes.",
+    "For chargen.restrictions compare both allowed and rejected race/alignment/ability choices with installed rules for each custom class. Record per-class choices, observed enabled/disabled controls or enforced ability bounds, independent expected restrictions and screenshot references; one legal Human/Lawful flow is insufficient.",
     "For chargen.initial-spellbooks and chargen.action-bars compare known spells/powers and available buttons for each completed custom class with the installed rules.",
     "Quit the engine normally after all actors and observations; an absent checkpoint is incomplete coverage."
   ],

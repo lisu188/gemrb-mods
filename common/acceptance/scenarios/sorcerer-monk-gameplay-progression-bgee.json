@@ -1,0 +1,42 @@
+{
+  "id": "sorcerer-monk-gameplay-progression-bgee",
+  "description": "Sorcerer/Monk spontaneous casting, Monk actions, component progression and persistence in the real engine on BGEE through the installed campaign XP cap.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [
+    0
+  ],
+  "supported_game_types": [
+    "bgee"
+  ],
+  "prerequisites": [
+    "Disposable legal fixture with Sorcerer/Monk, its shared GUI handler and the read-only checkpoint helper.",
+    "Legally created human lawful Sorcerer/Monk, local saves and real combat/rest/area transition access.",
+    "Installed-data progression oracle with separate Sorcerer and Monk levels; Monk component level determines fists.",
+    "XP grants may prepare low/middle/high progression but advancement occurs through the actual level-up screens.",
+    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it."
+  ],
+  "instructions": [
+    "Learn spontaneous spells and cast through the real spellbook/action bar; use Search, Stealth and Monk abilities against real targets.",
+    "Attempt representative allowed and prohibited equipment; observe actual equipped slots and item restrictions.",
+    "At low/middle levels and the installed campaign XP cap compare both component levels, fists, APR, AC, proficiencies, skills, HP and saves with the installed-data oracle. Include unequal component levels. Record cap XP and both expected/observed component levels in sorcerer-monk.level.cap; Monk component level determines fists.",
+    "Verify identity, known spells and available casting after ordinary rest, temple rest, area transition and save/reload.",
+    "Quit normally after all BGEE checkpoints. The separate sorcerer-monk-tob-hla scenario remains mandatory for BG2EE/ToB qualification; BGEE does not substitute for that gate."
+  ],
+  "required_checkpoints": [
+    "sorcerer-monk.learning",
+    "sorcerer-monk.spontaneous-casting",
+    "sorcerer-monk.search",
+    "sorcerer-monk.stealth",
+    "sorcerer-monk.monk-abilities",
+    "sorcerer-monk.equipment",
+    "sorcerer-monk.level.low",
+    "sorcerer-monk.level.middle",
+    "sorcerer-monk.level.cap",
+    "sorcerer-monk.fists.component-level",
+    "sorcerer-monk.combat",
+    "sorcerer-monk.rest.ordinary",
+    "sorcerer-monk.rest.temple",
+    "sorcerer-monk.area-transition",
+    "sorcerer-monk.save-reload"
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "id": "three-class-acceptance",
+  "description": "Required manifest inventory for BGEE and BG2EE/ToB acceptance. Paths are relative to the private evidence root. This inventory is a checklist, not a runner or a claim of success. EET requires separate qualification.",
+  "scenario_runs": [
+    {
+      "id": "bgee.chargen-three-classes",
+      "game_type": "bgee",
+      "scenario": "scenarios/chargen-three-classes.json",
+      "manifest": "bgee/chargen-three-classes/manifest.json"
+    },
+    {
+      "id": "bgee.psion-six-disciplines-chargen",
+      "game_type": "bgee",
+      "scenario": "scenarios/psion-six-disciplines-chargen.json",
+      "manifest": "bgee/psion-six-disciplines-chargen/manifest.json"
+    },
+    {
+      "id": "bgee.psion-gameplay-progression",
+      "game_type": "bgee",
+      "scenario": "scenarios/psion-gameplay-progression-bgee.json",
+      "manifest": "bgee/psion-gameplay-progression-bgee/manifest.json"
+    },
+    {
+      "id": "bgee.cipher-gameplay-progression",
+      "game_type": "bgee",
+      "scenario": "scenarios/cipher-gameplay-progression-bgee.json",
+      "manifest": "bgee/cipher-gameplay-progression-bgee/manifest.json"
+    },
+    {
+      "id": "bgee.sorcerer-monk-gameplay-progression",
+      "game_type": "bgee",
+      "scenario": "scenarios/sorcerer-monk-gameplay-progression-bgee.json",
+      "manifest": "bgee/sorcerer-monk-gameplay-progression-bgee/manifest.json"
+    },
+    {
+      "id": "bg2ee.chargen-three-classes",
+      "game_type": "bg2ee",
+      "scenario": "scenarios/chargen-three-classes.json",
+      "manifest": "bg2ee/chargen-three-classes/manifest.json"
+    },
+    {
+      "id": "bg2ee.psion-six-disciplines-chargen",
+      "game_type": "bg2ee",
+      "scenario": "scenarios/psion-six-disciplines-chargen.json",
+      "manifest": "bg2ee/psion-six-disciplines-chargen/manifest.json"
+    },
+    {
+      "id": "bg2ee.psion-gameplay-progression",
+      "game_type": "bg2ee",
+      "scenario": "scenarios/psion-gameplay-progression-bg2ee.json",
+      "manifest": "bg2ee/psion-gameplay-progression-bg2ee/manifest.json"
+    },
+    {
+      "id": "bg2ee.cipher-gameplay-progression",
+      "game_type": "bg2ee",
+      "scenario": "scenarios/cipher-gameplay-progression-bg2ee.json",
+      "manifest": "bg2ee/cipher-gameplay-progression-bg2ee/manifest.json"
+    },
+    {
+      "id": "bg2ee.sorcerer-monk-gameplay-progression",
+      "game_type": "bg2ee",
+      "scenario": "scenarios/sorcerer-monk-gameplay-progression-bg2ee.json",
+      "manifest": "bg2ee/sorcerer-monk-gameplay-progression-bg2ee/manifest.json"
+    },
+    {
+      "id": "bg2ee.sorcerer-monk-tob-hla",
+      "game_type": "bg2ee",
+      "campaign": "tob",
+      "scenario": "scenarios/sorcerer-monk-tob-hla.json",
+      "manifest": "bg2ee/sorcerer-monk-tob-hla/manifest.json"
+    }
+  ],
+  "lifecycle_runs": [
+    {
+      "id": "bgee.cipher-psion-shared-runtime",
+      "game_type": "bgee",
+      "matrix": "matrices/cipher-psion-lifecycle.json",
+      "manifest": "bgee/cipher-psion-shared-runtime/lifecycle-manifest.json"
+    },
+    {
+      "id": "bg2ee.cipher-psion-shared-runtime",
+      "game_type": "bg2ee",
+      "matrix": "matrices/cipher-psion-lifecycle.json",
+      "manifest": "bg2ee/cipher-psion-shared-runtime/lifecycle-manifest.json"
+    }
+  ],
+  "completion_requirements": [
+    "Each scenario entry needs its own complete successful schema-v1 manifest, matching scenario ID and game type, independent installed-rule oracles, exact engine/build and fixture provenance, and retained real UI/log evidence. Do not combine checkpoints from failed runs into a passing manifest.",
+    "Both lifecycle entries must contain all four install/uninstall cases with successful handler transitions and exact final restoration. Retain separate Sorcerer/Monk first/last-owner and standalone installation evidence for both families.",
+    "Chargen restrictions must include allowed and rejected race/alignment/ability combinations for each custom class. Initial spellbook/action and six-discipline observations do not replace those restrictions.",
+    "The ToB HLA entry requires an actual ToB campaign. Missing, interrupted, blocked, unsupported or mismatched entries keep qualification open. EET is outside this inventory."
+  ]
+}
