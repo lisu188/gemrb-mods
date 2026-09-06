@@ -2,8 +2,10 @@
 
 This development revision of Psion/Cipher requires the companion GemRB
 `SetSpellCastCheck` API. A version string such as `0.9.5-git` is not enough to
-establish that capability. The engine changes are being delivered separately
-in [GemRB PR #2525](https://github.com/gemrb/gemrb/pull/2525); do not interpret
+establish that capability. The companion engine changes are being delivered
+to the user-maintained fork in [GemRB PR #3](https://github.com/lisu188/gemrb/pull/3).
+The separate [upstream proposal](https://github.com/gemrb/gemrb/pull/2525)
+does not establish that an upstream release contains this API; do not interpret
 this branch as qualification of an unmodified released GemRB build.
 
 Without the API, class-power selection fails closed with an explicit
@@ -52,7 +54,9 @@ The focused regression is `common/tests/validate_cast_confirmation.py`.
 It tests dispatcher/event behavior with controlled engine boundaries. Native
 engine callback tests and actual learning, target cancellation, spending,
 quickslot, substitution and persistence runs are separate requirements. Until
-those runs are complete, issues #50 and #51 remain open acceptance gates.
+those runs are complete, the gameplay acceptance gates remain pending even
+though the infrastructure issues #50 and #51 are closed. The required campaign
+matrix is documented in [real-engine acceptance](../common/acceptance/README.md).
 
 Existing saves are not rewritten by the corrected CLAB orientation. Missing
 old Psion startup utilities and incorrectly persisted old Cipher Soul Whip

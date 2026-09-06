@@ -90,6 +90,14 @@ checkpoint. BG2EE retains the explicit Psion 17+ and Cipher 16/19 gates and
 Reaping Knives ownership, transfer, expiry and persistence checks. Missing
 BGEE high-tier access is tested as a rejection, not fabricated as a success.
 
+The explicit gameplay scenarios distinguish ordinary rest, inn rental and
+temple healing. `.rest.inn` requires the actual room/rental confirmation UI
+and its rest/reset rules. `.temple-healing` requires purchasing a native cure,
+checking its expected HP effect while preserving known spells and Psion PP
+or Cipher Focus. Temple healing does not call the inn rest path. The legacy
+`.rest.temple` name remains only in the unchanged unsuffixed scenarios; it
+must not be used to label an inn rental as temple evidence.
+
 For example, supply these arguments for the BGEE Psion entry, together with
 the ordinary exact-engine/fixture metadata and engine command:
 

@@ -19,7 +19,8 @@
     "Learn spontaneous spells and cast through the real spellbook/action bar; use Search, Stealth and Monk abilities against real targets.",
     "Attempt representative allowed and prohibited equipment; observe actual equipped slots and item restrictions.",
     "At low/middle levels and the installed campaign XP cap compare both component levels, fists, APR, AC, proficiencies, skills, HP and saves with the installed-data oracle. Include unequal component levels. Record cap XP and both expected/observed component levels in sorcerer-monk.level.cap; Monk component level determines fists.",
-    "Verify identity, known spells and available casting after ordinary rest, temple rest, area transition and save/reload.",
+    "Verify identity, known spells and available casting after ordinary rest, inn rental, area transition and save/reload.",
+    "Exercise actual inn room selection and rental confirmation for sorcerer-monk.rest.inn; derive restored spell charges and any pool reset from installed rules. Temple healing is a separate store purchase, not rest: record native cure identity/effects, expected HP healing and unchanged known spells in sorcerer-monk.temple-healing. Capture before/after values and native store UI actions; never invoke the store callbacks directly.",
     "Quit normally after all BGEE checkpoints. The separate sorcerer-monk-tob-hla scenario remains mandatory for BG2EE/ToB qualification; BGEE does not substitute for that gate."
   ],
   "required_checkpoints": [
@@ -35,7 +36,8 @@
     "sorcerer-monk.fists.component-level",
     "sorcerer-monk.combat",
     "sorcerer-monk.rest.ordinary",
-    "sorcerer-monk.rest.temple",
+    "sorcerer-monk.rest.inn",
+    "sorcerer-monk.temple-healing",
     "sorcerer-monk.area-transition",
     "sorcerer-monk.save-reload"
   ]

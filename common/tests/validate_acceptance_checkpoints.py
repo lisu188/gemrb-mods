@@ -97,8 +97,14 @@ def validate_campaign_inventory(harness):
         bg2ee = harness.load_scenario(SCENARIOS / (name + "-gameplay-progression-bg2ee.json"))
         assert bgee["supported_game_types"] == ["bgee"]
         assert bg2ee["supported_game_types"] == ["bg2ee"]
-        assert bg2ee["required_checkpoints"] == legacy["required_checkpoints"]
-        original = set(legacy["required_checkpoints"])
+        # Legacy "temple rest" combined two different native store paths.
+        # Explicit campaigns require both inn rest and an actual temple cure.
+        expected_bg2ee = [value.replace(".rest.temple", ".rest.inn")
+                          for value in legacy["required_checkpoints"]]
+        expected_bg2ee.insert(expected_bg2ee.index(name + ".rest.inn") + 1,
+                              name + ".temple-healing")
+        assert bg2ee["required_checkpoints"] == expected_bg2ee
+        original = set(expected_bg2ee)
         current = set(bgee["required_checkpoints"])
         removed = {
             "psion": {"psion.level.17-plus"},
@@ -115,6 +121,9 @@ def validate_campaign_inventory(harness):
         assert original - removed <= current
         for scenario in (bgee, bg2ee):
             assert any("XPCAP" in item and "XPLEVEL" in item for item in scenario["prerequisites"])
+            required = set(scenario["required_checkpoints"])
+            assert {name + ".rest.ordinary", name + ".rest.inn", name + ".temple-healing"} <= required
+            assert name + ".rest.temple" not in required
         # Wrong-family and EET requests fail before launching any process.
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / "must-not-launch"
