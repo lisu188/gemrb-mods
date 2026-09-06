@@ -815,6 +815,11 @@ def _sync_center_action(actor):
     )
     try:
         GemRB.RemoveSpell(actor, unwanted)
+        count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+        for index in range(count):
+            spell = GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+            if str(spell.get("SpellResRef", "")).upper() == wanted:
+                return True
         result = GemRB.LearnSpell(actor, wanted, LS_MEMO)
         return result in (0, 1)
     except Exception as error:
