@@ -50,6 +50,8 @@ jobs:
         run: python common/tests/validate_review_regressions.py
       - name: Validate accepted-cast transaction boundary
         run: python common/tests/validate_cast_confirmation.py
+      - name: Reject class casts when runtime metadata is missing
+        run: python common/tests/validate_cast_metadata.py
       - name: Validate in-place shared cast-hook upgrades with sibling ownership
         run: python common/tests/validate_shared_hook_upgrade.py
       - name: Validate chargen string safety

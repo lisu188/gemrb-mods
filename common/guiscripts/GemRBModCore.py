@@ -76,7 +76,7 @@ def begin_spell(spellbook, actor, raw_spell):
     cancel_pending(actor)
     handler, entry = resolve_action_entry(spellbook, actor, raw_spell)
     if not entry:
-        return True
+        return _native_spell_selection(spellbook, actor, raw_spell)
     import GemRB
     if not hasattr(GemRB, "SetSpellCastCheck"):
         GemRB.Log(1, "GemRBModCore", "Class powers require GemRB SetSpellCastCheck support")
@@ -146,7 +146,7 @@ def confirm_spell(actor, resref):
             cancel_pending(actor)
         return accepted
     cancel_pending(actor)
-    if pending or action_info(actual):
+    if pending or is_managed_action(actual):
         GemRB.Log(1, "GemRBModCore", "Unprepared class power cast rejected: %s" % actual)
         return False
     return True
@@ -186,8 +186,7 @@ def abort_action(actor, error):
         pass
 
 
-def spell_error(spellbook, actor, raw_spell, error):
-    abort_action(actor, error)
+def _native_spell_selection(spellbook, actor, raw_spell):
     try:
         import GemRB
         encoded_type, index = divmod(int(raw_spell), 1000)
@@ -204,3 +203,8 @@ def spell_error(spellbook, actor, raw_spell, error):
         return bool(resrefs) and all(resref and not is_managed_action(resref) for resref in resrefs)
     except Exception:
         return False
+
+
+def spell_error(spellbook, actor, raw_spell, error):
+    abort_action(actor, error)
+    return _native_spell_selection(spellbook, actor, raw_spell)
