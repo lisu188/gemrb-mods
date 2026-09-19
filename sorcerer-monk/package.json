@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "name": "sorcerer-monk",
+  "version": "2.0",
+  "runtime_api": 1,
+  "handler": "SorcererMonkUI",
+  "runtime_source": "sorcerer-monk/guiscripts/SorcererMonkUI.py",
+  "weidu": {
+    "tp2": "sorcerer-monk/setup-sorcerer-monk.tp2",
+    "component": 0,
+    "language": 0
+  }
+}
