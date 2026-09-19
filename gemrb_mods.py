@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-SUPPORTED_MODS = ("cipher", "psion")
+SUPPORTED_MODS = ("cipher", "psion", "sorcerer-monk")
 MANIFEST_SCHEMA_VERSION = 1
 RUNTIME_MANIFEST = Path("common/runtime-version.json")
 PACKAGE_MANIFEST = "package.json"

@@ -9,7 +9,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 DRIVER = ROOT / "gemrb_mods.py"
-SUPPORTED_MODS = ("cipher", "psion")
+SUPPORTED_MODS = ("cipher", "psion", "sorcerer-monk")
 ROOT_FILES = (
     "gemrb_mods.py",
     "README.md",
@@ -19,6 +19,10 @@ COMMON_FILES = (
     "common/README.md",
     "common/runtime-version.json",
     "common/tools/install_guiscripts.py",
+    "docs/compatibility.md",
+    "docs/cast-runtime.md",
+    "docs/runtime-resource-names.md",
+    "docs/install-three-classes.md",
 )
 COMMON_DIRS = (
     "common/guiscripts",
@@ -30,6 +34,7 @@ MOD_FILES = (
 )
 MOD_OPTIONAL_FILES = (
     "CHANGELOG.md",
+    "LIVE-ACCEPTANCE.md",
 )
 MOD_DIRS = (
     "guiscripts",
@@ -202,10 +207,10 @@ def write_release(output, mods, contexts, files):
     manifest = build_manifest(mods, contexts, files)
     manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
     with zipfile.ZipFile(archive, "w") as bundle:
-        for relative, path in sorted(files.items()):
+        for relative in sorted(set(files) | {MANIFEST_NAME}):
             executable = relative == "gemrb_mods.py" or relative.endswith("/install_guiscripts.py")
-            bundle.writestr(zip_info(relative, executable), path.read_bytes())
-        bundle.writestr(zip_info(MANIFEST_NAME), manifest_bytes)
+            data = manifest_bytes if relative == MANIFEST_NAME else files[relative].read_bytes()
+            bundle.writestr(zip_info(relative, executable), data)
     return archive, manifest
 
 

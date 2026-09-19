@@ -1,0 +1,48 @@
+name: Three-class release
+
+on:
+  push:
+    paths:
+      - 'common/**'
+      - 'cipher/**'
+      - 'psion/**'
+      - 'sorcerer-monk/**'
+      - 'docs/**'
+      - 'gemrb_mods.py'
+      - '.github/workflows/three-class-release.yml'
+  pull_request:
+    paths:
+      - 'common/**'
+      - 'cipher/**'
+      - 'psion/**'
+      - 'sorcerer-monk/**'
+      - 'docs/**'
+      - 'gemrb_mods.py'
+      - '.github/workflows/three-class-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python common/tests/validate_package_driver.py
+      - run: python common/tests/validate_release_builder.py
+      - run: python common/tests/validate_three_class_release.py
+      - name: Build class bundles
+        run: |
+          python common/tools/build_release.py sorcerer-monk
+          python common/tools/build_release.py cipher
+          python common/tools/build_release.py psion
+          python common/tools/build_release.py cipher psion sorcerer-monk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: three-class-bundles-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
