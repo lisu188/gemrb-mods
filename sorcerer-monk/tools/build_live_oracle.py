@@ -48,7 +48,7 @@ def cleaned_lines(path):
 
 def parse_2da(path):
     lines = cleaned_lines(path)
-    if len(lines) < 3 or not lines[0].upper().startswith("2DA V1.0"):
+    if len(lines) < 3 or lines[0].upper().split() != ["2DA", "V1.0"]:
         raise RuntimeError(f"{path}: unsupported 2DA header")
     default = lines[1]
     headers = lines[2].split()

@@ -99,14 +99,21 @@ def test_dispatcher():
     cipher.refresh_innate_charges = lambda actor: 3
     psion.filter_spellinfo = lambda actor, refs: [r for r in refs if r != "BAD"]
 
-    old = {name: sys.modules.get(name) for name in ("Psionics", "Cipher")}
+    old = {name: sys.modules.get(name) for name in ("Psionics", "Cipher", "GemRB")}
+    gemrb = types.ModuleType("GemRB")
+    gemrb.SetSpellCastCheck = lambda callback: None
+    gemrb.GetSelectedActors = lambda: [1004]
+    sys.modules["GemRB"] = gemrb
     sys.modules["Psionics"] = psion
     sys.modules["Cipher"] = cipher
     try:
         core = load("core_dispatch_test", GUI / "GemRBModCore.py")
         assert core.begin_spell(None, 4, 1)
         assert core.begin_spell(None, 4, 2)
-        assert calls[:2] == [("psion", 4, "PSX"), ("cipher", 4, "CIX")]
+        assert calls[:6] == [
+            ("cancel-psion", 4), ("cancel-cipher", 4), ("psion", 4, "PSX"),
+            ("cancel-psion", 4), ("cancel-cipher", 4), ("cipher", 4, "CIX"),
+        ]
         assert core.action_info("PSX")["handler"] == "Psionics"
         assert core.action_info("CIX")["handler"] == "Cipher"
         assert core.refresh_innate_charges(4) == 5
@@ -349,7 +356,7 @@ def SetupProfsWindow (pc, proftype, window, callback):
 \treturn
 '''
     return {
-        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n''',
+        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\tType = GemRB.GetVar ("Type")\n\tGemRB.SpellCast (pc, Type, Spell)\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
         "MenuWindow.py": 'import GemRB\n\ndef Rest():\n\tinfo = GemRB.RestParty (15, 0, 0)\n\treturn info\n',
         "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",

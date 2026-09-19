@@ -101,7 +101,7 @@ def dynamic_checks():
 
     tables = {
         "pscryst": fake_table("pscryst.2da"),
-        "psionskills": fake_table("psionskills.2da"),
+        "psskills": fake_table("psionskills.2da"),
     }
     class_rows = {1: "PSION_SHAPER", 2: "PSION_EGOIST", 3: "FIGHTER"}
     stats = {

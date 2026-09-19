@@ -51,10 +51,10 @@ def main() -> None:
 
     for filename in DISCIPLINE_CLABS:
         rows = table_rows(filename)
-        level1 = next(row for row in rows if row[0] == "1")
+        level1 = [row[1] for row in rows]
         assert level1.count("GA_PXSKILL") == 1, filename
-        for row in rows[1:]:
-            assert "GA_PXSKILL" not in row, (filename, row[0])
+        for row in rows:
+            assert "GA_PXSKILL" not in row[2:], (filename, row[0])
 
     builder = (ROOT / "lib" / "skills.tpa").read_text(encoding="utf-8")
     created = set(re.findall(r"ps_resref = ~(PX[A-Z0-9]+)~", builder))

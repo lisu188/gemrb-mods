@@ -20,12 +20,67 @@
 // while retaining conventional helper names so the resource definitions remain
 // readable.
 
+// An authored spell resref does not imply same-named B/C icon BAMs (for
+// example, SPPR115B is absent in the native EE fixture). Preserve explicit valid
+// icons, otherwise consult the intended native spell before using the shared
+// Magic Missile icon as an explicit last resort. Never emit a missing BAM.
+DEFINE_PATCH_FUNCTION ~GEMRB_RESOLVE_SPELL_ICON~
+  INT_VAR icon_type = 0
+  STR_VAR requested = ~~
+  RET resolved
+BEGIN
+  SPRINT resolved ~%requested%~
+  PATCH_IF NOT (~%requested%~ STRING_EQUAL ~~)
+    AND NOT FILE_EXISTS_IN_GAME ~%requested%.bam~ BEGIN
+    SPRINT gemrb_icon_template ~~
+    INNER_PATCH ~%requested%~ BEGIN
+      PATCH_IF (BUFFER_LENGTH > 1) BEGIN
+        READ_ASCII 0 gemrb_icon_template (BUFFER_LENGTH - 1)
+      END
+    END
+    PATCH_IF FILE_EXISTS_IN_GAME ~%gemrb_icon_template%.spl~ BEGIN
+      INNER_ACTION BEGIN
+        COPY_EXISTING ~%gemrb_icon_template%.spl~ ~override~
+          PATCH_IF (BUFFER_LENGTH >= 0x72) BEGIN
+            SPRINT gemrb_native_icon ~~
+            PATCH_IF icon_type = 0 BEGIN
+              READ_ASCII 0x3a gemrb_native_icon (8) NULL
+            END ELSE BEGIN
+              READ_LONG 0x64 gemrb_native_headers
+              READ_SHORT 0x68 gemrb_native_count
+              PATCH_IF (gemrb_native_count > 0)
+                AND (gemrb_native_headers + 0x28 <= BUFFER_LENGTH) BEGIN
+                READ_ASCII (gemrb_native_headers + 0x04) gemrb_native_icon (8) NULL
+              END
+            END
+            PATCH_IF NOT (~%gemrb_native_icon%~ STRING_EQUAL ~~)
+              AND FILE_EXISTS_IN_GAME ~%gemrb_native_icon%.bam~ BEGIN
+              SPRINT resolved ~%gemrb_native_icon%~
+            END
+          END
+        BUT_ONLY
+      END
+    END
+    PATCH_IF NOT FILE_EXISTS_IN_GAME ~%resolved%.bam~ BEGIN
+      PATCH_IF icon_type = 0 BEGIN
+        SPRINT resolved ~spwi112c~
+      END ELSE BEGIN
+        SPRINT resolved ~spwi112b~
+      END
+      PATCH_IF NOT FILE_EXISTS_IN_GAME ~%resolved%.bam~ BEGIN
+        PATCH_FAIL ~Missing spell icon %requested% and verified fallback %resolved%.bam.~
+      END
+      PATCH_PRINT ~Using shared %resolved% icon because %requested%.bam and its native spell icon are unavailable.~
+    END
+  END
+END
+
 DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~
   INT_VAR
     type = 1
     location = 4
     target = 1
-    target_count = 0
+    target_count = 1
     range = 0
     required_level = 1
     speed = 0
@@ -35,6 +90,29 @@ DEFINE_PATCH_FUNCTION ~ADD_SPELL_HEADER~
 BEGIN
   PATCH_IF (BUFFER_LENGTH < 0x72) BEGIN
     PATCH_FAIL ~ADD_SPELL_HEADER requires a complete SPL V1 header.~
+  END
+
+  // SPL header target numbers are not effect target numbers. GemRB handles
+  // creature/dead/point/self/untargeted GUI casts; inventory/unknown do not cast.
+  PATCH_IF (target != 1) AND (target != 3) AND (target != 4)
+    AND (target != 5) AND (target != 7) BEGIN
+    PATCH_FAIL ~ADD_SPELL_HEADER requires a supported GemRB spell target (1, 3, 4, 5 or 7).~
+  END
+  PATCH_IF (target_count < 1) OR (target_count > 255) BEGIN
+    PATCH_FAIL ~ADD_SPELL_HEADER requires a target_count between 1 and 255.~
+  END
+
+  READ_ASCII 0x3a ps_book_icon (8) NULL
+  LPF GEMRB_RESOLVE_SPELL_ICON
+    INT_VAR icon_type = 0
+    STR_VAR requested = ~%ps_book_icon%~
+    RET ps_book_icon = resolved
+  END
+  WRITE_ASCIIE 0x3a ~%ps_book_icon%~ #8
+  LPF GEMRB_RESOLVE_SPELL_ICON
+    INT_VAR icon_type = 1
+    STR_VAR requested = ~%icon%~
+    RET ps_memorized_icon = resolved
   END
 
   READ_LONG 0x64 ps_header_offset
@@ -52,7 +130,7 @@ BEGIN
 
   WRITE_BYTE ps_new_header type
   WRITE_BYTE (ps_new_header + 0x02) location
-  WRITE_ASCIIE (ps_new_header + 0x04) ~%icon%~ #8
+  WRITE_ASCIIE (ps_new_header + 0x04) ~%ps_memorized_icon%~ #8
   WRITE_BYTE (ps_new_header + 0x0c) target
   WRITE_BYTE (ps_new_header + 0x0d) target_count
   WRITE_SHORT (ps_new_header + 0x0e) range

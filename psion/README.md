@@ -6,6 +6,10 @@ This mod adds a point-based D&D 3.5e Psion class to BG-family campaigns running 
 
 Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md).
 
+This development revision requires GemRB `SetSpellCastCheck` support for class
+powers. See [the engine prerequisite and cast-accounting boundary](../docs/cast-runtime.md),
+including cancellation after a command has already been queued.
+
 The six discipline classes are:
 
 - **Seer** — Clairsentience
@@ -158,7 +162,7 @@ The current selector subsystem supports:
 
 D&D 3.5 uses `10 + power level + Intelligence modifier`. Psion 1.3 implements the current Intelligence modifier exactly at manifestation time.
 
-Public power resources keep the baseline save structure used by the catalogue. The build generates internal save-bearing variants for the reachable BG-family Intelligence modifiers. When a non-selector power or augmentation child is confirmed, `Psionics.prepare_action_entry()` resolves the actor's current modifier through `_dc_modifier()` and `_dc_variant_resref()`, then uses `GemRB.PrepareSpontaneousCast()` to substitute the matching internal resource before `ActionsWindow` executes the cast. The selected canonical resource remains the authority for PP cost and selector ownership, so save-DC substitution cannot change what the character knows or how much PP is charged.
+Public power resources keep the baseline save structure used by the catalogue. The build generates internal save-bearing variants for the reachable BG-family Intelligence modifiers. When a non-selector power or augmentation child is selected, `Psionics.prepare_action_entry()` resolves the actor's current modifier through `_dc_modifier()` and `_dc_variant_resref()` and records the matching `CastResRef`. The shared adapter uses `GemRB.SpellCast(actor, -3, 0, resref)` for this installed internal resource without learning it or prematurely depleting the parent. The selected canonical resource remains the authority for PP cost and selector ownership, so save-DC substitution cannot change what the character knows or how much PP is charged.
 
 The internal DC variants are implementation details and are not extra known powers. If a generated variant is unavailable, the runtime safely falls back to the canonical resource rather than inventing a second save-DC formula.
 

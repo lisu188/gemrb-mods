@@ -72,7 +72,7 @@ BUT_ONLY
 // Concussion Blast: force damage, no saving throw.
 LAF psion_create_level2_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level2_hostile_flags
@@ -160,7 +160,7 @@ BUT_ONLY
 // intended construct-only restriction for later GemRB-side enforcement.
 LAF psion_create_level2_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 15
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -207,7 +207,7 @@ BUT_ONLY
 // Dimension Swap: opcode 124 mode 3 exchanges source and target positions.
 LAF psion_create_level2_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -224,7 +224,7 @@ BUT_ONLY
 // to the hold opcode and remains a later runtime enhancement.
 LAF psion_create_level2_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level2_hostile_flags
@@ -251,7 +251,7 @@ BUT_ONLY
 // opcode-214 selector, so that pattern could be reused here later.
 LAF psion_create_level2_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level2_hostile_flags

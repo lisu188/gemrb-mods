@@ -57,7 +57,8 @@ def validate_psion_current_docs():
     required_readme = (
         "player-selected powers known",
         "Psionics.prepare_action_entry()",
-        "GemRB.PrepareSpontaneousCast()",
+        "GemRB.SpellCast(actor, -3, 0, resref)",
+        "SetSpellCastCheck",
         "psionknown.2da` defines how many powers",
     )
     for phrase in required_readme:

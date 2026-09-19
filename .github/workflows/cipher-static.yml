@@ -68,6 +68,8 @@ jobs:
           fetch-depth: 1
       - name: Seed missing Mage saving throw fixture
         run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
+      - name: Validate Cipher CLAB grants through real GemRB callbacks
+        run: python cipher/tests/validate_clab_engine.py vendor/gemrb
       - name: Install, uninstall and reinstall every class-table layout
         shell: bash
         run: |
@@ -75,6 +77,9 @@ jobs:
           for layout in normalized native legacy; do
             echo "Validating Cipher $layout layout"
             bash cipher/tests/validate_weidu_install.sh vendor/gemrb "$layout"
+            python cipher/tests/validate_clab_engine.py vendor/gemrb --tables "$RUNNER_TEMP/cipher-weidu-game-$layout/override"
+            python common/tests/validate_spell_targets.py vendor/gemrb --game "$RUNNER_TEMP/cipher-weidu-game-$layout"
+            python cipher/tests/validate_focus_startup.py "$RUNNER_TEMP/cipher-weidu-game-$layout" vendor/gemrb
           done
       - name: Validate late-installed Cipher items
         run: bash cipher/tests/validate_late_item_weidu.sh vendor/gemrb

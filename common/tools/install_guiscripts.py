@@ -7,6 +7,8 @@ import shutil
 
 MARK_BEGIN = "# GEMRB MOD CORE BEGIN"
 MARK_END = "# GEMRB MOD CORE END"
+CAST_CHECK_MARKER = "# GEMRB MOD CORE CAST CHECK v2"
+QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
 COMMON_MODULES = (
     "GemRBModCore.py",
@@ -57,9 +59,10 @@ def _insert_before(text, function_name, needle, hook):
     return text[:pos] + hook + text[pos:]
 
 
-def _patch_spell_pressed(text):
-    hook = (
+def _spell_pressed_hook():
+    return (
         "\t" + MARK_BEGIN + "\n"
+        "\t" + CAST_CHECK_MARKER + "\n"
         "\tif GemRB.GetVar(\"SettingButtons\"):\n"
         "\t\tGemRBModCore.cancel_pending(pc)\n"
         "\telse:\n"
@@ -73,12 +76,51 @@ def _patch_spell_pressed(text):
         "\t\t\t\treturn\n"
         "\t" + MARK_END + "\n\n"
     )
-    return _insert_before(text, "SpellPressed", '\tSpell = GemRB.GetVar ("Spell")', hook)
 
 
-def _patch_quickspell(text):
-    hook = (
+def _upgrade_spell_pressed(text, path):
+    """Upgrade only our recognized cast block; retain other edits and backups."""
+    start, end = _function_bounds(text, "SpellPressed")
+    body = text[start:end]
+    current_hook = _spell_pressed_hook()
+    upstream = current_hook.replace("\t" + CAST_CHECK_MARKER + "\n", "", 1)
+    previous = current_hook.replace(CAST_CHECK_MARKER, CAST_CHECK_MARKER.replace("v2", "v1"), 1)
+    previous = previous.replace("\t\traw_spell = None\n", "", 1).replace(
+        '\t\t\tif not GemRBModCore.spell_error(Spellbook, pc, raw_spell, error):\n\t\t\t\treturn\n',
+        '\t\t\tGemRB.Log(2, "GemRBModCore", str(error))\n\t\t\treturn\n', 1)
+    unversioned = previous.replace("\t" + CAST_CHECK_MARKER.replace("v2", "v1") + "\n", "", 1)
+    fail_open = unversioned.replace(
+        '\t\t\tGemRB.Log(2, "GemRBModCore", str(error))\n\t\t\treturn\n',
+        '\t\t\tGemRB.Log(2, "GemRBModCore", str(error))\n',
+        1,
+    )
+    recognized = [hook for hook in (current_hook, upstream, previous, unversioned, fail_open) if hook in body]
+    if len(recognized) != 1 or body.count(MARK_BEGIN) != 1 or body.count(MARK_END) != 1:
+        raise RuntimeError(f"{path.name} has an unrecognized modified SpellPressed hook; refusing to overwrite it")
+    native_cast = "GemRB.SpellCast (pc, Type, Spell)"
+    checked_cast = "GemRBModCore.cast_spell(pc, Type, Spell)"
+    if body.count(native_cast) + body.count(checked_cast) != 1:
+        raise RuntimeError(f"{path.name} SpellPressed cast boundary not recognized; refusing to overwrite it")
+    upgraded = body.replace(recognized[0], current_hook, 1).replace(native_cast, checked_cast, 1)
+    return text[:start] + upgraded + text[end:] if upgraded != body else None
+
+
+def _patch_spell_pressed(text):
+    hook = _spell_pressed_hook()
+    text = _insert_before(text, "SpellPressed", '\tSpell = GemRB.GetVar ("Spell")', hook)
+    start, end = _function_bounds(text, "SpellPressed")
+    body = text[start:end]
+    native_cast = "GemRB.SpellCast (pc, Type, Spell)"
+    if body.count(native_cast) != 1:
+        raise RuntimeError("SpellPressed native cast boundary not recognized")
+    body = body.replace(native_cast, "GemRBModCore.cast_spell(pc, Type, Spell)")
+    return text[:start] + body + text[end:]
+
+
+def _quickspell_hook():
+    return (
         "\t" + MARK_BEGIN + "\n"
+        "\t" + QUICK_CHECK_MARKER + "\n"
         "\tquickResRef = \"\"\n"
         "\ttry:\n"
         "\t\tpcStats = GemRB.GetPCStats(pc)\n"
@@ -106,6 +148,34 @@ def _patch_quickspell(text):
         "\t\t\treturn\n"
         "\t" + MARK_END + "\n\n"
     )
+
+
+def _upgrade_quickspell(text, path):
+    start, end = _function_bounds(text, "ActionQSpellPressed")
+    body = text[start:end]
+    current = _quickspell_hook()
+    upstream = current.replace("\t" + QUICK_CHECK_MARKER + "\n", "", 1)
+    previous = current.replace(QUICK_CHECK_MARKER, QUICK_CHECK_MARKER.replace("v2", "v1"), 1)
+    previous = previous.replace('\tquickResRef = ""\n', '', 1).replace(
+        '\t\tpcStats = GemRB.GetPCStats(pc)\n',
+        '\t\tpcStats = GemRB.GetPCStats(pc)\n\t\tquickResRef = ""\n', 1).replace(
+        '\t\tGemRBModCore.abort_action(pc, error)\n\t\tif not quickResRef or GemRBModCore.is_managed_action(quickResRef):\n\t\t\treturn\n',
+        '\t\tGemRB.Log(2, "GemRBModCore", "quickspell routing failed: %s" % error)\n\t\treturn\n', 1)
+    unversioned = previous.replace("\t" + QUICK_CHECK_MARKER.replace("v2", "v1") + "\n", "", 1)
+    fail_open = unversioned.replace(
+        '\t\tGemRB.Log(2, "GemRBModCore", "quickspell routing failed: %s" % error)\n\t\treturn\n',
+        '\t\tGemRB.Log(2, "GemRBModCore", "quickspell routing failed: %s" % error)\n',
+        1,
+    )
+    recognized = [hook for hook in (current, upstream, previous, unversioned, fail_open) if hook in body]
+    if len(recognized) != 1 or body.count(MARK_BEGIN) != 1 or body.count(MARK_END) != 1:
+        raise RuntimeError(f"{path.name} has an unrecognized modified ActionQSpellPressed hook; refusing to overwrite it")
+    upgraded = body.replace(recognized[0], current, 1)
+    return text[:start] + upgraded + text[end:] if upgraded != body else None
+
+
+def _patch_quickspell(text):
+    hook = _quickspell_hook()
     start, end = _function_bounds(text, "ActionQSpellPressed")
     match = re.search(r"(?m)^\tpc = GemRB\.GameGetFirstSelectedActor \(\)\n", text[start:end])
     if not match:
@@ -162,12 +232,11 @@ def _patch_rest(text, path):
 
 def render_patch(text, kind, path):
     if MARK_BEGIN in text:
-        if kind != "actions" or "GemRBModCore.spell_error(" in text:
-            return None
-        pattern = r"(?ms)^\t" + re.escape(MARK_BEGIN) + r"\n.*?^\t" + re.escape(MARK_END) + r"\n"
-        text, count = re.subn(pattern, "", text)
-        if count < 3:
-            raise RuntimeError(f"{path.name} legacy action hooks not recognized")
+        if kind == "actions":
+            upgraded = _upgrade_spell_pressed(text, path) or text
+            upgraded = _upgrade_quickspell(upgraded, path) or upgraded
+            return upgraded if upgraded != text else None
+        return None
     text = _insert_import(text, path)
     if kind == "actions":
         text = _patch_spell_pressed(text)

@@ -10,18 +10,20 @@ REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @1
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 
 // Rules and runtime metadata.
-COPY ~psion/tables/psionpool.2da~ ~override/psionpool.2da~
-COPY ~psion/tables/psionknown.2da~ ~override/psionknown.2da~
-COPY ~psion/tables/psiondisc.2da~ ~override/psiondisc.2da~
-COPY ~psion/tables/psionskills.2da~ ~override/psionskills.2da~
+// Engine resource references are limited to eight characters; source names
+// remain descriptive while the installed rule tables use distinct short IDs.
+COPY ~psion/tables/psionpool.2da~ ~override/pspool.2da~
+COPY ~psion/tables/psionknown.2da~ ~override/psknown.2da~
+COPY ~psion/tables/psiondisc.2da~ ~override/psdisc.2da~
+COPY ~psion/tables/psionskills.2da~ ~override/psskills.2da~
 COPY ~psion/tables/psskill.2da~ ~override/psskill.2da~
 COPY ~psion/tables/pscryst.2da~ ~override/pscryst.2da~
-COPY ~psion/tables/psionfeats.2da~ ~override/psionfeats.2da~
-COPY ~psion/tables/psionfeatpick.2da~ ~override/psionfeatpick.2da~
+COPY ~psion/tables/psionfeats.2da~ ~override/psfeats.2da~
+COPY ~psion/tables/psionfeatpick.2da~ ~override/psfeatpk.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
 COPY ~psion/tables/pspick.2da~ ~override/pspick.2da~
-COPY ~psion/tables/psionpowers.2da~ ~override/psionpowers.2da~
-COPY ~psion/tables/psionaugment.2da~ ~override/psionaugment.2da~
+COPY ~psion/tables/psionpowers.2da~ ~override/pspowers.2da~
+COPY ~psion/tables/psionaugment.2da~ ~override/psaugmnt.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
 COPY ~psion/tables/ps1mthr.2da~ ~override/ps1mthr.2da~
 COPY ~psion/tables/ps1vigr.2da~ ~override/ps1vigr.2da~

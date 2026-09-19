@@ -7,6 +7,11 @@ root = Path(sys.argv[1])
 layout = sys.argv[2]
 override = root / "override"
 
+# A renamed, byte-identical COPY must still produce its destination: the
+# class table references SAVECIPH during actual chargen finalization.
+assert (override / "saveciph.2da").is_file(), (layout, "missing SAVECIPH")
+assert (override / "saveciph.2da").read_bytes() == (override / "savewiz.2da").read_bytes(), (layout, "Cipher saves differ from native Mage saves")
+
 
 def rows(path):
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -113,7 +118,10 @@ def spell_effects(path):
 
 
 core = spell_effects(spl_path("CIFCORE"))
-assert any(effect[0] == 146 and effect[3] == 1 and effect[4] == 1 and effect[5] == "CIFS4" for effect in core), (layout, core)
+class_row = row_index(override / "splprot.2da", "CIPHER_CLASS")
+assert splprot["CIPHER_CLASS"] == ["0x10d", str(class_ids["CIPHER"]), "1"], (layout, splprot["CIPHER_CLASS"])
+assert (326, 2, 0, class_row, 1, "CIFS4") in core, (layout, core)
+assert not any(effect[0] == 146 for effect in core), (layout, core)
 assert not any(effect[0] == 282 and effect[3] == 9 for effect in core), (layout, core)
 
 soul_whip = {

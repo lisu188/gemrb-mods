@@ -55,12 +55,12 @@ def main():
     if args.uninstalled:
         for name in names:
             assert casefold_path(override, name) is None, name
-        assert casefold_path(override, "cipherknown.2da") is None
+        assert casefold_path(override, "ciknown.2da") is None
         assert casefold_path(override, "cipick.2da") is None
         print("Cipher power-learning resources removed cleanly")
         return
 
-    known_path = casefold_path(override, "cipherknown.2da")
+    known_path = casefold_path(override, "ciknown.2da")
     pick_path = casefold_path(override, "cipick.2da")
     selector = casefold_path(override, "CILRN.spl")
     assert known_path and pick_path and selector

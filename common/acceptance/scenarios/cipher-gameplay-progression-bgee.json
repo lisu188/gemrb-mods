@@ -1,0 +1,48 @@
+{
+  "id": "cipher-gameplay-progression-bgee",
+  "description": "Cipher learning, Focus combat ownership, locked-tier rejection and progression in real BGEE through the installed campaign XP cap.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [
+    0
+  ],
+  "supported_game_types": [
+    "bgee"
+  ],
+  "prerequisites": [
+    "Disposable legal BGEE fixture with Cipher, the read-only checkpoint helper and a legally created Cipher actor or its private save.",
+    "Controlled hostile and friendly targets with normal hits, critical hits and misses observed in real combat.",
+    "Ordinary rest, inn rental and temple healing access, a second area and local saves; XP grants only prepare real level-up screens.",
+    "Independent installed-rule oracles for Focus gain/cap/cost, learning credits and tier unlocks.",
+    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it."
+  ],
+  "instructions": [
+    "Record starting Focus and before/after Focus for hostile normal/critical hits, misses and friendly attacks; reach the cap and attempt further gain.",
+    "Exercise power learning confirm/cancel, casting/spending, target cancellation and quickslot casting through the actual UI.",
+    "Compare visible learning eligibility and rejection of locked tiers against installed rules in cipher.tier-restrictions, including inaccessible Reaping Knives. Its ownership/combat tests are mandatory in the separate BG2EE/ToB scenario; do not grant the power or raise the BGEE cap to simulate access.",
+    "Use real low/middle level-up screens and advance to the maximum level permitted by installed XPCAP/XPLEVEL. Record cap XP, expected/observed level, learning credits and tier eligibility in cipher.level.cap.",
+    "Exercise actual inn room selection and rental confirmation for cipher.rest.inn; derive restored spell charges and any pool reset from installed rules. Temple healing is a separate store purchase, not rest: record native cure identity/effects, expected HP healing and unchanged known spells and Focus in cipher.temple-healing. Capture before/after values and native store UI actions; never invoke the store callbacks directly.",
+    "Compare observed Focus/powers after ordinary rest, inn rental, an area transition and save/reload with the documented reset/persistence rules. Quit normally."
+  ],
+  "required_checkpoints": [
+    "cipher.focus.start",
+    "cipher.focus.hostile-hit",
+    "cipher.focus.critical-hit",
+    "cipher.focus.miss",
+    "cipher.focus.friendly-target",
+    "cipher.focus.cap",
+    "cipher.focus.spend",
+    "cipher.focus.cancel",
+    "cipher.learning.confirm",
+    "cipher.learning.cancel",
+    "cipher.quickslot",
+    "cipher.level.low",
+    "cipher.level.middle",
+    "cipher.level.cap",
+    "cipher.tier-restrictions",
+    "cipher.rest.ordinary",
+    "cipher.rest.inn",
+    "cipher.temple-healing",
+    "cipher.area-transition",
+    "cipher.save-reload"
+  ]
+}

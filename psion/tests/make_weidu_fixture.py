@@ -164,6 +164,21 @@ def configure_item_usability_fixtures(override: Path) -> None:
         write_item_fixture(override / filename.upper(), item_type, usability, proficiency)
 
 
+def write_icon_fixture(path: Path) -> None:
+    """Write an original one-pixel BAM V1, not a copied native game asset."""
+    palette_offset = 0x28
+    lookup_offset = palette_offset + 256 * 4
+    pixel_offset = lookup_offset + 2
+    data = bytearray(pixel_offset + 1)
+    data[:8] = b"BAM V1  "
+    struct.pack_into("<HBBIII", data, 8, 1, 1, 0, 0x18, palette_offset, lookup_offset)
+    struct.pack_into("<HHhhI", data, 0x18, 1, 1, 0, 0, pixel_offset | 0x80000000)
+    struct.pack_into("<HH", data, 0x24, 1, 0)
+    data[palette_offset + 4:palette_offset + 8] = b"\xff\xff\xff\xff"
+    data[pixel_offset] = 1
+    path.write_bytes(data)
+
+
 def read_2da_rows(path: Path) -> list[list[str]]:
     rows: list[list[str]] = []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[3:]:
@@ -325,7 +340,7 @@ def require_files(root: Path, names: tuple[str, ...]) -> None:
         raise RuntimeError(f"fixture is missing required resources: {', '.join(missing)}")
 
 
-def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
+def build_fixture(gemrb_root: Path, output: Path, layout: str, without_avprefc: bool = False, wolf_resource: str = "wolf") -> None:
     demo = gemrb_root / "demo"
     if not demo.is_dir():
         raise RuntimeError(f"GemRB demo directory not found: {demo}")
@@ -341,6 +356,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     unhardcoded = gemrb_root / "gemrb" / "unhardcoded"
     for directory in ("shared", "bg2", "bgee"):
         merge_tree(unhardcoded / directory, override)
+    if without_avprefc:
+        (override / "avprefc.2da").unlink()
 
     dialog = output / "dialog.tlk"
     if not dialog.is_file() or dialog.read_bytes()[:8] != b"TLK V1  ":
@@ -357,7 +374,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     )
     if not creature_candidates:
         raise RuntimeError("GemRB demo contains no CRE resource for WOLF.CRE")
-    shutil.copy2(creature_candidates[0], override / "wolf.cre")
+    if wolf_resource != "none":
+        shutil.copy2(creature_candidates[0], override / f"{wolf_resource}.cre")
 
     write_ids(
         override / "missile.ids",
@@ -405,12 +423,16 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
     required = [
         "classes.2da", "class.ids", "alignmnt.2da", "abclasrq.2da",
         "weapprof.2da", "profs.2da", "xpcap.2da", "xplevel.2da",
-        "thac0.2da", "lore.2da", "avprefc.2da", "qslots.2da",
-        "clskills.2da", "wolf.cre", "missile.ids", "dmgtype.ids",
+        "thac0.2da", "lore.2da", "qslots.2da",
+        "clskills.2da", "missile.ids", "dmgtype.ids",
         "oh1000.are",
     ]
     if layout != "legacy":
         required.extend(("clastext.2da", "clsrcreq.2da", "hpclass.2da"))
+    if not without_avprefc:
+        required.append("avprefc.2da")
+    if wolf_resource != "none":
+        required.append(f"{wolf_resource}.cre")
     require_files(override, tuple(required))
 
     preview_name = "classes.2da" if layout == "legacy" else "clastext.2da"
@@ -438,6 +460,8 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str) -> None:
         raise RuntimeError("generated chitin.key is invalid")
 
     configure_item_usability_fixtures(override)
+    for icon in ("spwi112b", "spwi112c"):
+        write_icon_fixture(override / (icon + ".bam"))
     require_files(override, tuple(filename.upper() for filename in ITEM_USABILITY_FIXTURES))
     print("Added uppercase override-only semantic ITM fixtures after CHITIN.KEY generation")
 
@@ -447,8 +471,10 @@ def main() -> None:
     parser.add_argument("--gemrb-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--layout", choices=LAYOUTS, default="normalized")
+    parser.add_argument("--without-avprefc", action="store_true", help="Omit the GemRB-only avatar table from both override and KEY")
+    parser.add_argument("--wolf-resource", choices=("wolf", "wolf01", "none"), default="wolf", help="Campaign-specific Astral Construct template name")
     args = parser.parse_args()
-    build_fixture(args.gemrb_root.resolve(), args.output.resolve(), args.layout)
+    build_fixture(args.gemrb_root.resolve(), args.output.resolve(), args.layout, args.without_avprefc, args.wolf_resource)
     print(f"WeiDU {args.layout} fixture created at {args.output.resolve()}")
 
 

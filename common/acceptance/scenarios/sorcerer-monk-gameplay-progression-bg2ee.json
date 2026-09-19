@@ -1,0 +1,45 @@
+{
+  "id": "sorcerer-monk-gameplay-progression-bg2ee",
+  "description": "Sorcerer/Monk spontaneous casting, Monk actions, component progression and persistence in the real engine on BG2EE/ToB including campaign-legal high levels.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [
+    0
+  ],
+  "supported_game_types": [
+    "bg2ee"
+  ],
+  "prerequisites": [
+    "Disposable legal fixture with Sorcerer/Monk, its shared GUI handler and the read-only checkpoint helper.",
+    "Legally created human lawful Sorcerer/Monk, local saves and real combat/rest/area transition access.",
+    "Installed-data progression oracle with separate Sorcerer and Monk levels; Monk component level determines fists.",
+    "XP grants may prepare low/middle/high progression but advancement occurs through the actual level-up screens.",
+    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it.",
+    "Real BG2EE data with ToB available for high-level preparation; record the active campaign and preserve legally created actors. Low/middle checkpoints may resume genuine campaign-start or imported lower-level saves; never overwrite component/class levels."
+  ],
+  "instructions": [
+    "Learn spontaneous spells and cast through the real spellbook/action bar; use Search, Stealth and Monk abilities against real targets.",
+    "Attempt representative allowed and prohibited equipment; observe actual equipped slots and item restrictions.",
+    "At each low/middle/high checkpoint compare both component levels, fists, APR, AC, proficiencies, skills, HP and saves with the installed-data oracle; include unequal component levels.",
+    "Verify identity, known spells and available casting after ordinary rest, inn rental, area transition and save/reload.",
+    "Exercise actual inn room selection and rental confirmation for sorcerer-monk.rest.inn; derive restored spell charges and any pool reset from installed rules. Temple healing is a separate store purchase, not rest: record native cure identity/effects, expected HP healing and unchanged known spells in sorcerer-monk.temple-healing. Capture before/after values and native store UI actions; never invoke the store callbacks directly.",
+    "Run sorcerer-monk-tob-hla separately on a real ToB-capable fixture for the mandatory ToB HLA gate. Quit normally."
+  ],
+  "required_checkpoints": [
+    "sorcerer-monk.learning",
+    "sorcerer-monk.spontaneous-casting",
+    "sorcerer-monk.search",
+    "sorcerer-monk.stealth",
+    "sorcerer-monk.monk-abilities",
+    "sorcerer-monk.equipment",
+    "sorcerer-monk.level.low",
+    "sorcerer-monk.level.middle",
+    "sorcerer-monk.level.high",
+    "sorcerer-monk.fists.component-level",
+    "sorcerer-monk.combat",
+    "sorcerer-monk.rest.ordinary",
+    "sorcerer-monk.rest.inn",
+    "sorcerer-monk.temple-healing",
+    "sorcerer-monk.area-transition",
+    "sorcerer-monk.save-reload"
+  ]
+}

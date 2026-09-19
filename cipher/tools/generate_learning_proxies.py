@@ -45,7 +45,7 @@ def neutralize(source: bytes) -> bytes:
     header = header_offset
     data[header + 0x02] = 4
     data[header + 0x0C] = 5
-    data[header + 0x0D] = 0
+    data[header + 0x0D] = 1
     struct.pack_into("<H", data, header + 0x0E, 0x7FFF)
     struct.pack_into("<H", data, header + 0x10, 1)
     struct.pack_into("<I", data, header + 0x12, 0)

@@ -10,8 +10,9 @@ DESIGNATED 0
 REQUIRE_PREDICATE FILE_EXISTS ~gemrb_path.txt~ @1
 REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 
-COPY ~cipher/tables/cipherpowers.2da~ ~override/cipherpowers.2da~
-COPY ~cipher/tables/cipherknown.2da~ ~override/cipherknown.2da~
+// Native engine resource references contain at most eight characters.
+COPY ~cipher/tables/cipherpowers.2da~ ~override/cipowers.2da~
+COPY ~cipher/tables/cipherknown.2da~ ~override/ciknown.2da~
 COPY ~cipher/tables/cipick.2da~ ~override/cipick.2da~
 COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
 COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~

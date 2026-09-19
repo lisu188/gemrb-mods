@@ -62,17 +62,33 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
     with tempfile.TemporaryDirectory(prefix=f"{mod}-{scenario}-") as tmp:
         game = Path(tmp) / "game"
         base_layout = "legacy" if scenario == "combined_hp" else "normalized"
-        subprocess.run([
+        fixture_command = [
             sys.executable, str(ROOT / "psion/tests/make_weidu_fixture.py"),
             "--gemrb-root", str(gemrb), "--output", str(game), "--layout", base_layout,
-        ], check=True)
+        ]
+        if scenario in ("missing_avprefc", "external_avprefc"):
+            fixture_command.append("--without-avprefc")
+        subprocess.run(fixture_command, check=True)
         override = game / "override"
+        avatar = override / "avprefc.2da"
+        avatar_before = None
+        external_avatar = None
         if scenario == "combined_hp":
             add_combined_hp(override / "hpclass.2da")
         elif scenario == "native9":
             write_split_classes(override / "classes.2da")
             write_native9(override / "clastext.2da")
-        elif scenario != "commented_split":
+        elif scenario == "custom_avprefc":
+            avatar.write_text("2DA V1.0\n*\nPREFIX\nTYPE 232\nMAGE 0x400\nFIGHTER 0x100\nOTHER_MOD 0x700\n", encoding="ascii")
+            avatar_before = avatar.read_bytes()
+        elif scenario == "external_avprefc":
+            data = Path(tmp) / "gemrb-data"
+            (data / "bgee").mkdir(parents=True)
+            (data / "shared").mkdir()
+            external_avatar = data / "shared/avprefc.2da"
+            external_avatar.write_text("2DA V1.0\n*\nPREFIX\nTYPE 232\nMAGE 0x400\nOTHER_MOD 0x700\n", encoding="ascii")
+            (game / "gemrb_path.txt").write_text(f"GemRB_Data_Path = {data / 'bgee'}\n", encoding="utf-8")
+        elif scenario not in ("commented_split", "missing_avprefc"):
             raise AssertionError(scenario)
         shutil.copytree(ROOT / "common", game / "common")
         shutil.copytree(ROOT / mod, game / mod)
@@ -83,10 +99,26 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
             weidu, tp2, "--use-lang", "en_US", "--force-install", "0", "--no-exit-pause",
         ], cwd=game, check=True)
 
+        if mod == "cipher":
+            assert (override / "saveciph.2da").is_file(), (mod, scenario, "missing SAVECIPH")
+            assert (override / "saveciph.2da").read_bytes() == (override / "savewiz.2da").read_bytes(), (mod, scenario, "Cipher saves differ from native Mage saves")
+
         ids = class_ids(override / "class.ids")
         clskills = read_rows(override / "clskills.2da")
         qslots = read_rows(override / "qslots.2da")
         names = DISCIPLINES if mod == "psion" else ("CIPHER",)
+        if scenario in ("missing_avprefc", "custom_avprefc", "external_avprefc"):
+            avatar_rows = dict(read_rows(avatar))
+            for name in names:
+                assert avatar_rows[name] == "0x600", (mod, scenario, name, avatar_rows)
+            if scenario == "missing_avprefc":
+                baseline = {
+                    row[0]: row[1] for row in read_rows(gemrb / "gemrb/unhardcoded/shared/avprefc.2da")
+                    if not row[0].startswith("#")
+                }
+                assert all(avatar_rows.get(name) == value for name, value in baseline.items()), avatar_rows
+            else:
+                assert avatar_rows["MAGE"] == "0x400" and avatar_rows["OTHER_MOD"] == "0x700", avatar_rows
         for name in names:
             cl_index = next(index for index, row in enumerate(clskills) if row[0] == name)
             assert ids[name] == cl_index, (mod, scenario, name, ids[name], cl_index)
@@ -109,6 +141,19 @@ def install(weidu: str, gemrb: Path, mod: str, scenario: str):
                 assert len(row) == expected_len, (mod, scenario, row)
                 assert int(row[1], 0) == ids[name], (mod, scenario, row)
 
+        if scenario in ("missing_avprefc", "custom_avprefc", "external_avprefc"):
+            subprocess.run([
+                weidu, tp2, "--use-lang", "en_US", "--force-uninstall", "0", "--no-exit-pause",
+            ], cwd=game, check=True)
+            if mod == "cipher":
+                assert not (override / "saveciph.2da").exists(), "SAVECIPH left behind on uninstall"
+            if avatar_before is None:
+                assert not avatar.exists(), "fallback AVPREFC left behind on uninstall"
+            else:
+                assert avatar.read_bytes() == avatar_before, "existing AVPREFC not restored exactly"
+            if external_avatar:
+                assert dict(read_rows(external_avatar)) == {"TYPE": "232", "MAGE": "0x400", "OTHER_MOD": "0x700"}
+
 
 def main():
     if len(sys.argv) != 3:
@@ -116,9 +161,9 @@ def main():
     weidu = sys.argv[1]
     gemrb = Path(sys.argv[2]).resolve()
     for mod in ("psion", "cipher"):
-        for scenario in ("commented_split", "combined_hp", "native9"):
+        for scenario in ("commented_split", "combined_hp", "native9", "missing_avprefc", "custom_avprefc", "external_avprefc"):
             install(weidu, gemrb, mod, scenario)
-    print("Psion and Cipher registration passed commented split, combined+HPCLASS and native 9-column CLASTEXT smoke tests.")
+    print("Psion and Cipher registration passed commented split, combined+HPCLASS, native 9-column CLASTEXT, missing-AVPREFC lifecycle and custom/external-AVPREFC preservation smoke tests.")
 
 
 if __name__ == "__main__":

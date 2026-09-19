@@ -90,6 +90,12 @@ jobs:
       - name: Seed missing Mage saving throw fixture
         run: python psion/tests/seed_savewiz_fixture.py vendor/gemrb
 
+      - name: Validate Psion CLAB grants through real GemRB callbacks
+        run: python psion/tests/validate_clab_engine.py vendor/gemrb
+
+      - name: Validate campaign-specific Astral Construct templates
+        run: python psion/tests/validate_construct_weidu.py weidu vendor/gemrb
+
       - name: Validate nonzero ITM equipping-effect offsets
         shell: bash
         run: bash psion/tests/validate_item_effect_offset.sh vendor/gemrb
@@ -102,6 +108,8 @@ jobs:
             echo "Validating $layout class-table layout"
             bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
             python psion/tests/validate_qslots_install.py "$RUNNER_TEMP/psion-weidu-game-$layout" "$layout"
+            python psion/tests/validate_clab_engine.py vendor/gemrb --tables "$RUNNER_TEMP/psion-weidu-game-$layout/override"
+            python common/tests/validate_spell_targets.py vendor/gemrb --game "$RUNNER_TEMP/psion-weidu-game-$layout"
           done
 
       - name: Validate late-installed Psion items

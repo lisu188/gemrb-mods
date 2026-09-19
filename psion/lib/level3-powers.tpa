@@ -136,7 +136,7 @@ BUT_ONLY
 // implementations may still apply Maze-specific return handling.
 LAF psion_create_level3_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level3_hostile_flags
@@ -176,7 +176,7 @@ BUT_ONLY
 // granted to the target.
 LAF psion_create_level3_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level3_hostile_flags
@@ -261,7 +261,7 @@ BUT_ONLY
 // not enforce.
 LAF psion_create_level3_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level3_hostile_flags

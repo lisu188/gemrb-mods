@@ -88,7 +88,7 @@ BUT_ONLY
 // legal manifestation level gives 21. Augmentation will later scale this value.
 LAF psion_create_level5_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -123,7 +123,7 @@ BUT_ONLY
 // target gets on its save, and the augment line of +1d6 per 2 additional PP.
 LAF psion_create_level5_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level5_hostile_flags
@@ -211,7 +211,7 @@ BUT_ONLY
 // The portable version deals an initial strike followed by four delayed pulses.
 LAF psion_create_level5_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level5_hostile_flags
@@ -251,7 +251,7 @@ BUT_ONLY
 // Baleful Teleport: damaging partial teleport plus a short spatial drag.
 LAF psion_create_level5_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level5_hostile_flags
@@ -270,7 +270,7 @@ BUT_ONLY
 // and dialogue integration. The portable effect weakens every saving throw.
 LAF psion_create_level5_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level5_hostile_flags

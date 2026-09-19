@@ -64,7 +64,7 @@ BUT_ONLY
 // represented by save vs death; magic resistance remains applicable.
 LAF psion_create_level6_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level6_hostile_flags
@@ -82,7 +82,7 @@ BUT_ONLY
 // effect dispel-DC hook, so the portable form blocks opcode 58 for the duration.
 LAF psion_create_level6_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -100,7 +100,7 @@ BUT_ONLY
 // opcodes do not provide the full tabletop menu of ability-score drain cures.
 LAF psion_create_level6_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -118,7 +118,7 @@ BUT_ONLY
 // Maze removal and states that the outsider restriction is not enforced.
 LAF psion_create_level6_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level6_hostile_flags
@@ -136,7 +136,7 @@ BUT_ONLY
 // portable form captures temporary control of the target instead.
 LAF psion_create_level6_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level6_hostile_flags

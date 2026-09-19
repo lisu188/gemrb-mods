@@ -8,7 +8,7 @@
 // and HOSTILE is row 1, with its numeric value in column 1.
 
 OUTER_SET ci_hostile_splprot = (0 - 1)
-COPY_EXISTING ~cipherfocus.2da~ ~override~
+COPY_EXISTING ~cifocus.2da~ ~override~
   READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value
   INNER_ACTION BEGIN
     OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~
@@ -16,7 +16,7 @@ COPY_EXISTING ~cipherfocus.2da~ ~override~
 BUT_ONLY
 
 ACTION_IF ci_hostile_splprot <= 0 THEN BEGIN
-  FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIPHERFOCUS.2DA.~
+  FAIL ~The Cipher late item patch could not recover CIPHER_HOSTILE metadata from CIFOCUS.2DA.~
 END
 
 COPY_EXISTING_REGEXP GLOB ~.*\.itm~ ~override~

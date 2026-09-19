@@ -60,6 +60,13 @@ def test_tables():
     assert "AP_CIFCORE" in clab
     assert "AP_CIFSW15" in clab
     assert "AP_CIFSW20" in clab
+    clab_levels, clab_abilities = read_2da(CIPHER / "tables" / "clabciph.2da")
+    assert clab_levels == [str(level) for level in range(1, 21)]
+    assert all(len(row) == 20 for row in clab_abilities.values())
+    grants = {(level, token) for row in clab_abilities.values()
+              for level, token in enumerate(row, 1) if token != "****"}
+    assert grants == {(1, "AP_CIFCORE"), (1, "GA_CILRN"), (10, "AP_CIFSW15"), (20, "AP_CIFSW20")}, grants
+    assert sum(token != "****" for row in clab_abilities.values() for token in row) == 4
 
 
 def test_sources():
@@ -123,7 +130,7 @@ def test_sources():
     assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
-    assert "COPY ~cipher/tables/cipherfocus.2da~ ~override/cipherfocus.2da~" in focus
+    assert "COPY ~cipher/tables/cipherfocus.2da~ ~override/cifocus.2da~" in focus
     assert "REPLACE_TEXTUALLY ~HOSTILE[ %TAB%]+0~ ~HOSTILE %ci_hostile_splprot%~" in focus
     assert "WRITE_SHORT ci_new_effect 326" in focus_item_patch
     assert "WRITE_BYTE (ci_new_effect + 0x02) 2" in focus_item_patch
@@ -132,7 +139,7 @@ def test_sources():
     assert "STRING_EQUAL_CASE ~CIFGAIN~" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in focus_item_patch
     assert "CIPHER_ADD_FOCUS_HIT_EFFECT" in late_focus
-    assert "COPY_EXISTING ~cipherfocus.2da~" in late_focus
+    assert "COPY_EXISTING ~cifocus.2da~" in late_focus
     assert "READ_2DA_ENTRY 1 1 2 ci_focus_metadata_value" in late_focus
     assert "OUTER_SET ci_hostile_splprot = EVALUATE_BUFFER ~%ci_focus_metadata_value%~" in late_focus
     assert "ci_hostile_splprot <= 0" in late_focus
@@ -161,7 +168,9 @@ def test_sources():
 
     focus_core = (CIPHER / "lib" / "focus-core.tpa").read_text(encoding="utf-8")
     assert "CIFS4" in focus_core
-    assert "WRITE_SHORT ci_core_effect 146" in focus_core
+    assert "WRITE_SHORT ci_core_effect 326" in focus_core
+    assert "WRITE_BYTE (ci_core_effect + 0x02) 2" in focus_core
+    assert "WRITE_LONG (ci_core_effect + 0x08) ci_class_splprot" in focus_core
 
     critical = (CIPHER / "lib" / "critical-focus.tpa").read_text(encoding="utf-8")
     assert "0x155 CastSpellOnCriticalHit" in critical
@@ -212,8 +221,8 @@ def load_runtime():
     memorized_innates = [dict(spell, Flags=1) for spell in known_innates]
 
     table_files = {
-        "cipherpowers": "cipherpowers.2da",
-        "cipherknown": "cipherknown.2da",
+        "cipowers": "cipherpowers.2da",
+        "ciknown": "cipherknown.2da",
         "cipick": "cipick.2da",
     }
 
@@ -257,9 +266,11 @@ def load_runtime():
         return True
 
     gemrb = types.ModuleType("GemRB")
+    gemrb.GetPartySize = lambda: 1
     gemrb.GetPlayerStat = lambda actor, stat, *args: state.get(stat, 0)
     gemrb.ApplySpell = apply_spell
-    gemrb.LoadTable = lambda name, *args: Table(str(name).lower())
+    # Match native ResRef truncation instead of accepting filesystem-only names.
+    gemrb.LoadTable = lambda name, *args: Table(str(name).lower()[:8])
     gemrb.DisplayString = lambda *args: None
     gemrb.Log = lambda *args: None
     gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)

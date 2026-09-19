@@ -19,7 +19,7 @@ BEGIN
 
   LAF psion_create_level1_power
     INT_VAR
-      ps_target = 2
+      ps_target = 1
       ps_range = 30
       ps_projectile = psion_none_projectile
       ps_flags = psion_hostile_flags

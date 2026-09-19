@@ -65,7 +65,7 @@ BUT_ONLY
 // the common movement and restraint opcodes for seven turns.
 LAF psion_create_level4_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
   STR_VAR
@@ -120,7 +120,7 @@ BUT_ONLY
 // Disarm and pull modes remain future selector children.
 LAF psion_create_level4_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level4_hostile_flags
@@ -140,7 +140,7 @@ BUT_ONLY
 // the runtime transfer remains an explicit follow-up task.
 LAF psion_create_level4_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level4_hostile_flags
@@ -249,7 +249,7 @@ BUT_ONLY
 // Dominate (Psionic): direct domination for five rounds, save vs spell negates.
 LAF psion_create_level4_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level4_hostile_flags

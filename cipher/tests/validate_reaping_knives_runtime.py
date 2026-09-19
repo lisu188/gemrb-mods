@@ -55,8 +55,9 @@ def test_prepare_reaping_knives():
         "SpellIndex": 17,
     }
     assert runtime.prepare_action_entry(None, 3, entry) is entry
-    assert prepared == [(3, "CI8RKNI", 2, 0, "CI8RK9")]
-    assert variables["Spell"] == 4012
+    assert not prepared
+    assert entry["CastResRef"] == "CI8RK9"
+    assert not variables
     assert not logs
 
 
@@ -71,6 +72,18 @@ def test_non_reaping_spell_is_unchanged():
     assert runtime.prepare_action_entry(None, 2, entry) is entry
     assert not prepared
     assert not variables
+
+
+def test_internal_owner_variants_remain_managed():
+    runtime, _, _, _ = load_runtime()
+    runtime.power_info = lambda name: {"resref": name} if name == "CI8RKNI" else None
+    for token in (1, 6, 7, 9, 99, 100, 255):
+        info = runtime.action_info("CI8RK%d" % token)
+        assert info["resref"] == "CI8RKNI"
+        assert info["internal_resref"] == "CI8RK%d" % token
+    runtime.power_choice_info = lambda name: None
+    for name in ("CI8RK0", "CI8RK256", "CI8RK01", "CI8RKX"):
+        assert runtime.action_info(name) is None
 
 
 def test_invalid_owner_slot_fails_closed():
@@ -102,12 +115,13 @@ def test_installer_source_contract():
     assert "ci_hostile_splprot" in source
     assert "ci_class_splprot" in source
     assert "REAPING_KNIVES_RESOURCE = \"CI8RKNI\"" in runtime_source
-    assert "GemRB.PrepareSpontaneousCast" in runtime_source
+    assert 'entry["CastResRef"]' in runtime_source
 
 
 def main():
     test_prepare_reaping_knives()
     test_non_reaping_spell_is_unchanged()
+    test_internal_owner_variants_remain_managed()
     test_invalid_owner_slot_fails_closed()
     test_installer_source_contract()
     subprocess.run([sys.executable, str(CIPHER / "tests" / "validate_reaping_identity.py")], check=True)

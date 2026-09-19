@@ -340,9 +340,9 @@ for discipline in disciplines:
     )
 
 for filename in (
-    "psionpool.2da", "psionknown.2da", "psiondisc.2da",
-    "psionskills.2da", "psionfeats.2da", "psionpowers.2da",
-    "psionaugment.2da", "ps1eray.2da", "ps1mthr.2da",
+    "pspool.2da", "psknown.2da", "psdisc.2da",
+    "psskills.2da", "psfeats.2da", "psfeatpk.2da", "pspowers.2da",
+    "psaugmnt.2da", "ps1eray.2da", "ps1mthr.2da",
     "ps1vigr.2da", "ps2aaff.2da", "mxpsion.2da",
     "clabpsee.2da", "clabpsha.2da", "clabpkin.2da",
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",
@@ -445,9 +445,9 @@ assert not any(
 ), layout
 assert not any(path.name.lower() == "psacon01.cre" for path in remaining), layout
 for filename in (
-    "psionpool.2da", "psionknown.2da", "psiondisc.2da",
-    "psionskills.2da", "psionfeats.2da", "psionpowers.2da",
-    "psionaugment.2da", "ps1eray.2da", "ps1mthr.2da",
+    "pspool.2da", "psknown.2da", "psdisc.2da",
+    "psskills.2da", "psfeats.2da", "psfeatpk.2da", "pspowers.2da",
+    "psaugmnt.2da", "ps1eray.2da", "ps1mthr.2da",
     "ps1vigr.2da", "ps2aaff.2da", "mxpsion.2da",
     "clabpsee.2da", "clabpsha.2da", "clabpkin.2da",
     "clabpego.2da", "clabpnom.2da", "clabptel.2da",

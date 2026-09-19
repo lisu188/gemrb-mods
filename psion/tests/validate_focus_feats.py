@@ -50,7 +50,7 @@ def main() -> None:
     for filename in DISCIPLINE_CLABS:
         text = (ROOT / "tables" / filename).read_text(encoding="utf-8")
         rows = table_rows(filename)
-        level1 = next(row for row in rows if row[0] == "1")
+        level1 = [row[1] for row in rows]
         assert level1.count("GA_PXPLRN") == 1, filename
         assert level1.count("GA_PXCNTR") == 1, filename
         assert level1.count("GA_PXFSEL") == 1, filename
@@ -58,8 +58,7 @@ def main() -> None:
         assert text.count("GA_PXCNTR") == 1, filename
         assert text.count("GA_PXFSEL") == 1, filename
         for level in ("5", "10", "15", "20"):
-            row = next(row for row in rows if row[0] == level)
-            assert "GA_PXFSEL" not in row, (filename, level)
+            assert all(row[int(level)] != "GA_PXFSEL" for row in rows), (filename, level)
 
     builder = (ROOT / "lib" / "focus-feats.tpa").read_text(encoding="utf-8")
     created = set(re.findall(r"ps_resref = ~(PX[A-Z0-9]+)~", builder))

@@ -1,0 +1,45 @@
+{
+  "id": "cipher-gameplay-progression",
+  "description": "Cipher learning, Focus combat ownership, Reaping Knives and progression in the real engine.",
+  "timeout_seconds": 14400,
+  "expected_exit_codes": [0],
+  "supported_game_types": ["bgee", "bg2ee", "eet"],
+  "prerequisites": [
+    "Disposable legal fixture with Cipher, the read-only checkpoint helper and two legally created Cipher actors.",
+    "Controlled hostile and friendly targets with normal hits, critical hits and misses observed in real combat.",
+    "Ordinary and temple rest access, a second area and local saves; XP grants only prepare real level-up screens.",
+    "Independent installed-rule oracles for Focus gain/cap/cost, learning credits, tier unlocks and Reaping Knives ownership/expiry."
+  ],
+  "instructions": [
+    "Record starting Focus and before/after Focus for hostile normal/critical hits, misses and friendly attacks; reach the cap and attempt further gain.",
+    "Exercise power learning confirm/cancel, casting/spending, target cancellation and quickslot casting through the actual UI.",
+    "Use two Ciphers to check Reaping Knives credit owner, transfer, expiry and save/reload without cross-credit. Record both actors' Focus and the recipient/owner state.",
+    "Use real low/middle/high level-up screens; independently verify new tier credits and eligibility at levels 16 and 19.",
+    "Compare observed Focus/powers after ordinary rest, temple rest, an area transition and save/reload with the documented reset/persistence rules. Quit normally."
+  ],
+  "required_checkpoints": [
+    "cipher.focus.start",
+    "cipher.focus.hostile-hit",
+    "cipher.focus.critical-hit",
+    "cipher.focus.miss",
+    "cipher.focus.friendly-target",
+    "cipher.focus.cap",
+    "cipher.focus.spend",
+    "cipher.focus.cancel",
+    "cipher.learning.confirm",
+    "cipher.learning.cancel",
+    "cipher.quickslot",
+    "cipher.reaping-knives.owner",
+    "cipher.reaping-knives.transfer",
+    "cipher.reaping-knives.expiry",
+    "cipher.reaping-knives.save-reload",
+    "cipher.level.low",
+    "cipher.level.middle",
+    "cipher.level.16",
+    "cipher.level.19",
+    "cipher.rest.ordinary",
+    "cipher.rest.temple",
+    "cipher.area-transition",
+    "cipher.save-reload"
+  ]
+}

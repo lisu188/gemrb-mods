@@ -16,7 +16,8 @@ ACTIONS = '''import GemRB
 def SpellPressed():
 	pc = GemRB.GameGetFirstSelectedActor ()
 	Spell = GemRB.GetVar ("Spell")
-	calls.append("cast")
+	Type = GemRB.GetVar("Type")
+	GemRB.SpellCast (pc, Type, Spell)
 
 def ActionQSpellPressed(which):
 	pc = GemRB.GameGetFirstSelectedActor ()
@@ -52,6 +53,9 @@ class CastingRegression(unittest.TestCase):
         self.gemrb.GameGetFirstSelectedActor = lambda: 1
         self.gemrb.GetPCStats = lambda actor: {"QuickSpells": ["PS1MTHR"]}
         self.gemrb.GetSpelldata = lambda actor: ["PSVG01"]
+        self.gemrb.GetSelectedActors = lambda: [1001]
+        self.gemrb.SetSpellCastCheck = lambda callback: None
+        self.gemrb.SpellCast = lambda *args: self.calls.append("cast")
         self.gemrb.Log = lambda *args: None
         self.transactions = load("review_transactions", GUI / "Transactions.py")
         self.core = load("review_core", GUI / "GemRBModCore.py")
@@ -140,6 +144,17 @@ class CastingRegression(unittest.TestCase):
         self.actions["ActionQSpellPressed"](0)
         self.assertEqual(self.calls, ["direct-quickspell"])
 
+    def test_known_native_quickslot_can_fall_back_after_unrelated_error(self):
+        self.reserve()
+        self.core._pending_casts[1] = {"cast": "PSVG01"}
+        self.gemrb.GetPCStats = lambda actor: {"QuickSpells": ["SPWI112"]}
+        self.core.action_info = fail
+        self.actions["ActionQSpellPressed"](0)
+        self.assertEqual(self.calls, ["direct-quickspell"])
+        self.assertNotIn(1, self.core._pending_casts)
+        self.assertNotIn(("Psionics", 1), self.transactions._pending)
+        self.assertIn(("Psionics", 2), self.transactions._pending)
+
     def test_managed_quickslot_failures_do_not_fall_back(self):
         for stage in ("lookup", "refresh", "entries"):
             with self.subTest(stage=stage):
@@ -167,7 +182,9 @@ class CastingRegression(unittest.TestCase):
 
     def test_upgrade_replaces_owned_hooks_without_replacing_backup(self):
         current = self.patcher.render_patch(ACTIONS, "actions", Path("ActionsWindow.py"))
-        legacy = current.replace("GemRBModCore.spell_error(", "LegacyCore.spell_error(")
+        legacy = current.replace("\t" + self.patcher.CAST_CHECK_MARKER + "\n", "").replace(
+            "\t" + self.patcher.QUICK_CHECK_MARKER + "\n", "").replace(
+            "GemRBModCore.cast_spell(pc, Type, Spell)", "GemRB.SpellCast (pc, Type, Spell)")
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "ActionsWindow.py"
             target.write_text(ACTIONS)
@@ -175,12 +192,18 @@ class CastingRegression(unittest.TestCase):
             upgraded = self.patcher.render_patch(target.read_text(), "actions", target)
             self.assertIsNotNone(upgraded)
             self.patcher.apply_patch(target, upgraded)
-            self.assertNotIn("LegacyCore", target.read_text())
+            self.assertIn(self.patcher.CAST_CHECK_MARKER, target.read_text())
             self.assertEqual(target.read_text().count(self.patcher.MARK_BEGIN), 4)
             self.assertEqual(target.with_suffix(".py" + self.patcher.CORE_BACKUP_SUFFIX).read_text(), ACTIONS)
             self.assertIsNone(self.patcher.render_patch(target.read_text(), "actions", target))
             self.patcher.remove_patch(target)
             self.assertEqual(target.read_text(), ACTIONS)
+
+    def test_unknown_modified_owned_hook_is_not_silently_replaced(self):
+        current = self.patcher.render_patch(ACTIONS, "actions", Path("ActionsWindow.py"))
+        modified = current.replace("GemRBModCore.spell_error(", "UserCore.spell_error(")
+        with self.assertRaisesRegex(RuntimeError, "unrecognized modified SpellPressed hook"):
+            self.patcher.render_patch(modified, "actions", Path("ActionsWindow.py"))
 
 
 class HitPointRegression(unittest.TestCase):

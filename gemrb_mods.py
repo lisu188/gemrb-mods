@@ -13,7 +13,7 @@ SUPPORTED_MODS = ("cipher", "psion")
 MANIFEST_SCHEMA_VERSION = 1
 RUNTIME_MANIFEST = Path("common/runtime-version.json")
 PACKAGE_MANIFEST = "package.json"
-WEIDU_LOG_PATTERN = re.compile(r"~([^~]+)~\s+#\d+\s+#(\d+)")
+WEIDU_LOG_PATTERN = re.compile(r"^\s*~([^~]+)~\s+#\d+\s+#(\d+)")
 
 
 def read_json(path):

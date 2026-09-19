@@ -16,11 +16,147 @@ Scenario files live in `common/acceptance/scenarios/` and use a small JSON contr
   "expected_exit_codes": [0],
   "expected_log_markers": ["EXPECTED_MARKER"],
   "forbidden_log_markers": ["KNOWN_FAILURE"],
+  "required_checkpoints": ["actor.after-action"],
+  "prerequisites": ["Required fixture and independently derived expected values."],
+  "instructions": ["Perform the real UI action and record its observed result."],
   "supported_game_types": ["bgee", "bg2ee"]
 }
 ```
 
-`Traceback (most recent call last):` is always forbidden. Scenario-specific forbidden markers are additive.
+`Traceback (most recent call last):`, `[GUIScript/ERROR]: Runtime Error:`, and
+`[GUIScript/ERROR]: Unhandled target type` are always forbidden, including GUI
+failures that provide no Python traceback or cannot enter targeting at all.
+Scenario-specific forbidden markers are additive.
+
+`required_checkpoints`, `prerequisites` and `instructions` are optional, so existing log-marker scenarios retain their behavior. Required checkpoint IDs must be unique. The manifest retains schema version 1 and adds parsed `checkpoints`, required assertions and the scenario's prerequisite/instruction lists.
+
+## Structured gameplay checkpoints
+
+Copy `common/acceptance/GemRBAcceptance.py` into the **disposable** fixture's GUIScripts root. The helper only observes state and emits evidence; it never casts, levels an actor, grants XP or repairs a failed state. After performing an action through the real engine UI, emit an observation from its console or a temporary fixture probe:
+
+```python
+import GemRBAcceptance as Acceptance
+from ie_stats import IE_CLASS, IE_KIT
+
+actual = Acceptance.capture_actor(1, {"class": IE_CLASS, "kit": IE_KIT})
+# Set these from the installed class tables before observing the actor.
+expected = {"actor": 1, "stats": {"class": installed_class_id, "kit": installed_kit_id}, "variables": {}}
+Acceptance.checkpoint("chargen.cipher.identity", actual, expected,
+                      {"oracle": "installed class tables", "screenshot": "screenshots/cipher-record.png"})
+```
+
+`capture_actor(actor, stats, variables=(), base=False)` reads named GemRB stat IDs and optional GUI variables. `base=True` selects unmodified stats. More specific read-only engine queries, such as known powers or current pool accessors, can provide `actual` directly to `checkpoint`. Use independently derived installed-rule values or a previously recorded baseline for `expected`; assigning the current observation to both fields proves nothing. Screenshots and logs must establish the claimed UI actions and resource transitions. A successful checkpoint alone does not authenticate that a real engine or real UI action produced it.
+
+The stdout protocol is one JSON object per line, optionally prefixed by the engine's log label:
+
+```text
+GEMRB_ACCEPTANCE_CHECKPOINT|{"id":"pool.after-cast","actual":7,"expected":7,"context":{"before":10,"installed_cost":3}}
+```
+
+Only `id`, `actual`, `expected` and optional object-valued `context` are allowed. The runner compares canonical JSON values, including list order and JSON types (`true` does not equal `1`). It records each observation, source line and computed status in `manifest.json`. It rejects invalid JSON, duplicate object fields, non-finite numbers, missing fields, extra success flags, duplicate checkpoint IDs and missing required checkpoints. All emitted mismatches fail, even for optional checkpoint IDs. Engine termination, forbidden log markers and timeouts remain independent failure gates.
+
+The checked-in manual scenarios cover:
+
+- `chargen-three-classes`: Fighter baseline, Cipher, Sorcerer/Monk and all six Psion disciplines.
+- `psion-six-disciplines-chargen`: six real Psion identity flows and initial action/learning state; separate from combat and progression.
+- `psion-gameplay-progression-{bgee,bg2ee}`: learning, PP, augmentation, current-INT DC selection, discipline access and progression/persistence.
+- `cipher-gameplay-progression-{bgee,bg2ee}`: Focus gain/spending, campaign-appropriate tiers and progression/persistence; BG2EE additionally requires two-Cipher Reaping Knives ownership.
+- `sorcerer-monk-gameplay-progression-{bgee,bg2ee}`: casting, Monk actions, equipment, component-level progression and persistence.
+- `sorcerer-monk-tob-hla`: real ToB merged HLA selection and save/reload, a separate required gate for ToB qualification.
+
+### Required campaign matrix
+
+[`matrices/three-class-acceptance.json`](matrices/three-class-acceptance.json)
+lists the required scenario and lifecycle manifests. Each entry has a unique
+run ID, game family, source scenario/matrix and output path relative to a
+private evidence root. It is an inventory for review, not a gameplay runner or
+an aggregate success result. It requires these runs:
+
+| Scenario group | BGEE | BG2EE/ToB |
+| --- | --- | --- |
+| Three-class chargen with Fighter control and positive/negative restrictions | Required | Required |
+| All six Psion disciplines and initial state | Required | Required |
+| Psion gameplay | Low/middle/campaign cap | Low/middle/17+, all discipline tiers |
+| Cipher gameplay | Low/middle/campaign cap and locked-tier rejection | Low/middle/16/19 and two-Cipher Reaping Knives |
+| Sorcerer/Monk gameplay | Low/middle/campaign cap, component-level fists | Low/middle/high, component-level fists |
+| Sorcerer/Monk HLA | Not applicable | Required in an actual ToB campaign |
+| Cipher/Psion install/uninstall matrix | All four cases | All four cases |
+
+Derive legal progression from the installed `XPCAP` and `XPLEVEL` resources,
+retaining their hashes with the oracle. BGEE uses `.level.cap` checkpoints;
+the expected result includes the installed cap and attainable class/component
+levels. Do not raise or bypass the campaign XP cap to satisfy a high-level
+checkpoint. BG2EE retains the explicit Psion 17+ and Cipher 16/19 gates and
+Reaping Knives ownership, transfer, expiry and persistence checks. Missing
+BGEE high-tier access is tested as a rejection, not fabricated as a success.
+
+The explicit gameplay scenarios distinguish ordinary rest, inn rental and
+temple healing. `.rest.inn` requires the actual room/rental confirmation UI
+and its rest/reset rules. `.temple-healing` requires purchasing a native cure,
+checking its expected HP effect while preserving known spells and Psion PP
+or Cipher Focus. Temple healing does not call the inn rest path. The legacy
+`.rest.temple` name remains only in the unchanged unsuffixed scenarios; it
+must not be used to label an inn rental as temple evidence.
+
+For example, supply these arguments for the BGEE Psion entry, together with
+the ordinary exact-engine/fixture metadata and engine command:
+
+```text
+--scenario common/acceptance/scenarios/psion-gameplay-progression-bgee.json
+--game-type bgee
+--output <private-evidence>/bgee/psion-gameplay-progression-bgee
+```
+
+Family-specific scenarios reject the wrong `--game-type`. Always provide it.
+
+The unsuffixed gameplay scenarios remain unchanged for existing consumers;
+their broad game-type declarations do not establish campaign qualification.
+Use the explicit family variants for the required matrix. EET is outside this
+matrix and requires independent evidence; a legacy scenario accepting `eet`
+does not qualify it.
+
+Every required run needs its own complete successful manifest, independent
+expected values, exact build/fixture provenance, and retained real UI/log
+evidence. Chargen must test permitted and rejected race/alignment/ability
+combinations for each custom class; initial identity and action bars alone do
+not satisfy restrictions. Preserve separate Sorcerer/Monk first/last-owner
+and standalone installation evidence alongside both lifecycle matrices.
+Do not combine checkpoints from failed/interrupted runs into a passing
+manifest. Scoped regression retries supplement the full matrix and do not
+replace it. Missing or unsupported required runs keep acceptance open.
+
+When inspecting rule tables from the live console, use the documented
+[eight-character runtime resource names](../../docs/runtime-resource-names.md),
+not the longer authoring filenames. The resource-name regression is
+`python3 common/tests/validate_runtime_resrefs.py`.
+
+Run each scenario independently on the required game families. Their prerequisite and instruction lists describe the real session procedure; they are not automated gameplay scripts. Four-hour timeouts allow interactive runs, but the engine must exit normally. Missing or blocked checkpoints fail the scenario and must remain recorded as incomplete coverage. Public synthetic checkpoint tests validate the recorder only, not any class or campaign.
+
+## Optional private live console
+
+`common/tools/live_console.py` prepares an explicitly disposable GUI tree with a
+local file mailbox. It installs `LiveControl.py` and the checkpoint helper, backs
+up `bg2/Start.py`, and adds an opt-in startup hook:
+
+```text
+python common/tools/live_console.py --session /tmp/private-gemrb-session \
+  --prepare /tmp/disposable-fixture/GUIScripts
+```
+
+Launch the real engine with `GEMRB_ACCEPTANCE_SESSION` set to that same directory.
+Then `--session /tmp/private-gemrb-session --expression 'GemRB.GetCurrentArea()'`
+observes the running engine; requests and results remain in the mailbox. This
+POSIX-only console executes arbitrary Python expressions on the GUI thread with
+the engine's privileges. It is **not** a sandbox or a production mod component.
+Both endpoints reject symlink, shared-permission and differently owned session
+directories. Newly prepared mailboxes use mode `0700`; existing directories must
+already be private. Never expose the mailbox to untrusted writers.
+
+Use `LiveControl.controls(...)` to observe current control geometry and drive
+the real UI using mouse/keyboard input. Observations must not invoke mutating
+helpers or replace the gameplay transition being tested. Controlled fixture/XP
+preparation is separate and must be recorded. Keep mailboxes, screenshots, saves
+and game assets local; they may contain private paths or proprietary content.
 
 ## Synthetic smoke run
 

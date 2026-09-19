@@ -58,17 +58,17 @@ def main() -> None:
     base_stats = dict(stats)
     effects = {1: []}
     tables = {
-        name: fake_table(name + ".2da")
-        for name in (
-            "psionpool",
-            "psionpowers",
-            "psionaugment",
-            "psionfeatpick",
-            "psionknown",
-            "pspick",
-            "psionskills",
-            "psskill",
-        )
+        name: fake_table(source + ".2da")
+        for name, source in {
+            "pspool": "psionpool",
+            "pspowers": "psionpowers",
+            "psaugmnt": "psionaugment",
+            "psfeatpk": "psionfeatpick",
+            "psknown": "psionknown",
+            "pspick": "pspick",
+            "psskills": "psionskills",
+            "psskill": "psskill",
+        }.items()
     }
     known_innates = [
         {"SpellResRef": "PS1ERAY"},
@@ -103,7 +103,8 @@ def main() -> None:
 
     gemrb.GetPlayerStat = get_player_stat
     gemrb.SetPlayerStat = lambda actor, stat, value: stats.__setitem__((actor, stat), value)
-    gemrb.LoadTable = lambda name, *_: tables[name.lower()]
+    # GemRB resolves native resources through an eight-character ResRef.
+    gemrb.LoadTable = lambda name, *_: tables[name.lower()[:8]]
     gemrb.DisplayString = lambda *_: None
     gemrb.Log = lambda *_: None
     gemrb.Roll = lambda dice, sides, bonus: roll_value["value"] + bonus
@@ -192,7 +193,10 @@ def main() -> None:
 
     def learn_spell(actor, resref, flags=0, *args):
         key = str(resref).upper()
-        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates):
+        # Native LearnSpell permits repeated innate grants with LS_MEMO.
+        if not (int(flags) & ie_spells.LS_MEMO) and any(
+            str(spell["SpellResRef"]).upper() == key for spell in known_innates
+        ):
             return 1
         known_innates.append({"SpellResRef": key})
         if int(flags) & ie_spells.LS_MEMO:
@@ -215,6 +219,13 @@ def main() -> None:
         spec = importlib.util.spec_from_file_location("psion_runtime_test", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+
+        # Refreshing the action bar must not add another Center Mind entry or
+        # restore its charge before the normal innate-charge refresh.
+        for _ in range(3):
+            assert module._sync_center_action(1)
+        assert sum(spell["SpellResRef"] == module.CENTER_RESOURCE for spell in known_innates) == 1
+        assert [spell["Flags"] for spell in memorized_innates if spell["SpellResRef"] == module.CENTER_RESOURCE] == [0]
 
         assert module._dc_modifier(1) == 4
         assert module.power_info("PS1CHAR4")["resref"] == "PS1CHAR"
@@ -239,13 +250,14 @@ def main() -> None:
             "SpellIndex": 4007,
         }
         assert module.prepare_action_entry(FakeSpellbook, 1, normal_entry) is normal_entry
-        assert prepared_casts[-1][-1] == "PS1CHAR4"
-        assert gemrb_vars["Spell"] == 17 + 1000 * (1 << module.INNATE_TYPE)
+        assert normal_entry["CastResRef"] == "PS1CHAR4"
+        assert not prepared_casts  # no premature depletion/known-only lookup
+        assert "Spell" not in gemrb_vars
 
         temporary_entry = {"SpellResRef": "PSMT03", "SpellIndex": 255000}
         assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry
-        assert prepared_casts[-1][1] == "PS1MTHR"
-        assert prepared_casts[-1][-1] == "PSMT034"
+        assert temporary_entry["CastResRef"] == "PSMT034"
+        assert not prepared_casts
 
         real_begin_manifest = module.begin_manifest
         callback_counts = {}
@@ -446,6 +458,10 @@ def main() -> None:
         assert module.MEDITATION_CENTER_RESOURCE in known_refs()
         assert module.MEDITATION_CENTER_RESOURCE in memorized_refs()
         assert module._center_resource_for_actor(1) == module.MEDITATION_CENTER_RESOURCE
+        for _ in range(3):
+            assert module._sync_center_action(1)
+        assert sum(spell["SpellResRef"] == module.MEDITATION_CENTER_RESOURCE for spell in known_innates) == 1
+        assert sum(spell["SpellResRef"] == module.MEDITATION_CENTER_RESOURCE for spell in memorized_innates) == 1
 
         assert module.expend_focus(1)
         assert not module.begin_manifest(1, module.CENTER_RESOURCE)
@@ -462,6 +478,10 @@ def main() -> None:
         assert module.CENTER_RESOURCE in memorized_refs()
         assert module.MEDITATION_CENTER_RESOURCE not in known_refs()
         assert module.MEDITATION_CENTER_RESOURCE not in memorized_refs()
+        for _ in range(3):
+            assert module._sync_center_action(1)
+        assert sum(spell["SpellResRef"] == module.CENTER_RESOURCE for spell in known_innates) == 1
+        assert sum(spell["SpellResRef"] == module.CENTER_RESOURCE for spell in memorized_innates) == 1
 
         for spell in memorized_innates:
             if spell["SpellResRef"] == "PXSKILL":

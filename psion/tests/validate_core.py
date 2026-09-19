@@ -94,14 +94,16 @@ def validate_progressions() -> None:
 
     for discipline, filename in DISCIPLINE_CLABS.items():
         data = rows(filename)
-        assert len(data) == 20, (discipline, len(data))
-        level1 = next(row for row in data if row[0] == "1")
-        utilities = {token for token in level1[1:] if token != "****"}
+        assert header(filename) == [str(level) for level in range(1, 21)], filename
+        assert len(data) == 6, (discipline, len(data))
+        assert all(len(row) == 21 for row in data), filename
+        level1 = [row[1] for row in data]
+        utilities = {token for token in level1 if token != "****"}
         assert utilities == {"GA_PXPLRN", "GA_PXCNTR", "GA_PXFSEL", "GA_PXSKILL"}, (discipline, utilities)
+        assert len([token for token in level1 if token != "****"]) == 4, filename
         for row in data:
             assert not any(token.startswith("GA_PS") for token in row[1:]), (discipline, row)
-            if row[0] != "1":
-                assert all(token == "****" for token in row[1:]), (discipline, row)
+            assert all(token == "****" for token in row[2:]), (discipline, row)
 
 
 def validate_learnable_powers() -> None:

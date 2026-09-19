@@ -142,7 +142,7 @@ BUT_ONLY
 // child: resisted = no effect, save success = 7d6, save failure = 10d6 + hold.
 LAF psion_create_level7_power
   INT_VAR
-    ps_target = 2
+    ps_target = 1
     ps_range = 30
     ps_projectile = psion_none_projectile
     ps_flags = psion_level7_hostile_flags
