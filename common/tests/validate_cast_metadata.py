@@ -74,6 +74,53 @@ class MissingCastMetadataTests(unittest.TestCase):
         self.assertFalse(self.core.confirm_spell(1, "CI1MMIS"))
         self.assertTrue(self.core.confirm_spell(1, "SPWI103"))
 
+    def test_quickslots_reject_orphan_powers_before_callback_registration(self):
+        spec = importlib.util.spec_from_file_location("metadata_installer", ROOT / "common/tools/install_guiscripts.py")
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        source = "def ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n"
+        source = installer._patch_quickspell(source)
+        self.gemrb.GameGetFirstSelectedActor = lambda: 1
+        casts = []
+        self.gemrb.SpellCast = lambda *args: casts.append(args)
+        namespace = {"GemRB": self.gemrb, "GemRBModCore": self.core, "Spellbook": self.book}
+        exec(compile(source, "patched-quickspell.py", "exec"), namespace)
+        transactions = types.SimpleNamespace(cancel=lambda *args: None)
+        with patch.dict(sys.modules, {"Transactions": transactions}):
+            for resref in ("PS1MTHR", "CI1MMIS", "PXL0001", "SPWI103", "SPIN101"):
+                with self.subTest(resref=resref):
+                    casts.clear()
+                    self.gemrb.GetPCStats = lambda actor: {"QuickSpells": [resref]}
+                    namespace["ActionQSpellPressed"](0)
+                    self.assertEqual(casts, [] if self.core.is_managed_action(resref) else [(1, -2, 0)])
+
+    def test_native_known_wizard_selection_preserves_wild_magic(self):
+        self.book.UAW_ALLMAGE = 5
+        self.book.IE_SPELL_TYPE_WIZARD = 1
+        self.book.GetKnownSpells = lambda actor, book: [{"SpellResRef": "SPWI103"}]
+        self.gemrb.GetVar = lambda name: 5 if name == "ActionLevel" else 3
+        self.rows = []
+        self.assertTrue(self.core.begin_spell(self.book, 1, 2000))
+        self.assertTrue(self.core.confirm_spell(1, "SPWI103"))
+        self.assertFalse(self.core.begin_spell(self.book, 1, 4000))
+        self.assertFalse(self.core.begin_spell(self.book, 1, 2001))
+
+    def test_known_wizard_mode_does_not_authorize_managed_powers(self):
+        self.book.UAW_ALLMAGE = 5
+        self.book.IE_SPELL_TYPE_WIZARD = 1
+        self.book.GetKnownSpells = lambda actor, book: [{"SpellResRef": "PS1MTHR"}]
+        self.gemrb.GetVar = lambda name: 5 if name == "ActionLevel" else 3
+        self.rows = [{"SpellResRef": "SPWI103", "SpellIndex": 2000}]
+        self.assertFalse(self.core.begin_spell(self.book, 1, 2000))
+
+    def test_ordinary_casting_cannot_fall_back_to_known_wizard_spells(self):
+        self.book.UAW_ALLMAGE = 5
+        self.book.IE_SPELL_TYPE_WIZARD = 1
+        self.book.GetKnownSpells = lambda actor, book: [{"SpellResRef": "SPWI103"}]
+        self.gemrb.GetVar = lambda name: 2 if name == "ActionLevel" else 3
+        self.rows = []
+        self.assertFalse(self.core.begin_spell(self.book, 1, 2000))
+
 
 if __name__ == "__main__":
     unittest.main()

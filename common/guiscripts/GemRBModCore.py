@@ -167,7 +167,7 @@ def action_info(resref):
         result["parent"] = result.get("parent") or result.get("resref") or str(resref).upper()
         result["innate_type"] = int(getattr(handler, "INNATE_TYPE", 2))
         return result
-    return None
+    raise RuntimeError("Class power metadata unavailable: %s" % str(resref).upper())
 
 
 def is_managed_action(resref):
@@ -190,7 +190,14 @@ def _native_spell_selection(spellbook, actor, raw_spell):
     try:
         import GemRB
         encoded_type, index = divmod(int(raw_spell), 1000)
-        if encoded_type == 255:
+        known_action = getattr(spellbook, "UAW_ALLMAGE", None)
+        action_level = getattr(GemRB, "GetVar", lambda name: None)("ActionLevel")
+        if known_action is not None and action_level == known_action:
+            wizard_book = spellbook.IE_SPELL_TYPE_WIZARD
+            if encoded_type != 1 << wizard_book:
+                return False
+            resrefs = [spellbook.GetKnownSpells(actor, wizard_book)[index]["SpellResRef"]]
+        elif encoded_type == 255:
             resrefs = [GemRB.GetSpelldata(actor)[index]]
         else:
             books = [i for i in range(16) if encoded_type & (1 << i)] or range(16)
