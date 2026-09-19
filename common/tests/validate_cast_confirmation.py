@@ -150,7 +150,8 @@ class CastConfirmation(unittest.TestCase):
 
     def test_native_selection_clears_stale_runtime_reservation(self):
         self.assertTrue(self.core.begin_spell(None, 1, 1))
-        self.assertTrue(self.core.begin_spell(None, 1, 0))
+        native_book = types.SimpleNamespace(GetUsableMemorizedSpells=lambda *args: [{"SpellResRef": "NATIVE", "SpellIndex": 0}])
+        self.assertTrue(self.core.begin_spell(native_book, 1, 0))
         self.assertTrue(self.callback(1, "NATIVE"))
         self.assertEqual(self.pool[1], 20)
         self.assertFalse(self.callback(1, "PSPOWER"))
@@ -169,7 +170,8 @@ class CastConfirmation(unittest.TestCase):
         self.assertEqual(self.core._pending_casts, {})
         self.assertEqual(self.transactions._pending, {})
         self.assertIn("SetSpellCastCheck", self.logs[-1][-1])
-        self.assertTrue(self.core.begin_spell(None, 1, 0))  # native unaffected
+        native_book = types.SimpleNamespace(GetUsableMemorizedSpells=lambda *args: [{"SpellResRef": "NATIVE", "SpellIndex": 0}])
+        self.assertTrue(self.core.begin_spell(native_book, 1, 0))  # native unaffected
 
     def test_unknown_internal_resource_uses_explicit_cast_without_learning(self):
         casts = []

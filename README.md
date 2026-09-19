@@ -20,9 +20,11 @@ Some simple mods require only setting tweaks. For those, see the GemRB modding p
 
 See [the compatibility and release matrix](docs/compatibility.md) for supported game families, runtime requirements, and the distinction between automated validation and live-engine acceptance.
 
-## Unified Cipher/Psion installation
+## Unified three-class installation
 
-Cipher and Psion share a versioned runtime API. For the new installation path, place the matching `common/`, selected class directory/directories and `gemrb_mods.py` in the game directory. Then use the top-level driver for both WeiDU and GemRB GUI installation:
+Cipher, Psion and Sorcerer/Monk use the same versioned package driver and shared GUI ownership layer. Sorcerer/Monk retains native spontaneous spellcasting; only Cipher and Psion use the PP/Focus cast-accounting runtime. See [the three-class installation guide](docs/install-three-classes.md) for the required engine build and combined installation procedure.
+
+Place the matching `common/`, selected class directory/directories and `gemrb_mods.py` in the game directory. Then use the top-level driver for both WeiDU and GemRB GUI installation:
 
 ```text
 python gemrb_mods.py preflight cipher --game . --guiscripts /path/to/GemRB/gemrb/GUIScripts
@@ -30,13 +32,13 @@ python gemrb_mods.py install cipher --game . --guiscripts /path/to/GemRB/gemrb/G
 python gemrb_mods.py status --game . --guiscripts /path/to/GemRB/gemrb/GUIScripts
 ```
 
-Use `psion` instead of `cipher` for Psion. Uninstall through the same entry point:
+Use `psion` or `sorcerer-monk` instead of `cipher` for the other packages. Uninstall through the same entry point:
 
 ```text
 python gemrb_mods.py uninstall cipher --game . --guiscripts /path/to/GemRB/gemrb/GUIScripts
 ```
 
-The driver rejects a mismatched class/common runtime API, a package/TP2 version mismatch, a missing WeiDU executable, an invalid game target, or an incompatible GemRB GUI-script layout before the first installation mutation. GUI compatibility is checked by running the existing shared installer against a disposable copy of the target `GUIScripts` tree.
+The driver rejects a mismatched class/common runtime API, a package/TP2 version mismatch, a missing WeiDU executable, an invalid game target, or an incompatible GemRB GUI-script layout before the first installation mutation. GUI compatibility is checked by running the existing shared installer against a disposable copy of the target `GUIScripts` tree. This does not execute the native engine or certify gameplay.
 
 Install uses WeiDU first and then delegates GUI mutation to `common/tools/install_guiscripts.py`. Uninstall removes that class's GUI handler first and then invokes WeiDU. If a second phase fails, the driver reports the resulting partial state rather than claiming an atomic rollback. `status` distinguishes `not installed`, `weidu only`, `runtime only/inconsistent`, `installed`, and `installed with other handlers`.
 
@@ -44,19 +46,24 @@ The existing class-specific WeiDU and `tools/install_guiscripts.py` commands rem
 
 ## Release archives
 
-Build a Cipher-only, Psion-only, or combined release with the deterministic allowlisted builder:
+Build any individual class package or combined release with the deterministic allowlisted builder:
 
 ```text
 python common/tools/build_release.py cipher
 python common/tools/build_release.py psion
-python common/tools/build_release.py cipher psion
+python common/tools/build_release.py sorcerer-monk
+python common/tools/build_release.py cipher psion sorcerer-monk
 ```
 
-Archives are written to `dist/` by default. They contain only the public driver, license/readme files, matching shared runtime files, shared WeiDU helpers, and the selected class runtime/installer resources. Repository tests, backup directories, caches, unrelated mods and CI files are excluded.
+Archives are written to `dist/` by default. They contain only the public driver, license/readme files, compatibility and engine prerequisite documentation, matching shared runtime files, shared WeiDU helpers, and the selected class runtime/installer resources. Repository tests, backup directories, caches, unrelated mods and CI files are excluded.
 
 Every ZIP contains `release-manifest.json` with the shared runtime API/revision, selected package versions, and SHA-256 plus size for every packaged file. ZIP member ordering and timestamps are normalized so two builds from identical repository inputs produce identical archive bytes.
 
-The archive has no enclosing repository directory. Extract it directly into the target game directory, then run the unified commands above. Public CI validates a clean extracted Cipher+Psion bundle by installing both handlers, uninstalling Cipher while Psion remains active, uninstalling Psion last, and requiring byte-for-byte restoration of the synthetic GemRB GUI fixture.
+The archive has no enclosing repository directory. Extract it directly into the target game directory, then run the unified commands above. Public CI validates all seven nonempty package subsets and all 36 three-class GUI installation/removal orderings with a synthetic WeiDU boundary, including repeated installation and byte-for-byte restoration of pre-existing GUI files. Real WeiDU suites and live-game qualification are separate checks.
+
+## Runtime failure behavior
+
+Missing Cipher/Psion metadata or handlers must not turn a class power into a free native cast. The shared dispatcher checks the selected resource even before a cast callback is registered and rejects unprepared resources in its reserved `PS`, `PX` and `CI` namespaces. Native Sorcerer/Monk spells remain on their normal engine path. Empty, ambiguous or unreadable spell selections fail closed. Accepted-cast resource spending and later-interruption limitations are described in [cast accounting](docs/cast-runtime.md).
 
 ## Installation layout
 

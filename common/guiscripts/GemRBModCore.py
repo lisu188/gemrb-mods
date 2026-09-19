@@ -76,7 +76,7 @@ def begin_spell(spellbook, actor, raw_spell):
     cancel_pending(actor)
     handler, entry = resolve_action_entry(spellbook, actor, raw_spell)
     if not entry:
-        return True
+        return _native_spell_selection(spellbook, actor, raw_spell)
     import GemRB
     if not hasattr(GemRB, "SetSpellCastCheck"):
         GemRB.Log(1, "GemRBModCore", "Class powers require GemRB SetSpellCastCheck support")
@@ -146,7 +146,7 @@ def confirm_spell(actor, resref):
             cancel_pending(actor)
         return accepted
     cancel_pending(actor)
-    if pending or action_info(actual):
+    if pending or is_managed_action(actual):
         GemRB.Log(1, "GemRBModCore", "Unprepared class power cast rejected: %s" % actual)
         return False
     return True
@@ -167,7 +167,7 @@ def action_info(resref):
         result["parent"] = result.get("parent") or result.get("resref") or str(resref).upper()
         result["innate_type"] = int(getattr(handler, "INNATE_TYPE", 2))
         return result
-    return None
+    raise RuntimeError("Class power metadata unavailable: %s" % str(resref).upper())
 
 
 def is_managed_action(resref):
@@ -186,12 +186,18 @@ def abort_action(actor, error):
         pass
 
 
-def spell_error(spellbook, actor, raw_spell, error):
-    abort_action(actor, error)
+def _native_spell_selection(spellbook, actor, raw_spell):
     try:
         import GemRB
         encoded_type, index = divmod(int(raw_spell), 1000)
-        if encoded_type == 255:
+        known_action = getattr(spellbook, "UAW_ALLMAGE", None)
+        action_level = getattr(GemRB, "GetVar", lambda name: None)("ActionLevel")
+        if known_action is not None and action_level == known_action:
+            wizard_book = spellbook.IE_SPELL_TYPE_WIZARD
+            if encoded_type != 1 << wizard_book:
+                return False
+            resrefs = [spellbook.GetKnownSpells(actor, wizard_book)[index]["SpellResRef"]]
+        elif encoded_type == 255:
             resrefs = [GemRB.GetSpelldata(actor)[index]]
         else:
             books = [i for i in range(16) if encoded_type & (1 << i)] or range(16)
@@ -204,3 +210,8 @@ def spell_error(spellbook, actor, raw_spell, error):
         return bool(resrefs) and all(resref and not is_managed_action(resref) for resref in resrefs)
     except Exception:
         return False
+
+
+def spell_error(spellbook, actor, raw_spell, error):
+    abort_action(actor, error)
+    return _native_spell_selection(spellbook, actor, raw_spell)
