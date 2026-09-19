@@ -16,6 +16,10 @@ on:
   schedule:
     - cron: "17 5 * * *"
 
+env:
+  GEMRB_CONTRACT_REPOSITORY: ${{ github.event_name == 'schedule' && 'gemrb/gemrb' || 'lisu188/gemrb' }}
+  GEMRB_CONTRACT_REF: ${{ github.event_name == 'schedule' && 'master' || '91e64d19c90f169530f99f5a08ecf96f1402cf67' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -27,13 +31,15 @@ jobs:
       - run: python -m unittest discover -s sorcerer-monk/tests -p "test_*.py"
       - name: Validate shared chargen text safety
         run: python common/tests/validate_chargen_strings.py
-      - name: Validate current GemRB runtime contract
+      - name: Validate supported GemRB contract and scheduled upstream drift
         run: |
-          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/core/Scriptable/Actor.cpp -o /tmp/Actor.cpp
-          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/GUICommon.py -o /tmp/GUICommon.py
-          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/LUCommon.py -o /tmp/LUCommon.py
-          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/LevelUp.py -o /tmp/LevelUp.py
-          curl -fsSL https://raw.githubusercontent.com/gemrb/gemrb/master/gemrb/GUIScripts/Spellbook.py -o /tmp/Spellbook.py
+          echo "Validating ${GEMRB_CONTRACT_REPOSITORY}@${GEMRB_CONTRACT_REF}"
+          base="https://raw.githubusercontent.com/${GEMRB_CONTRACT_REPOSITORY}/${GEMRB_CONTRACT_REF}/gemrb"
+          curl -fsSL "$base/core/Scriptable/Actor.cpp" -o /tmp/Actor.cpp
+          curl -fsSL "$base/GUIScripts/GUICommon.py" -o /tmp/GUICommon.py
+          curl -fsSL "$base/GUIScripts/LUCommon.py" -o /tmp/LUCommon.py
+          curl -fsSL "$base/GUIScripts/LevelUp.py" -o /tmp/LevelUp.py
+          curl -fsSL "$base/GUIScripts/Spellbook.py" -o /tmp/Spellbook.py
           python sorcerer-monk/tests/validate_gemrb_runtime_contract.py /tmp/Actor.cpp /tmp/GUICommon.py /tmp/LUCommon.py
           python sorcerer-monk/tests/validate_gemrb_hla_contract.py /tmp/LevelUp.py
           python sorcerer-monk/tests/validate_gemrb_spell_levelup_contract.py /tmp/LevelUp.py /tmp/Spellbook.py
