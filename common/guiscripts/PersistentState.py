@@ -12,8 +12,8 @@ def read(actor, opcode, marker, resource):
             if str(effect.get("Resource1", "")).upper() != resource:
                 continue
             return True, max(0, int(effect.get("Param1", 0)))
-    except Exception:
-        return False, 0
+    except Exception as error:
+        raise RuntimeError("Persistent state read failed for actor %s, resource %s" % (actor, resource)) from error
     return False, 0
 
 
