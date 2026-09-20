@@ -1,0 +1,49 @@
+name: Publish validated companion source
+on:
+  push:
+    branches: [feat/psicrystal-companion]
+    paths: [.github/workflows/psicrystal-publish.yml]
+jobs:
+  publish:
+    if: github.repository == 'lisu188/gemrb-mods'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize checksum-verified tested patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for blob in 90505bb734444e556398b875f0f776f8d7063938 973d1446219cfe7aba3cd9aeb5462abe8930e16c; do
+            gh api "repos/lisu188/gemrb-mods/git/blobs/$blob" --jq .content | base64 -d >> "$RUNNER_TEMP/companion.patch.xz"
+          done
+          xz -dc "$RUNNER_TEMP/companion.patch.xz" > "$RUNNER_TEMP/companion.patch"
+          echo "456ea7394e9d5e7aeb91914ad85fd7e7f21a9f74a1a9f6b82a1f3311f1a94bb9  $RUNNER_TEMP/companion.patch" | sha256sum -c -
+          git apply --check "$RUNNER_TEMP/companion.patch"
+          git apply "$RUNNER_TEMP/companion.patch"
+      - name: Validate actual source before publication
+        run: |
+          set -euo pipefail
+          python3 psion/tests/validate_psicrystal_companion.py
+          python3 common/tests/validate_actor_state_failures.py
+          python3 common/tests/validate_cast_confirmation.py
+          python3 common/tests/validate_cast_metadata.py
+          python3 common/tests/validate.py
+          python3 common/tests/validate_release_metadata.py
+          python3 psion/tests/validate_runtime.py
+          python3 psion/tests/validate_psicrystal.py
+          python3 cipher/tests/validate.py
+          python3 -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
+          git diff --check
+      - name: Commit validated implementation and remove temporary workflows
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/feat/psicrystal-companion
+          rm .github/workflows/psicrystal-toolchain.yml .github/workflows/psicrystal-engine.yml .github/workflows/psicrystal-publish.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows psion docs/psicrystal-companion.md
+          git commit -m 'Implement save-persistent psicrystal companions and native lifecycle tests'
+          git push origin HEAD:refs/heads/feat/psicrystal-companion
