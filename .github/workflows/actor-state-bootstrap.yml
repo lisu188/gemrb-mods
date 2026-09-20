@@ -1,0 +1,72 @@
+name: Validate actor-state correction
+
+on:
+  push:
+    branches: [fix/actor-state-integrity]
+    paths: [.github/workflows/actor-state-bootstrap.yml]
+
+jobs:
+  validate:
+    if: github.repository == 'lisu188/gemrb-mods'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply checksum-guarded local correction
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          corrections = {
+            'common/guiscripts/PersistentState.py': ('e61695902036d38a68f70877aeeb2c29834c9500af45c03d83030bea5f7aee86', [
+              ('    except Exception:\n        return False, 0\n', '    except Exception as error:\n        raise RuntimeError("Persistent state read failed for actor %s, resource %s" % (actor, resource)) from error\n')]),
+            'psion/guiscripts/Psionics.py': ('691611c86a1336aa4a1c074b9a00b2a2bd0bdb67a051a8b73e0596539fb3e212', [
+              ('        GemRB.Log(2, "Psionics", "known-power scan failed: %s" % error)', '        raise RuntimeError("Psion known-power scan failed for actor %s" % actor) from error'),
+              ('        GemRB.Log(2, "Psionics", "feat state read failed: %s" % error)', '        raise RuntimeError("Psion feat state read failed for actor %s" % actor) from error'),
+              ('        GemRB.Log(2, "Psionics", "focus state read failed: %s" % error)', '        raise RuntimeError("Psion focus state read failed for actor %s" % actor) from error')]),
+            'cipher/guiscripts/Cipher.py': ('dca2e74d801d8a42681496f34ec7f618d41080bf3e709deca0e3350ee30a2e86', [
+              ('        GemRB.Log(2, "Cipher", "known-power scan failed: %s" % error)', '        raise RuntimeError("Cipher known-power scan failed for actor %s" % actor) from error')]),
+          }
+          pending = {}
+          for name, (expected, replacements) in corrections.items():
+              path = Path(name)
+              data = path.read_bytes()
+              assert hashlib.sha256(data).hexdigest() == expected, name
+              text = data.decode('utf-8')
+              for old, new in replacements:
+                  assert text.count(old) == 1, (name, old)
+                  text = text.replace(old, new, 1)
+              pending[path] = text
+          for path, text in pending.items():
+              path.write_text(text, encoding='utf-8')
+          PY
+      - name: Validate production corrections before publishing
+        run: |
+          set -euo pipefail
+          python common/tests/validate_actor_state_failures.py
+          python common/tests/validate.py
+          python common/tests/validate_cast_confirmation.py
+          python common/tests/validate_cast_metadata.py
+          python psion/tests/validate_runtime.py
+          python psion/tests/validate_psicrystal.py
+          python cipher/tests/validate.py
+          python -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
+          git diff --check
+      - name: Publish validated source on this isolated branch only
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/fix/actor-state-integrity
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add common/guiscripts/PersistentState.py psion/guiscripts/Psionics.py cipher/guiscripts/Cipher.py
+          git commit -m 'Reject unreadable actor state and incomplete known-power scans'
+          git push origin HEAD:refs/heads/fix/actor-state-integrity
+          git archive --format=zip HEAD > "$RUNNER_TEMP/actor-state-source.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: actor-state-validated-source
+          path: ${{ runner.temp }}/actor-state-source.zip
