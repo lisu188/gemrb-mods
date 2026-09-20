@@ -23,6 +23,29 @@ jobs:
           echo "456ea7394e9d5e7aeb91914ad85fd7e7f21a9f74a1a9f6b82a1f3311f1a94bb9  $RUNNER_TEMP/companion.patch" | sha256sum -c -
           git apply --check "$RUNNER_TEMP/companion.patch"
           git apply "$RUNNER_TEMP/companion.patch"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('psion/tools/generate_psicrystal.py')
+          s = p.read_text()
+          old = 'def resource_path(path):'
+          new = 'def configuration(slots):\n    if not 1 <= len(slots) <= 32:\n        raise ValueError("invalid psicrystal party capacity")\n    return f"2DA V1.0\\n0\\nVALUE\\nOWNER_LIMIT {OWNER_LIMIT}\\nPARTY_SLOTS {len(slots)}\\nOWNER_STAT {OWNER_STAT}\\n"\n\n\ndef resource_path(path):'
+          assert s.count(old) == 1
+          s = s.replace(old, new)
+          old = '(resources / "pscrcfg.2da").write_text(\n        f"2DA V1.0\\n0\\nVALUE\\nOWNER_LIMIT {OWNER_LIMIT}\\nPARTY_SLOTS {len(slots)}\\nOWNER_STAT {OWNER_STAT}\\n",\n        encoding="ascii",\n    )'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, '(resources / "pscrcfg.2da").write_text(configuration(slots), encoding="ascii")'))
+          p = Path('common/tests/validate_runtime_resrefs.py')
+          s = p.read_text()
+          old = '    return result\n\n\nclass Table:'
+          new = '    generator = load_module("psicrystal_table_generator", ROOT / "psion/tools/generate_psicrystal.py")\n    assert "pscrcfg" not in result, "generated table collides with a static destination"\n    result["pscrcfg"] = types.SimpleNamespace(read_text=lambda: generator.configuration(range(1, 7)))\n    return result\n\n\nclass Table:'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, new))
+          p = Path('common/tools/build_release.py')
+          s = p.read_text()
+          old = '    "docs/install-three-classes.md",\n'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, old + '    "docs/psicrystal-companion.md",\n'))
+          PY
       - name: Validate actual source before publication
         run: |
           set -euo pipefail
@@ -32,18 +55,18 @@ jobs:
           python3 common/tests/validate_cast_metadata.py
           python3 common/tests/validate.py
           python3 common/tests/validate_release_metadata.py
+          python3 common/tests/validate_runtime_resrefs.py
           python3 psion/tests/validate_runtime.py
           python3 psion/tests/validate_psicrystal.py
           python3 cipher/tests/validate.py
           python3 -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
           git diff --check
-      - name: Commit validated implementation and remove temporary workflows
+      - name: Commit validated source only
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/feat/psicrystal-companion
-          rm .github/workflows/psicrystal-toolchain.yml .github/workflows/psicrystal-engine.yml .github/workflows/psicrystal-publish.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows psion docs/psicrystal-companion.md
+          git add psion docs/psicrystal-companion.md common/tests/validate_runtime_resrefs.py common/tools/build_release.py
           git commit -m 'Implement save-persistent psicrystal companions and native lifecycle tests'
           git push origin HEAD:refs/heads/feat/psicrystal-companion
