@@ -411,6 +411,27 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str, without_avprefc: 
         ("VALUE",),
         (("MAGE", "161000"), ("SORCERER", "8000000")),
     )
+    companion_ids = {
+        "object.ids": [(20 + slot, f"Player{slot}") for slot in range(2, 7)],
+        "trigger.ids": [
+            (0x400d, "Exists(O:Object*)"),
+            (0x4018, "Range(O:Object*,I:Range*)"),
+            (0x402b, "ActionListEmpty()"),
+            (0x4037, "StateCheck(O:Object*,I:State*State)"),
+            (0x4044, "CheckStat(O:Object*,I:Value*,I:Stat*Stats)"),
+            (0x4089, "OR(I:Count*)"),
+            (0x40cb, "InMyArea(O:Object*)"),
+            (0x40d5, "ActuallyInCombat()"),
+        ],
+        "action.ids": [(22, "MoveToObject(O:Object*)"), (111, "DestroySelf()")],
+    }
+    for filename, rows in companion_ids.items():
+        path = override / filename
+        original = path.read_text(encoding="ascii").rstrip()
+        path.write_text(original + "\n" + "\n".join(
+            f"{code:#x} {signature}" for code, signature in rows
+        ) + "\n", encoding="ascii")
+
     configure_progression_tables(override, layout)
     configure_class_rule_tables(override)
     configure_class_layout(override, layout)

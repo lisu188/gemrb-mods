@@ -1288,6 +1288,14 @@ PSICRYSTAL_SELECTOR_RESOURCE = "PXCRYST"
 PSICRYSTAL_PERSONALITY_MARKER = 0x50534350
 PSICRYSTAL_PERSONALITY_RESOURCE = "PSCRPERS"
 PSICRYSTAL_EFFECT_SOURCE = "PSCRYST"
+PSICRYSTAL_SUMMON_RESOURCE = "PXCSUM"
+PSICRYSTAL_DISMISS_RESOURCE = "PXCDISM"
+PSICRYSTAL_OWNER_MARKER = 0x50534349
+PSICRYSTAL_OWNER_RESOURCE = "PSCRID"
+PSICRYSTAL_OWNER_COUNTER = "PSCRNEXT"
+PSICRYSTAL_OWNER_LIMIT = 255
+PSICRYSTAL_OWNER_STAT_INDEX = 7
+PSICRYSTAL_EPOCH_LIMIT = 0x7fffffff
 
 _base_action_info = action_info
 _base_filter_spellinfo = filter_spellinfo
@@ -1420,6 +1428,7 @@ def _sync_psicrystal_selector(actor):
             GemRB.RemoveSpell(actor, PSICRYSTAL_SELECTOR_RESOURCE)
         except Exception as error:
             GemRB.Log(2, "Psionics", "psicrystal selector cleanup failed: %s" % error)
+        _ensure_psicrystal_companion_actions(actor)
         return False
     return _ensure_psicrystal_selector_known(actor)
 
@@ -1455,6 +1464,9 @@ def skill_check_total(actor, skill, roll=None):
 
 def action_info(resref):
     key = (resref or "").upper()
+    if key in (PSICRYSTAL_SUMMON_RESOURCE, PSICRYSTAL_DISMISS_RESOURCE):
+        return {"kind": "psicrystal_companion", "resref": key, "parent": key,
+                "cost": 0, "selector": False}
     if key == PSICRYSTAL_SELECTOR_RESOURCE:
         return {
             "kind": "psicrystal_selector",
@@ -1481,6 +1493,8 @@ def filter_spellinfo(actor, resrefs):
 
 def _is_reusable_innate(actor, resref):
     key = (resref or "").upper()
+    if key in (PSICRYSTAL_SUMMON_RESOURCE, PSICRYSTAL_DISMISS_RESOURCE):
+        return bool(psicrystal_personality_info(actor))
     if key == PSICRYSTAL_SELECTOR_RESOURCE:
         return bool(available_psicrystal_choices(actor))
     return _base_is_reusable_innate(actor, key)
@@ -1506,6 +1520,13 @@ def begin_manifest(actor, resref):
     info = action_info(resref)
     if not info:
         return True
+    if info["kind"] == "psicrystal_companion":
+        summon = info["resref"] == PSICRYSTAL_SUMMON_RESOURCE
+        return _begin_simple_action(
+            actor, ("PSICRYSTAL_COMPANION", info["resref"]),
+            lambda: can_use_psicrystal_companion(actor, summon),
+            lambda: _summon_psicrystal(actor) if summon else _dismiss_psicrystal(actor),
+        )
     if info["kind"] == "psicrystal_selector":
         cancel_pending(actor)
         return bool(available_psicrystal_choices(actor))
@@ -1518,3 +1539,166 @@ def begin_manifest(actor, resref):
             lambda: _choose_psicrystal(actor, key),
         )
     return _base_begin_manifest(actor, resref)
+
+
+
+def _psicrystal_owner_token(actor):
+    found, token = _read_private_value(
+        actor, PSICRYSTAL_OWNER_MARKER, PSICRYSTAL_OWNER_RESOURCE,
+    )
+    if not found:
+        return 0
+    last = int(GemRB.GetGameVar(PSICRYSTAL_OWNER_COUNTER))
+    if not 1 <= token <= last <= PSICRYSTAL_OWNER_LIMIT:
+        raise RuntimeError("Psicrystal owner identity does not belong to this save")
+    return token
+
+
+def _psicrystal_global(token):
+    if not 1 <= token <= PSICRYSTAL_OWNER_LIMIT:
+        raise RuntimeError("Invalid psicrystal owner token")
+    return "PSCR%03d" % token
+
+
+def _psicrystal_epoch(token):
+    value = int(GemRB.GetGameVar(_psicrystal_global(token)))
+    if not 0 <= value < PSICRYSTAL_EPOCH_LIMIT:
+        raise RuntimeError("Psicrystal generation exhausted or corrupt")
+    return value
+
+
+def _set_psicrystal_epoch(token, epoch):
+    if not 1 <= epoch <= PSICRYSTAL_EPOCH_LIMIT:
+        raise RuntimeError("Invalid psicrystal generation")
+    name = _psicrystal_global(token)
+    GemRB.SetGlobal(name, "GLOBAL", epoch)
+    if int(GemRB.GetGameVar(name)) != epoch:
+        raise RuntimeError("Psicrystal generation write failed")
+
+
+def _check_psicrystal_owner_tag(actor, token):
+    if GemRB.GetPlayerStat(actor, 156 + PSICRYSTAL_OWNER_STAT_INDEX, 1):
+        raise RuntimeError("Psicrystal scripting-state base slot is already occupied")
+    effects = [effect for effect in GemRB.GetEffects(actor, "ScriptingState")
+               if int(effect.get("Param2", -1)) == PSICRYSTAL_OWNER_STAT_INDEX]
+    if any(str(effect.get("Resource1", "")).upper() != PSICRYSTAL_OWNER_RESOURCE
+           for effect in effects):
+        raise RuntimeError("Psicrystal scripting-state slot is occupied by another effect")
+    if len(effects) > 1 or any(int(effect["Param1"]) != token for effect in effects):
+        raise RuntimeError("Psicrystal scripting-state identity is inconsistent")
+    return bool(effects)
+
+
+def _ensure_psicrystal_owner(actor):
+    token = _psicrystal_owner_token(actor)
+    _check_psicrystal_owner_tag(actor, token)
+    if not token:
+        last = int(GemRB.GetGameVar(PSICRYSTAL_OWNER_COUNTER))
+        if not 0 <= last < PSICRYSTAL_OWNER_LIMIT:
+            raise RuntimeError("Psicrystal owner identities exhausted or corrupt")
+        token = last + 1
+        GemRB.SetGlobal(PSICRYSTAL_OWNER_COUNTER, "GLOBAL", token)
+        if int(GemRB.GetGameVar(PSICRYSTAL_OWNER_COUNTER)) != token:
+            raise RuntimeError("Psicrystal owner allocation failed")
+        _write_private_value(actor, PSICRYSTAL_OWNER_MARKER,
+                             PSICRYSTAL_OWNER_RESOURCE, token, PSICRYSTAL_EFFECT_SOURCE)
+        if _psicrystal_owner_token(actor) != token:
+            raise RuntimeError("Psicrystal owner write failed")
+    if not _check_psicrystal_owner_tag(actor, token):
+        GemRB.ApplyEffect(actor, "ScriptingState", token, PSICRYSTAL_OWNER_STAT_INDEX,
+                          PSICRYSTAL_OWNER_RESOURCE, "", "", PSICRYSTAL_EFFECT_SOURCE, 9)
+        if not _check_psicrystal_owner_tag(actor, token):
+            raise RuntimeError("Psicrystal scripting-state tag was not applied")
+    return token
+
+
+def _ensure_psicrystal_companion_actions(actor):
+    if not psicrystal_personality_info(actor):
+        return
+    known = {str(GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)
+                 ["SpellResRef"]).upper()
+             for index in range(GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL))}
+    for resource in (PSICRYSTAL_SUMMON_RESOURCE, PSICRYSTAL_DISMISS_RESOURCE):
+        if resource not in known:
+            if GemRB.LearnSpell(actor, resource, LS_MEMO) not in (0, 1):
+                raise RuntimeError("Could not grant psicrystal action: %s" % resource)
+
+
+def can_use_psicrystal_companion(actor, summon):
+    if not is_psion(actor) or not psicrystal_personality_info(actor):
+        return False
+    required = ("CreateCreature", "ApplyEffect", "EvaluateString", "SetGlobal", "GetGameVar")
+    if not all(callable(getattr(GemRB, name, None)) for name in required):
+        raise RuntimeError("GemRB companion APIs are missing")
+    config = GemRB.LoadTable("pscrcfg", False, True)
+    if (int(config.GetValue("OWNER_LIMIT", "VALUE")) != PSICRYSTAL_OWNER_LIMIT
+            or int(config.GetValue("OWNER_STAT", "VALUE")) != 156 + PSICRYSTAL_OWNER_STAT_INDEX):
+        raise RuntimeError("Psicrystal resources and runtime do not match")
+    capacity = int(config.GetValue("PARTY_SLOTS", "VALUE"))
+    if not 1 <= capacity <= 32:
+        raise RuntimeError("Invalid psicrystal party capacity")
+    slots = min(GemRB.GetPartySize(), capacity)
+    if not 1 <= actor <= slots or GemRB.GetPlayerStat(actor, 206) & 2048:
+        return False
+    if GemRB.GetPlayerStat(actor, 0) <= 0:
+        return False
+    token = _psicrystal_owner_token(actor)
+    _check_psicrystal_owner_tag(actor, token)
+    if token:
+        for other in range(1, GemRB.GetPartySize() + 1):
+            if other != actor and is_psion(other) and _psicrystal_owner_token(other) == token:
+                raise RuntimeError("Two Psions have the same imported psicrystal identity")
+        _psicrystal_epoch(token)
+    if not summon:
+        return bool(token)
+    if not GemRB.EvaluateString("InMyArea(Player%d)" % actor, True):
+        return False
+    if GemRB.EvaluateString("ActuallyInCombat()", True):
+        return False
+    return not token or not GemRB.EvaluateString('Exists("%s")' % _psicrystal_global(token), True)
+
+
+def psicrystal_profile(actor):
+    level = manifester_level(actor)
+    if not level:
+        raise RuntimeError("Only a Psion can manifest a psicrystal")
+    table = GemRB.LoadTable("pscrlvl", False, True)
+    values = {name: int(table.GetValue(str(level), name)) for name in ("AC", "INT", "DEX", "MOVE")}
+    if not (-20 <= values["AC"] <= 10 and 1 <= values["INT"] <= 25
+            and 1 <= values["DEX"] <= 25 and 1 <= values["MOVE"] <= 30):
+        raise RuntimeError("Invalid psicrystal level profile")
+    hp = max(1, min(32767, int(GemRB.GetPlayerStat(actor, 1, 1)) // 2))
+    stats = {1: hp, 0: hp, 2: values["AC"], 34: level, 38: values["INT"],
+             40: values["DEX"], 251: values["MOVE"], 8: 0}
+    for stat in range(9, 14):
+        stats[stat] = int(GemRB.GetPlayerStat(actor, stat, 1))
+    return stats
+
+
+def _summon_psicrystal(actor):
+    if not can_use_psicrystal_companion(actor, True):
+        return False
+    profile = psicrystal_profile(actor)
+    token = _ensure_psicrystal_owner(actor)
+    epoch = _psicrystal_epoch(token) + 1
+    creature = GemRB.CreateCreature(actor, _psicrystal_global(token))
+    if not isinstance(creature, int) or isinstance(creature, bool) or creature <= 1000:
+        raise RuntimeError("GemRB failed to create the psicrystal")
+    try:
+        for stat, value in profile.items():
+            GemRB.SetPlayerStat(creature, stat, value)
+        GemRB.ApplyEffect(creature, "ModifyLocalVariable", epoch, 0, "PSCREP")
+        _set_psicrystal_epoch(token, epoch)
+        GemRB.ApplyEffect(creature, "ModifyLocalVariable", 1, 0, "PSREADY")
+    except Exception:
+        GemRB.ApplyEffect(creature, "UnsummonCreature", 0, 0)
+        raise
+    return True
+
+
+def _dismiss_psicrystal(actor):
+    if not can_use_psicrystal_companion(actor, False):
+        return False
+    token = _psicrystal_owner_token(actor)
+    _set_psicrystal_epoch(token, _psicrystal_epoch(token) + 1)
+    return True

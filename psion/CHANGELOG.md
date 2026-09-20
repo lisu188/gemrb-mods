@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added actual psicrystal manifestation/dismissal with 255 bounded save-owned
+  identities, native generation revocation, level-derived stats and original
+  generated crystal animation. No familiar state is used.
+- Added native-engine public-demo save/load, party-reorder, area-change and death
+  tests, plus fault-injection and real WeiDU restoration coverage. Campaign-level
+  BGEE/BG2EE/ToB qualification remains separate.
+
 - Made Mage-progression extraction tolerant of stock BGEE's CRLF-formatted
   `XPLEVEL.2DA`, which WeiDU 251 otherwise miscounts as a single data row.
 - Extended the Psion powers-known allowance from the BG1-accessible level-1–9
