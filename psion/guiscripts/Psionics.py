@@ -313,7 +313,7 @@ def known_power_refs(actor):
             if _base_power_info(key):
                 known.add(key)
     except Exception as error:
-        GemRB.Log(2, "Psionics", "known-power scan failed: %s" % error)
+        raise RuntimeError("Psion known-power scan failed for actor %s" % actor) from error
     return known
 
 
@@ -391,7 +391,7 @@ def feat_rank(actor, resref):
                 continue
             return max(0, int(effect.get("Param1", 0)))
     except Exception as error:
-        GemRB.Log(2, "Psionics", "feat state read failed: %s" % error)
+        raise RuntimeError("Psion feat state read failed for actor %s" % actor) from error
     return 0
 
 
@@ -723,7 +723,7 @@ def _read_focus_state(actor):
             found = True
             focused = focused or bool(int(effect.get("Param1", 0)))
     except Exception as error:
-        GemRB.Log(2, "Psionics", "focus state read failed: %s" % error)
+        raise RuntimeError("Psion focus state read failed for actor %s" % actor) from error
     return found, focused
 
 

@@ -160,7 +160,7 @@ def known_power_refs(actor):
             if power_info(key):
                 known.add(key)
     except Exception as error:
-        GemRB.Log(2, "Cipher", "known-power scan failed: %s" % error)
+        raise RuntimeError("Cipher known-power scan failed for actor %s" % actor) from error
     return known
 
 
