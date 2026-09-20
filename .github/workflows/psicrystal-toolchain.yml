@@ -1,0 +1,32 @@
+name: Psicrystal validation inputs
+on:
+  push:
+    branches: [feat/psicrystal-companion]
+    paths: [.github/workflows/psicrystal-toolchain.yml]
+jobs:
+  inputs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: lisu188/gemrb
+          ref: 91e64d19c90f169530f99f5a08ecf96f1402cf67
+          path: vendor/gemrb
+      - name: Collect public validation inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p inputs/weidu
+          git archive --format=zip HEAD > inputs/mod-source.zip
+          git -C vendor/gemrb archive --format=zip HEAD > inputs/engine-source.zip
+          gh release download v251.00 --repo WeiDUorg/weidu --pattern '*Linux*' --dir inputs/weidu
+          sha256sum inputs/*.zip inputs/weidu/* > inputs/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: psicrystal-validation-inputs
+          path: inputs/
+          retention-days: 7
