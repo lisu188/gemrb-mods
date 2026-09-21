@@ -41,6 +41,9 @@ jobs:
         run: python psion/tests/validate_qslots.py
       - name: Validate exact Intelligence save-DC variants
         run: python psion/tests/validate_dc_variants.py
+      - name: Validate persistent psicrystal runtime and resources
+        run: python psion/tests/validate_psicrystal_companion.py
+
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
       - name: Validate GUI patch lifecycle
