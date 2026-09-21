@@ -1,0 +1,60 @@
+name: Validate psicrystal implementation
+
+on:
+  push:
+    branches: [fix/psicrystal-companion]
+    paths: [.github/workflows/psicrystal-implementation.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: github.repository == 'lisu188/gemrb-mods'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply the locally validated source patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, zlib
+          data = zlib.decompress(Path('common/tools/psicrystal-implementation.patch.z').read_bytes())
+          assert hashlib.sha256(data).hexdigest() == 'bf043227f9cd363caa3144aef4a32e0c53801ac69aa7a7ecdb3538035a4ddd99'
+          Path('/tmp/psicrystal.patch').write_bytes(data)
+          PY
+          git apply --check --exclude=.github/workflows/psion-static.yml /tmp/psicrystal.patch
+          git apply --exclude=.github/workflows/psion-static.yml /tmp/psicrystal.patch
+      - name: Validate complete runtime integration before publication
+        run: |
+          set -euo pipefail
+          python psion/tests/validate_psicrystal_companion.py
+          python psion/tests/validate_psicrystal.py
+          python psion/tests/validate_runtime.py
+          python common/tests/validate_actor_state_failures.py
+          python common/tests/validate_cast_confirmation.py
+          python common/tests/validate_cast_metadata.py
+          python common/tests/validate.py
+          python common/tests/validate_release_metadata.py
+          python common/tests/validate_package_driver.py
+          python cipher/tests/validate.py
+          python -m unittest discover -s sorcerer-monk/tests -p 'test_*.py'
+          git diff --check
+      - name: Publish only validated source on this isolated branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/fix/psicrystal-companion
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add README.md docs/compatibility.md psion common/tests/validate_package_driver.py
+          git commit -m 'Implement persistent psicrystal companion, original resources and level scaling'
+          git push origin HEAD:refs/heads/fix/psicrystal-companion
+          git archive --format=tar HEAD > "$RUNNER_TEMP/psicrystal-mods.tar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: psicrystal-validated-source
+          path: ${{ runner.temp }}/psicrystal-mods.tar
+          retention-days: 7
