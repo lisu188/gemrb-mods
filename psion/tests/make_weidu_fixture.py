@@ -411,6 +411,21 @@ def build_fixture(gemrb_root: Path, output: Path, layout: str, without_avprefc: 
         ("VALUE",),
         (("MAGE", "161000"), ("SORCERER", "8000000")),
     )
+    # The demo's minimal scripting dictionaries do not include companion AI.
+    # GemRB resolves these fixture-only numeric IDs by their symbol names.
+    for name, additions in {
+        "object.ids": "100 LastSummonerOf\n",
+        "trigger.ids": "0x4018 Range(O:Object*,I:Range*)\n0x4030 ActionListEmpty()\n",
+        "action.ids": "22 MoveToObject(O:Object*)\n",
+    }.items():
+        path = override / name
+        text = path.read_text(encoding="ascii") if path.exists() else ""
+        for line in additions.splitlines():
+            symbol = line.split()[1].split("(")[0]
+            if symbol.lower() not in text.lower():
+                text = text.rstrip() + "\n" + line + "\n"
+        path.write_text(text, encoding="ascii")
+
     configure_progression_tables(override, layout)
     configure_class_rule_tables(override)
     configure_class_layout(override, layout)

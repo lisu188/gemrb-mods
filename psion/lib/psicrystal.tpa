@@ -1,9 +1,8 @@
 // Psicrystal personality selection.
 //
 // Ownership is stored by Psionics.py as one actor-local persistent numeric ID.
-// These SPLs are only the reusable selector and harmless temporary choices.
-// Summoning is intentionally a later slice so personality ownership never
-// depends on transient world-creature state or the generic familiar subsystem.
+// Selector resources are harmless choices; the companion uses the native
+// persistent-NPC lifecycle instead of the shared familiar subsystem.
 
 LAF psion_create_focus_action
   STR_VAR
@@ -55,3 +54,43 @@ LAF psion_create_focus_action
     ps_description = ~A relentlessly focused fragment. Grants a +3 personality bonus to Concentration checks.~
     ps_icon = ~sppr101~
 END
+
+ACTION_IF DIRECTORY_EXISTS ~.psion-crystal-build~ THEN BEGIN
+  FAIL ~Remove the stale .psion-crystal-build directory before installing the Psion companion.~
+END
+COPY_EXISTING ~avatars.2da~ ~override/avatars.2da~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --avatars "override/avatars.2da" --output ".psion-crystal-build"~
+ACTION_IF NOT FILE_EXISTS ~.psion-crystal-build/PSCRBODY.CRE~ THEN BEGIN
+  FAIL ~Psicrystal resources could not be generated. Check the Python error above.~
+END
+COPY ~.psion-crystal-build~ ~override~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --output ".psion-crystal-build" --cleanup~
+COMPILE ~psion/lib/pscrai.baf~
+COPY_EXISTING ~PSCRBODY.cre~ ~override~
+  SAY NAME1 ~Psicrystal~
+  SAY NAME2 ~Psicrystal~
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRSUM~
+    ps_name = ~Manifest or Recall Psicrystal~
+    ps_description = ~Manifest your chosen personality as a permanent, controllable crystal companion. A new body can be created once per completed rest. Recalling a living crystal preserves its injuries and does not consume another use. Its hit points are half your base maximum, its defenses scale with Psion level, and its base saves match yours. It follows you between areas. This companion cannot attack; the personality skill bonus remains on you. Requires the companion-enabled GemRB build. This management action is instantaneous and costs no PP.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXCRSUM.spl~ ~override~
+  READ_LONG 0x64 ps_crystal_header
+  WRITE_BYTE (ps_crystal_header + 0x0c) 7
+BUT_ONLY
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRDIS~
+    ps_name = ~Dismiss Psicrystal~
+    ps_description = ~Dismiss your crystal companion without erasing its permanent personality. Dismissal does not refund the body's once-per-rest creation use. A dead or dismissed body can be replaced after a completed rest. This management action is instantaneous and costs no PP.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXCRDIS.spl~ ~override~
+  READ_LONG 0x64 ps_crystal_header
+  WRITE_BYTE (ps_crystal_header + 0x0c) 7
+BUT_ONLY

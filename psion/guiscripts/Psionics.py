@@ -1288,6 +1288,13 @@ PSICRYSTAL_SELECTOR_RESOURCE = "PXCRYST"
 PSICRYSTAL_PERSONALITY_MARKER = 0x50534350
 PSICRYSTAL_PERSONALITY_RESOURCE = "PSCRPERS"
 PSICRYSTAL_EFFECT_SOURCE = "PSCRYST"
+PSICRYSTAL_BODY = "PSCRBODY"
+PSICRYSTAL_SUMMON = "PXCRSUM"
+PSICRYSTAL_DISMISS = "PXCRDIS"
+PSICRYSTAL_USED_MARKER = 0x50534355
+PSICRYSTAL_USED_RESOURCE = "PSCRUSED"
+PSICRYSTAL_LEVEL_MARKER = 0x5053434C
+PSICRYSTAL_LEVEL_RESOURCE = "PSCRLEVL"
 
 _base_action_info = action_info
 _base_filter_spellinfo = filter_spellinfo
@@ -1420,6 +1427,7 @@ def _sync_psicrystal_selector(actor):
             GemRB.RemoveSpell(actor, PSICRYSTAL_SELECTOR_RESOURCE)
         except Exception as error:
             GemRB.Log(2, "Psionics", "psicrystal selector cleanup failed: %s" % error)
+        _ensure_psicrystal_actions(actor)
         return False
     return _ensure_psicrystal_selector_known(actor)
 
@@ -1439,6 +1447,128 @@ def _choose_psicrystal(actor, resref):
     return True
 
 
+def psicrystal_companion(actor, mode=0):
+    if not is_psion(actor):
+        return None
+    if not hasattr(GemRB, "ManageCompanion"):
+        raise RuntimeError("Psicrystal companions require GemRB.ManageCompanion")
+    return GemRB.ManageCompanion(actor, PSICRYSTAL_BODY, mode)
+
+
+def _psicrystal_used(actor):
+    found, value = _read_private_value(
+        actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
+    )
+    return bool(value) if found else False
+
+
+def _write_psicrystal_used(actor, value):
+    _write_private_value(
+        actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
+        int(bool(value)), PSICRYSTAL_EFFECT_SOURCE,
+    )
+    if _psicrystal_used(actor) != bool(value):
+        raise RuntimeError("Psicrystal rest-use state could not be persisted")
+
+
+def can_summon_psicrystal(actor):
+    if not is_psion(actor) or not hasattr(GemRB, "ManageCompanion"):
+        return False
+    if not psicrystal_personality_info(actor):
+        return False
+    companion = psicrystal_companion(actor)
+    return bool(companion and companion["Alive"]) or not _psicrystal_used(actor)
+
+
+def can_dismiss_psicrystal(actor):
+    return bool(is_psion(actor) and hasattr(GemRB, "ManageCompanion")
+                and psicrystal_companion(actor))
+
+
+def _psicrystal_statistics(actor):
+    level = manifester_level(actor)
+    table = GemRB.LoadTable("pscrlvl", False, True)
+    armor = int(table.GetValue(str(level), "AC"))
+    intelligence = int(table.GetValue(str(level), "INT"))
+    maximum_hp = max(1, min(32767, int(GemRB.GetPlayerStat(actor, 1, 1)) // 2))
+    return level, {
+        1: maximum_hp, 2: armor, 8: 0, 34: level, 38: intelligence,
+        **{stat: int(GemRB.GetPlayerStat(actor, stat, 1)) for stat in range(9, 14)},
+    }
+
+
+def _scale_psicrystal(actor, companion, statistics=None):
+    if not companion or not companion["Alive"]:
+        return
+    body = int(companion["ActorID"])
+    found, accounted = _read_private_value(
+        body, PSICRYSTAL_LEVEL_MARKER, PSICRYSTAL_LEVEL_RESOURCE,
+    )
+    level, values = statistics or _psicrystal_statistics(actor)
+    if found and accounted == level and not companion["Created"]:
+        return
+    hp = values[1] if companion["Created"] else min(int(GemRB.GetPlayerStat(body, 0, 1)), values[1])
+    for stat, value in values.items():
+        GemRB.SetPlayerStat(body, stat, value)
+    GemRB.SetPlayerStat(body, 0, hp)
+    _write_private_value(
+        body, PSICRYSTAL_LEVEL_MARKER, PSICRYSTAL_LEVEL_RESOURCE,
+        level, PSICRYSTAL_EFFECT_SOURCE,
+    )
+
+
+def _summon_psicrystal(actor):
+    if not can_summon_psicrystal(actor):
+        return False
+    statistics = _psicrystal_statistics(actor)
+    previous = psicrystal_companion(actor)
+    fresh = not previous or not previous["Alive"]
+    if fresh:
+        _write_psicrystal_used(actor, True)
+    companion = psicrystal_companion(actor, 1)
+    if not companion or not companion["Alive"]:
+        raise RuntimeError("Psicrystal creation returned no living companion")
+    try:
+        _scale_psicrystal(actor, companion, statistics)
+    except Exception:
+        if companion["Created"]:
+            psicrystal_companion(actor, 2)
+        raise
+    return True
+
+
+def _dismiss_psicrystal(actor):
+    if not can_dismiss_psicrystal(actor):
+        return False
+    psicrystal_companion(actor, 2)
+    return True
+
+
+def _ensure_psicrystal_actions(actor):
+    if not hasattr(GemRB, "ManageCompanion") or not psicrystal_personality_info(actor):
+        return
+    count = GemRB.GetKnownSpellsCount(actor, INNATE_TYPE, INNATE_LEVEL)
+    known = {
+        str(GemRB.GetKnownSpell(actor, INNATE_TYPE, INNATE_LEVEL, index)["SpellResRef"]).upper()
+        for index in range(count)
+    }
+    for resref in (PSICRYSTAL_SUMMON, PSICRYSTAL_DISMISS):
+        if resref not in known and GemRB.LearnSpell(actor, resref, LS_MEMO) not in (0, 1):
+            raise RuntimeError("Psicrystal action could not be learned: " + resref)
+
+
+def sync_psicrystal_party():
+    if not hasattr(GemRB, "ManageCompanion"):
+        return
+    for actor in range(1, GemRB.GetPartySize() + 1):
+        if not is_psion(actor):
+            continue
+        try:
+            _scale_psicrystal(actor, psicrystal_companion(actor, 3))
+        except Exception as error:
+            GemRB.Log(2, "Psionics", "Psicrystal synchronization failed: %s" % error)
+
+
 def psicrystal_skill_bonus(actor, skill):
     info = psicrystal_personality_info(actor)
     if not info or info["skill"] != (skill or "").upper():
@@ -1455,6 +1585,11 @@ def skill_check_total(actor, skill, roll=None):
 
 def action_info(resref):
     key = (resref or "").upper()
+    if key in (PSICRYSTAL_SUMMON, PSICRYSTAL_DISMISS):
+        return {
+            "kind": "psicrystal_summon" if key == PSICRYSTAL_SUMMON else "psicrystal_dismiss",
+            "resref": key, "parent": key, "cost": 0, "selector": False,
+        }
     if key == PSICRYSTAL_SELECTOR_RESOURCE:
         return {
             "kind": "psicrystal_selector",
@@ -1481,12 +1616,17 @@ def filter_spellinfo(actor, resrefs):
 
 def _is_reusable_innate(actor, resref):
     key = (resref or "").upper()
+    if key == PSICRYSTAL_SUMMON:
+        return can_summon_psicrystal(actor)
+    if key == PSICRYSTAL_DISMISS:
+        return can_dismiss_psicrystal(actor)
     if key == PSICRYSTAL_SELECTOR_RESOURCE:
         return bool(available_psicrystal_choices(actor))
     return _base_is_reusable_innate(actor, key)
 
 
 def refresh_innate_charges(actor):
+    sync_psicrystal_party()
     if not is_psion(actor):
         return 0
     _sync_psicrystal_selector(actor)
@@ -1498,14 +1638,27 @@ def restore_party():
     for actor in range(1, GemRB.GetPartySize() + 1):
         try:
             _sync_psicrystal_selector(actor)
-        except Exception:
-            pass
+            if is_psion(actor) and hasattr(GemRB, "ManageCompanion"):
+                _write_psicrystal_used(actor, False)
+        except Exception as error:
+            GemRB.Log(2, "Psionics", "Psicrystal rest synchronization failed: %s" % error)
+    sync_psicrystal_party()
 
 
 def begin_manifest(actor, resref):
     info = action_info(resref)
     if not info:
         return True
+    if info["kind"] == "psicrystal_summon":
+        return _begin_simple_action(
+            actor, ("PSICRYSTAL_SUMMON", PSICRYSTAL_BODY),
+            lambda: can_summon_psicrystal(actor), lambda: _summon_psicrystal(actor),
+        )
+    if info["kind"] == "psicrystal_dismiss":
+        return _begin_simple_action(
+            actor, ("PSICRYSTAL_DISMISS", PSICRYSTAL_BODY),
+            lambda: can_dismiss_psicrystal(actor), lambda: _dismiss_psicrystal(actor),
+        )
     if info["kind"] == "psicrystal_selector":
         cancel_pending(actor)
         return bool(available_psicrystal_choices(actor))

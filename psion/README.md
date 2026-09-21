@@ -2,7 +2,7 @@
 
 This mod adds a point-based D&D 3.5e Psion class to BG-family campaigns running through GemRB.
 
-**Current version: `1.3.0`**
+**Current version: `1.4.0`**
 
 Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md).
 
@@ -21,7 +21,7 @@ The six discipline classes are:
 
 ## Development status
 
-Version 1.3.0 contains the current level-1–20 Psion implementation, including the 85-power catalogue, player-selected powers known, persistent PP/focus/feat/skill state, augmentation selectors, and exact current-Intelligence save-DC substitution.
+Version 1.4.0 contains the current level-1–20 Psion implementation, including the 85-power catalogue, player-selected powers known, persistent PP/focus/feat/skill state, augmentation selectors, and exact current-Intelligence save-DC substitution.
 
 The current catalogue contains **85 powers**:
 
@@ -261,7 +261,7 @@ These automated checks do not by themselves claim live-game qualification. The r
 
 ## Next work
 
-The main remaining design systems are psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+Remaining expansion work includes psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
 
 ### Psicrystal personality availability
 
@@ -269,6 +269,51 @@ Personality selection only offers bonuses for skills available to the Psion's
 current discipline. All disciplines may choose Sage or Single-Minded. Artiste
 requires Shaper, Friendly requires Telepath, and Observant requires Seer.
 The same rule is checked again when the choice commits; a blocked choice does
-not consume the selector or grant cross-discipline skill access. The personality
-and owner benefit are the current slice, not a completed summoned-psicrystal
-lifecycle.
+not consume the selector or grant cross-discipline skill access. The personality and owner benefit remain independent of the companion body.
+
+## Persistent psicrystal companion (1.4)
+
+After choosing a personality, **Manifest or Recall Psicrystal** and **Dismiss
+Psicrystal** become available automatically when the engine exposes
+`GemRB.ManageCompanion` (the companion-enabled `lisu188/gemrb` build).
+An older engine keeps the existing personality benefit but cannot provide the
+new companion actions. Python GUI patches alone do not add the native API.
+
+A new body may be created **once per completed rest**. Recalling a living body
+is unlimited, moves that same creature to its owner, and preserves injuries,
+effects and inventory. Death or dismissal does not refund a creation use.
+Rest makes a new body available but does not summon, resurrect, or heal a body
+through the mod's runtime. The engine's ordinary rest effects remain separate.
+
+The body uses an original animated crystal sprite, no copied familiar or wolf
+creature. It is a controllable noncombat companion with zero base attacks. Its
+base maximum HP is half the owner's base maximum HP (minimum 1); its base saves
+copy the owner's base saves. `PSCRLVL.2DA` sets base AC to
+`4 - floor((Psion level - 1) / 2)` and Intelligence to
+`6 + floor((Psion level - 1) / 2)` for levels 1–20. On an owner level change,
+statistics are updated without refilling current HP. These are bounded engine
+rules, not a complete implementation of tabletop psicrystal abilities.
+
+The native lifecycle stores namespaced owner/companion identities in save data
+and uses the persistent NPC roster. It never identifies owners by mutable party
+slots. The shared action-bar refresh synchronizes existing companions across
+areas and rebinds their current summoner after loading; it never creates a copy
+on load. The follow script then keeps the body near its owner within the area.
+Each Psion owns an independent body and rest-use state. Ordinary familiar
+ownership and protagonist familiar HP bonuses are untouched.
+
+Management actions are instantaneous and use the same accepted-action
+transaction as other Psion utilities. They cost no PP. Failed ownership reads
+block the operation. A failure after reserving a fresh body's use keeps that
+use spent until rest; a partially initialized new body is dismissed. There is
+no automatic repair of corrupt or foreign ownership tokens.
+
+Dismiss the body before intentionally abandoning/removing its owner or
+uninstalling the mod. The mod does not migrate or delete already-saved creatures
+on uninstall, and an owner exported into a different game with an incompatible
+ownership registry is rejected rather than silently assigned a duplicate.
+
+Companion regression tests cover runtime behavior, original resource formats,
+real WeiDU installation/restoration, and native engine lifecycle boundaries.
+The open-demo engine test separately exercises actual save/reload. Full
+BGEE/BG2EE/ToB campaign qualification remains the existing #50 acceptance gate.

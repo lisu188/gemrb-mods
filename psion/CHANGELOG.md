@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
+
+- Added a permanent, independently owned psicrystal body with manifest/recall
+  and dismissal actions, a once-per-completed-rest creation limit, and automatic
+  synchronization of existing companions after area changes and loading.
+- Added original CRE/BAM resources, owner-level scaling through level 20,
+  injury-preserving recall and scaling, lazy action migration, and native
+  `ManageCompanion` capability checks. Familiar ownership is not reused.
+- Added companion runtime/resource tests and installed WeiDU resource and
+  rollback validation. Requires a companion-enabled engine for body actions;
+  campaign acceptance remains separate from automated validation.
+
+## Earlier development
 
 - Made Mage-progression extraction tolerant of stock BGEE's CRLF-formatted
   `XPLEVEL.2DA`, which WeiDU 251 otherwise miscounts as a single data row.

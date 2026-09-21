@@ -11,7 +11,7 @@ startup checks.
 | Mod | Version | Supported game families under GemRB | Runtime / GUI requirement | Automated validation | Real-engine acceptance |
 | --- | --- | --- | --- | --- | --- |
 | Cipher | 0.2.0 | Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE, EET | matching sibling `common/`; shared `GemRBModCore` GUI hooks | static, fake-GemRB, WeiDU parse/install/uninstall/reinstall and pinned GemRB fixture contracts | pending cross-mod acceptance suite in #50 |
-| Psion | 1.3.0 | Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE, EET | matching sibling `common/`; shared `GemRBModCore` GUI hooks | static, fake-GemRB, generated-resource, WeiDU lifecycle and pinned GemRB fixture contracts | pending cross-mod acceptance suite in #50 |
+| Psion | 1.4.0 | Tutu, Tutu_TotSC, BGEE, Classic Adventures, BGT, BG2EE, EET | matching sibling `common/`; shared `GemRBModCore` GUI hooks | static, fake-GemRB, generated-resource, WeiDU lifecycle and pinned GemRB fixture contracts | pending cross-mod acceptance suite in #50 |
 | Sorcerer/Monk | 2.0 | Tutu, Tutu_TotSC, BGEE, Classic Adventures, BG2/ToB, BGT, BG2EE, EET | matching sibling `common/`; shared custom-class chargen layer | source-contract, table-shape and real-WeiDU lifecycle validation | live campaign qualification pending in #51 |
 
 ## What the validation states mean
