@@ -17,7 +17,7 @@ class RestPartyBoundsTests(unittest.TestCase):
             # Execute the actual definition/alias order, including extension
             # wrappers. Testing only the first definition misses later loops.
             functions = [node for node in tree.body
-                         if (isinstance(node, ast.FunctionDef) and node.name == "restore_party")
+                         if (isinstance(node, ast.FunctionDef) and node.name in ("restore_party", "sync_psicrystal_party"))
                          or (isinstance(node, ast.Assign)
                              and any(isinstance(target, ast.Name) and target.id == "_base_restore_party"
                                      for target in node.targets))]
@@ -36,10 +36,21 @@ class RestPartyBoundsTests(unittest.TestCase):
                         check(actor)
                         restored.append(actor)
 
-                    namespace = {"GemRB": SimpleNamespace(GetPartySize=lambda: size),
+                    def companion(actor, mode):
+                        check(actor)
+                        self.assertEqual(mode, 3, "rest must not create or resurrect a companion")
+                        return None
+
+                    def reset_use(actor, used):
+                        check(actor)
+                        self.assertIs(used, False)
+
+                    namespace = {"GemRB": SimpleNamespace(GetPartySize=lambda: size, ManageCompanion=companion),
                                  "cancel_pending": lambda: canceled.append(True),
                                  "STARTING_FOCUS": 20, "is_cipher": check,
-                                 "set_focus": restore, "ensure_pool": restore}
+                                 "set_focus": restore, "ensure_pool": restore,
+                                 "is_psion": check, "_write_psicrystal_used": reset_use,
+                                 "psicrystal_companion": companion, "_scale_psicrystal": check}
                     for name in ("ensure_focus", "_ensure_power_selector_known", "sync_skill_points",
                                  "_ensure_skill_selector_known", "_sync_center_action", "_sync_psicrystal_selector"):
                         namespace[name] = check
