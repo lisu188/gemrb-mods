@@ -34,6 +34,9 @@ def installed_tables():
                 assert re.fullmatch(r"[a-z0-9_]{1,8}", name), (source, destination)
                 assert name not in result, ("colliding table resource", name)
                 result[name] = ROOT / original
+    generator = load_module("psicrystal_table_generator", ROOT / "psion/tools/generate_psicrystal.py")
+    assert "pscrcfg" not in result, "generated table collides with a static destination"
+    result["pscrcfg"] = types.SimpleNamespace(read_text=lambda: generator.configuration(range(1, 7)))
     return result
 
 

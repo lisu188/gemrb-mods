@@ -261,7 +261,7 @@ These automated checks do not by themselves claim live-game qualification. The r
 
 ## Next work
 
-The main remaining design systems are psicrystals, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+The main remaining design systems are advanced tabletop psicrystal abilities, psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
 
 ### Psicrystal personality availability
 
@@ -269,6 +269,33 @@ Personality selection only offers bonuses for skills available to the Psion's
 current discipline. All disciplines may choose Sage or Single-Minded. Artiste
 requires Shaper, Friendly requires Telepath, and Observant requires Seer.
 The same rule is checked again when the choice commits; a blocked choice does
-not consume the selector or grant cross-discipline skill access. The personality
-and owner benefit are the current slice, not a completed summoned-psicrystal
-lifecycle.
+not consume the selector or grant cross-discipline skill access. The personality and its existing owner skill bonus remain permanent and are not
+removed by companion death or dismissal.
+
+### Manifested psicrystal companion
+
+After choosing a personality, the action bar gains **Manifest Psicrystal** and
+**Dismiss Psicrystal**. Manifestation is free of PP but allowed only outside
+party combat. The accepted native cast creates one controlled, non-attacking
+crystal for the owner; selecting/cancelling the button does not create a body.
+Dismissal also works during combat and takes effect on the next script update.
+
+The crystal follows its owner in the current area. It has half the owner's base
+maximum HP (rounded down, minimum 1), copies the owner's base saves, and derives
+AC and Intelligence from Psion levels 1–20. Values are sampled when manifested;
+refreshing the action bar or loading a save never heals or recreates it. It does
+not receive Fighter attacks or Nightmare-mode HP/XP bonuses.
+
+Native save/load preserves owner identity, companion generation and injury.
+Party reordering does not change ownership. After death or area travel, manifest
+again explicitly outside combat. The previous body is revoked and removes itself
+when its area scripts next run; this is not familiar-style automatic teleportation.
+Leaving the party or the owner's death also removes the old body at script update.
+
+This is a bounded companion implementation, not every D&D 3.5 psicrystal ability:
+telepathy, shared powers, arbitrary remote viewing, and distance-gating the
+existing personality bonus are not implemented. The save supports 255 lifetime
+owner identities. ScriptingState slot 7 (stat 163) must be available; conflicting
+foreign effects or duplicate imported owners are rejected rather than overwritten.
+Details and reproducible native-engine tests are in
+[the lifecycle contract](../docs/psicrystal-companion.md).

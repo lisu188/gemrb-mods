@@ -2,8 +2,7 @@
 //
 // Ownership is stored by Psionics.py as one actor-local persistent numeric ID.
 // These SPLs are only the reusable selector and harmless temporary choices.
-// Summoning is intentionally a later slice so personality ownership never
-// depends on transient world-creature state or the generic familiar subsystem.
+// The companion uses independent save-owned identities and native area scripts.
 
 LAF psion_create_focus_action
   STR_VAR
@@ -55,3 +54,65 @@ LAF psion_create_focus_action
     ps_description = ~A relentlessly focused fragment. Grants a +3 personality bonus to Concentration checks.~
     ps_icon = ~sppr101~
 END
+
+
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCSUM~
+    ps_name = ~Manifest Psicrystal~
+    ps_description = ~Manifest your chosen personality as a controllable crystalline companion outside combat. Only one companion per owner can be active. Its hit points are half your base maximum, its saves use yours, and its defenses and Intelligence scale with your Psion level at manifestation. It follows you while idle in this area; after travel, manifest it again. Death or dismissal does not erase personality. No power points are spent.~
+    ps_icon = ~sppr107~
+END
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCDISM~
+    ps_name = ~Dismiss Psicrystal~
+    ps_description = ~Revoke your current psicrystal manifestation. It dissolves on its next script update, including if it was left in another area. Your personality choice and bonus remain. Dismissal spends no power points.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXCSUM.spl~ ~override~ ~PXCDISM.spl~ ~override~
+  READ_LONG 0x64 ps_crystal_header
+  WRITE_BYTE (ps_crystal_header + 0x0c) 7
+BUT_ONLY
+
+CREATE ~cre~ ~PSCRBASE~
+COPY_EXISTING ~PSCRBASE.cre~ ~override~
+  SAY NAME1 ~Psicrystal~
+  SAY NAME2 ~Psicrystal~
+  WRITE_LONG 0x10 (BIT1 BOR BIT22)
+  WRITE_LONG 0x14 0
+  WRITE_LONG 0x18 0
+  WRITE_LONG 0x1c 0
+  WRITE_LONG 0x20 0
+  WRITE_SHORT 0x24 1
+  WRITE_SHORT 0x26 1
+  WRITE_SHORT 0x46 10
+  WRITE_SHORT 0x48 10
+  WRITE_BYTE 0x52 20
+  WRITE_BYTE 0x53 0
+  WRITE_BYTE 0x234 1
+  WRITE_BYTE 0x237 4
+  WRITE_BYTE 0x238 1
+  WRITE_BYTE 0x23a 6
+  WRITE_BYTE 0x23b 10
+  WRITE_BYTE 0x23c 15
+  WRITE_BYTE 0x23d 10
+  WRITE_BYTE 0x23e 10
+  WRITE_BYTE 0x23f 20
+  WRITE_BYTE 0x240 0
+  WRITE_BYTE 0x270 5
+  WRITE_BYTE 0x273 0
+  WRITE_BYTE 0x275 4
+  WRITE_BYTE 0x27b 34
+BUT_ONLY
+
+COPY_EXISTING ~object.ids~ ~override/object.ids~
+COPY_EXISTING ~trigger.ids~ ~override/trigger.ids~
+COPY_EXISTING ~gemtrig.ids~ ~override/gemtrig.ids~
+COPY_EXISTING ~avatars.2da~ ~override/avatars.2da~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --template "override/PSCRBASE.cre" --objects "override/object.ids" --triggers "override/trigger.ids" --engine-triggers "override/gemtrig.ids" --avatars "override/avatars.2da"~
+COPY ~.psion-crystal-build/resources~ ~override~
+COMPILE ~.psion-crystal-build/scripts~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --compiled "override"~
+COPY ~.psion-crystal-build/compiled~ ~override~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --cleanup~
