@@ -1,8 +1,8 @@
 // Psicrystal personality selection.
 //
 // Ownership is stored by Psionics.py as one actor-local persistent numeric ID.
-// These SPLs are only the reusable selector and harmless temporary choices.
-// The companion uses independent save-owned identities and native area scripts.
+// Selector resources are harmless choices; the companion uses the native
+// persistent-NPC lifecycle instead of the shared familiar subsystem.
 
 LAF psion_create_focus_action
   STR_VAR
@@ -55,64 +55,42 @@ LAF psion_create_focus_action
     ps_icon = ~sppr101~
 END
 
+ACTION_IF DIRECTORY_EXISTS ~.psion-crystal-build~ THEN BEGIN
+  FAIL ~Remove the stale .psion-crystal-build directory before installing the Psion companion.~
+END
+COPY_EXISTING ~avatars.2da~ ~override/avatars.2da~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --avatars "override/avatars.2da" --output ".psion-crystal-build"~
+ACTION_IF NOT FILE_EXISTS ~.psion-crystal-build/PSCRBODY.CRE~ THEN BEGIN
+  FAIL ~Psicrystal resources could not be generated. Check the Python error above.~
+END
+COPY ~.psion-crystal-build~ ~override~
+AT_NOW ~python "psion/tools/generate_psicrystal.py" --output ".psion-crystal-build" --cleanup~
+COMPILE ~psion/lib/pscrai.baf~
+COPY_EXISTING ~PSCRBODY.cre~ ~override~
+  SAY NAME1 ~Psicrystal~
+  SAY NAME2 ~Psicrystal~
+BUT_ONLY
 
 LAF psion_create_focus_action
   STR_VAR
-    ps_resref = ~PXCSUM~
-    ps_name = ~Manifest Psicrystal~
-    ps_description = ~Manifest your chosen personality as a controllable crystalline companion outside combat. Only one companion per owner can be active. Its hit points are half your base maximum, its saves use yours, and its defenses and Intelligence scale with your Psion level at manifestation. It follows you while idle in this area; after travel, manifest it again. Death or dismissal does not erase personality. No power points are spent.~
+    ps_resref = ~PXCRSUM~
+    ps_name = ~Manifest or Recall Psicrystal~
+    ps_description = ~Manifest your chosen personality as a permanent, controllable crystal companion. A new body can be created once per completed rest. Recalling a living crystal preserves its injuries and does not consume another use. Its hit points are half your base maximum, its defenses scale with Psion level, and its base saves match yours. It follows you between areas. This companion cannot attack; the personality skill bonus remains on you. Requires the companion-enabled GemRB build. This management action is instantaneous and costs no PP.~
     ps_icon = ~sppr107~
 END
-LAF psion_create_focus_action
-  STR_VAR
-    ps_resref = ~PXCDISM~
-    ps_name = ~Dismiss Psicrystal~
-    ps_description = ~Revoke your current psicrystal manifestation. It dissolves on its next script update, including if it was left in another area. Your personality choice and bonus remain. Dismissal spends no power points.~
-    ps_icon = ~sppr107~
-END
-COPY_EXISTING ~PXCSUM.spl~ ~override~ ~PXCDISM.spl~ ~override~
+COPY_EXISTING ~PXCRSUM.spl~ ~override~
   READ_LONG 0x64 ps_crystal_header
   WRITE_BYTE (ps_crystal_header + 0x0c) 7
 BUT_ONLY
 
-CREATE ~cre~ ~PSCRBASE~
-COPY_EXISTING ~PSCRBASE.cre~ ~override~
-  SAY NAME1 ~Psicrystal~
-  SAY NAME2 ~Psicrystal~
-  WRITE_LONG 0x10 (BIT1 BOR BIT22)
-  WRITE_LONG 0x14 0
-  WRITE_LONG 0x18 0
-  WRITE_LONG 0x1c 0
-  WRITE_LONG 0x20 0
-  WRITE_SHORT 0x24 1
-  WRITE_SHORT 0x26 1
-  WRITE_SHORT 0x46 10
-  WRITE_SHORT 0x48 10
-  WRITE_BYTE 0x52 20
-  WRITE_BYTE 0x53 0
-  WRITE_BYTE 0x234 1
-  WRITE_BYTE 0x237 4
-  WRITE_BYTE 0x238 1
-  WRITE_BYTE 0x23a 6
-  WRITE_BYTE 0x23b 10
-  WRITE_BYTE 0x23c 15
-  WRITE_BYTE 0x23d 10
-  WRITE_BYTE 0x23e 10
-  WRITE_BYTE 0x23f 20
-  WRITE_BYTE 0x240 0
-  WRITE_BYTE 0x270 5
-  WRITE_BYTE 0x273 0
-  WRITE_BYTE 0x275 4
-  WRITE_BYTE 0x27b 34
+LAF psion_create_focus_action
+  STR_VAR
+    ps_resref = ~PXCRDIS~
+    ps_name = ~Dismiss Psicrystal~
+    ps_description = ~Dismiss your crystal companion without erasing its permanent personality. Dismissal does not refund the body's once-per-rest creation use. A dead or dismissed body can be replaced after a completed rest. This management action is instantaneous and costs no PP.~
+    ps_icon = ~sppr107~
+END
+COPY_EXISTING ~PXCRDIS.spl~ ~override~
+  READ_LONG 0x64 ps_crystal_header
+  WRITE_BYTE (ps_crystal_header + 0x0c) 7
 BUT_ONLY
-
-COPY_EXISTING ~object.ids~ ~override/object.ids~
-COPY_EXISTING ~trigger.ids~ ~override/trigger.ids~
-COPY_EXISTING ~gemtrig.ids~ ~override/gemtrig.ids~
-COPY_EXISTING ~avatars.2da~ ~override/avatars.2da~
-AT_NOW ~python "psion/tools/generate_psicrystal.py" --template "override/PSCRBASE.cre" --objects "override/object.ids" --triggers "override/trigger.ids" --engine-triggers "override/gemtrig.ids" --avatars "override/avatars.2da"~
-COPY ~.psion-crystal-build/resources~ ~override~
-COMPILE ~.psion-crystal-build/scripts~
-AT_NOW ~python "psion/tools/generate_psicrystal.py" --compiled "override"~
-COPY ~.psion-crystal-build/compiled~ ~override~
-AT_NOW ~python "psion/tools/generate_psicrystal.py" --cleanup~

@@ -1,13 +1,18 @@
 # Changelog
 
-## Unreleased
+## 1.4.0
 
-- Added actual psicrystal manifestation/dismissal with 255 bounded save-owned
-  identities, native generation revocation, level-derived stats and original
-  generated crystal animation. No familiar state is used.
-- Added native-engine public-demo save/load, party-reorder, area-change and death
-  tests, plus fault-injection and real WeiDU restoration coverage. Campaign-level
-  BGEE/BG2EE/ToB qualification remains separate.
+- Added a permanent, independently owned psicrystal body with manifest/recall
+  and dismissal actions, a once-per-completed-rest creation limit, and automatic
+  synchronization of existing companions after area changes and loading.
+- Added original CRE/BAM resources, owner-level scaling through level 20,
+  injury-preserving recall and scaling, lazy action migration, and native
+  `ManageCompanion` capability checks. Familiar ownership is not reused.
+- Added companion runtime/resource tests and installed WeiDU resource and
+  rollback validation. Requires a companion-enabled engine for body actions;
+  campaign acceptance remains separate from automated validation.
+
+## Earlier development
 
 - Made Mage-progression extraction tolerant of stock BGEE's CRLF-formatted
   `XPLEVEL.2DA`, which WeiDU 251 otherwise miscounts as a single data row.

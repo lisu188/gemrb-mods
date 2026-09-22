@@ -1,6 +1,6 @@
 BACKUP ~psion/backup~
 AUTHOR ~lisu188~
-VERSION ~1.3.0~
+VERSION ~1.4.0~
 AUTO_EVAL_STRINGS
 LANGUAGE ~English~ ~english~ ~psion/tra/english.tra~
 

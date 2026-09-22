@@ -41,10 +41,11 @@ jobs:
         run: python psion/tests/validate_qslots.py
       - name: Validate exact Intelligence save-DC variants
         run: python psion/tests/validate_dc_variants.py
+      - name: Validate persistent psicrystal runtime and resources
+        run: python psion/tests/validate_psicrystal_companion.py
+
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
-      - name: Validate psicrystal lifecycle and generator
-        run: python psion/tests/validate_psicrystal_companion.py
       - name: Validate GUI patch lifecycle
         run: python psion/tests/validate_patcher.py
       - name: Validate level-3 powers
@@ -109,7 +110,6 @@ jobs:
           for layout in normalized native legacy; do
             echo "Validating $layout class-table layout"
             bash psion/tests/validate_weidu_install.sh vendor/gemrb "$layout"
-            python psion/tests/validate_psicrystal_install.py --game "$RUNNER_TEMP/psion-weidu-game-$layout"
             python psion/tests/validate_qslots_install.py "$RUNNER_TEMP/psion-weidu-game-$layout" "$layout"
             python psion/tests/validate_clab_engine.py vendor/gemrb --tables "$RUNNER_TEMP/psion-weidu-game-$layout/override"
             python common/tests/validate_spell_targets.py vendor/gemrb --game "$RUNNER_TEMP/psion-weidu-game-$layout"

@@ -22,6 +22,17 @@ Cipher and Psion require `GemRB.SetSpellCastCheck`; merely patching Python
 scripts into an older engine does not add this native API. The engine fixes
 also cover Sorcerer/Monk progression, fists and saving.
 
+Psion 1.4.0's summoned psicrystal additionally requires `GemRB.ManageCompanion`
+from `lisu188/gemrb#4`. Without this native API, the existing personality bonus
+remains available but the summon/dismiss actions are not granted. Installing
+new Python scripts alone cannot add persistent companion support to an old
+binary. Verify both capabilities in the actual engine used for this game.
+Dismiss every psicrystal before removing its owner from the party or
+uninstalling Psion; WeiDU cannot remove creatures already stored in a save.
+The new companion uses saved owner locals, not party-slot identities or the
+shared familiar subsystem. A living recalled body retains its injuries.
+Creation or replacement is limited to once per completed rest.
+
 Run that engine against the game once to create `gemrb_path.txt` before
 installing. WeiDU and Python must be available. Back up saves and use a
 separate game installation for acceptance testing. Do not install mods while
@@ -72,15 +83,16 @@ From the source repository:
 python common/tools/build_release.py sorcerer-monk
 python common/tools/build_release.py cipher psion sorcerer-monk
 python common/tests/validate_three_class_release.py
+python psion/tests/validate_psicrystal_companion.py
 ```
 
-The tests cover all seven nonempty package subsets, deterministic ZIP ordering
-including `release-manifest.json`, and all 36 combinations of installation and
-removal ordering. They execute the actual extracted driver and shared GUI
-installer against synthetic GUI files with a fake WeiDU boundary. They also
-check repeated installation, preservation of pre-existing handler files and
-byte-for-byte GUI restoration. These checks are not live BGEE/BG2EE gameplay
-acceptance or a substitute for the real WeiDU suites.
+The package tests cover all seven nonempty package subsets, deterministic ZIP
+ordering including `release-manifest.json`, and all 36 combinations of
+installation and removal ordering. They execute the actual extracted driver
+and shared GUI installer against synthetic GUI files with a fake WeiDU
+boundary. They also check repeated installation, preservation of pre-existing
+handler files and byte-for-byte GUI restoration. These checks are not live
+BGEE/BG2EE gameplay acceptance or a substitute for the real WeiDU suites.
 
 Full campaign qualification still requires the scenarios under
 `common/acceptance/`, including combat, advancement, inn rest and save/reload.

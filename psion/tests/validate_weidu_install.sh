@@ -61,7 +61,7 @@ candidates = (
     "classes.2da", "clastext.2da", "clsrcreq.2da", "hpclass.2da",
     "class.ids", "alignmnt.2da", "abclasrq.2da", "weapprof.2da",
     "profs.2da", "xpcap.2da", "xplevel.2da", "thac0.2da", "lore.2da",
-    "avprefc.2da", "qslots.2da", "clskills.2da",
+    "avprefc.2da", "avatars.2da", "qslots.2da", "clskills.2da",
     "psspear.itm", "psxbow.itm", "psclub.itm", "psmace.itm",
     "pssword.itm", "psarmor.itm", "psshield.itm", "psringx.itm",
     "psringok.itm", "psbullet.itm", "psbolt.itm",
@@ -102,6 +102,7 @@ uninstall() {
 }
 
 verify_installed() {
+  python3 "$repo_root/psion/tests/verify_psicrystal_install.py" "$game"
   python3 - "$game" "$layout" <<'PY'
 from __future__ import annotations
 import struct
@@ -444,6 +445,8 @@ assert not any(
     for path in remaining
 ), layout
 assert not any(path.name.lower() == "psacon01.cre" for path in remaining), layout
+for filename in ("pscrbody.cre", "pscrai.bcs", "pscrani.bam", "pxcrsum.spl", "pxcrdis.spl", "pscrlvl.2da"):
+    assert not any(path.name.lower() == filename for path in remaining), (layout, filename)
 for filename in (
     "pspool.2da", "psknown.2da", "psdisc.2da",
     "psskills.2da", "psfeats.2da", "psfeatpk.2da", "pspowers.2da",

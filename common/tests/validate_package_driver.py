@@ -62,7 +62,7 @@ def main():
     assert cipher["runtime"]["runtime_api"] == 1
     assert psion["runtime"]["runtime_api"] == 1
     assert cipher["package"]["version"] == "0.2.0"
-    assert psion["package"]["version"] == "1.3.0"
+    assert psion["package"]["version"] == "1.4.0"
     assert driver.weidu_command(cipher, Path("/game"), "weidu", True)[-2:] == ["--force-install-list", "0"]
     assert driver.weidu_command(cipher, Path("/game"), "weidu", False)[-2:] == ["--force-uninstall", "0"]
 

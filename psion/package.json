@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "psion",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "runtime_api": 1,
   "handler": "Psionics",
   "runtime_source": "psion/guiscripts/Psionics.py",
