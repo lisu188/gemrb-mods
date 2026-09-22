@@ -23,6 +23,7 @@ COMMON_FILES = (
     "docs/cast-runtime.md",
     "docs/runtime-resource-names.md",
     "docs/install-three-classes.md",
+    "docs/psicrystal-companion.md",
 )
 COMMON_DIRS = (
     "common/guiscripts",
