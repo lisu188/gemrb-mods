@@ -40,9 +40,17 @@ def cast(actor, resource):
             bodies.append(int(after['ActorID']))
 
 
-def exists(token):
-    return GemRB.EvaluateString('Exists("PSCR%03d")' % token, True)
+def companion_for_token(token):
+    for actor in range(1, GemRB.GetPartySize() + 1):
+        if Psionics._psicrystal_owner_token(actor) != token:
+            continue
+        companion = Psionics.psicrystal_companion(actor)
+        return companion if companion and companion['Alive'] else None
+    return None
 
+
+def exists(token):
+    return bool(companion_for_token(token))
 
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
@@ -97,8 +105,11 @@ def after_load():
     assert Psionics._psicrystal_owner_token(2) == 1
     assert GemRB.GetPlayerStat(1, 163) == 2
     assert GemRB.GetPlayerStat(2, 163) == 1
-    assert GemRB.EvaluateString('CheckStat("PSCR001",17,0)', True)
-    assert GemRB.EvaluateString('CheckStat("PSCR001",0,8)', True)
+    body = companion_for_token(1)
+    assert body
+    body_id = int(body['ActorID'])
+    assert GemRB.GetPlayerStat(body_id, 0) == 17
+    assert GemRB.GetPlayerStat(body_id, 8) == 0
     assert len(bodies) == 2
     record('loaded', no_duplicate=True, hp_preserved=True, zero_attacks=True)
     cast(2, 'PXCRDIS')
