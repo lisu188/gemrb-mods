@@ -3,7 +3,7 @@
 
 Psion powers are authored against the guaranteed INT 15 minimum (+2 modifier).
 For BG-family GemRB games MaximumAbility is 25, so the complete runtime range is
-INT 0..25 (modifiers -5..+7).  The +2 baseline keeps its public resref; every
+INT 0..25 (modifiers -5..+7), plus the optional +1 equipment DC bonus.  The +2 baseline keeps its public resref; every
 other modifier gets an internal one-character-suffix clone when the source SPL
 contains at least one real saving-throw effect.
 """
@@ -30,6 +30,7 @@ MODIFIER_SUFFIXES = {
     5: "5",
     6: "6",
     7: "7",
+    8: "8",
 }
 BASELINE_MODIFIER = 2
 EFFECT_SIZE = 0x30
