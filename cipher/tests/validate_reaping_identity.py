@@ -32,8 +32,10 @@ class ReapingIdentityTests(unittest.TestCase):
         self.gemrb.SetVar = self.variables.__setitem__
         self.gemrb.Log = lambda *args: self.logs.append(args)
         modules = {"GemRB": self.gemrb}
-        for name in ("Transactions", "InnateCharges", "Selectors", "ie_spells"):
+        for name in ("Transactions", "InnateCharges", "PersistentState", "Selectors", "ie_spells"):
             modules[name] = types.ModuleType(name)
+        modules["PersistentState"].read = lambda *args, **kwargs: (False, 0)
+        modules["PersistentState"].write = lambda *args, **kwargs: args[4] if len(args) > 4 else 0
         modules["ie_spells"].LS_MEMO = 8
         self.patched_modules = patch.dict(sys.modules, modules)
         self.patched_modules.start()

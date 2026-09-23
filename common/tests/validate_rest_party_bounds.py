@@ -52,7 +52,8 @@ class RestPartyBoundsTests(unittest.TestCase):
                                  "is_psion": check, "_write_psicrystal_used": reset_use,
                                  "psicrystal_companion": companion, "_scale_psicrystal": check}
                     for name in ("ensure_focus", "_ensure_power_selector_known", "sync_skill_points",
-                                 "_ensure_skill_selector_known", "_sync_center_action", "_sync_psicrystal_selector"):
+                                 "_ensure_skill_selector_known", "_sync_center_action", "_sync_subclass_mirror",
+                                 "_sync_psicrystal_selector"):
                         namespace[name] = check
                     exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), "exec"), namespace)
                     namespace["restore_party"]()

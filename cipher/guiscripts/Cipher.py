@@ -3,6 +3,7 @@
 import GemRB
 import Transactions
 import InnateCharges
+import PersistentState
 import Selectors
 from ie_spells import LS_MEMO
 
@@ -14,6 +15,14 @@ INNATE_TYPE = 2
 INNATE_LEVEL = 0
 CIPHER_CLASS = "CIPHER"
 POWER_SELECTOR_RESOURCE = "CILRN"
+SUBCLASS_SELECTOR_RESOURCE = "CISUB"
+SUBCLASS_STAT = 166
+SUBCLASS_STATE_OPCODE = "Protection:Spell"
+SUBCLASS_STATE_MARKER = 0x43495355
+SUBCLASS_STATE_RESOURCE = "CISUBCLS"
+SUBCLASS_STATE_SOURCE = "CISUBMOD"
+BASE_SUBCLASS = "BASE"
+SOUL_BLADE_SUBCLASS = "SOUL_BLADE"
 REAPING_KNIVES_RESOURCE = "CI8RKNI"
 REAPING_OWNER_FIRST = 7
 REAPING_OWNER_LAST = 255
@@ -45,7 +54,8 @@ def cipher_level(actor):
 
 def maximum_focus(actor):
     level = cipher_level(actor)
-    return 0 if not level else 20 + 5 * level
+    base = 0 if not level else 20 + 5 * level
+    return subclass_focus_cap(actor, base)
 
 
 def _focus_units(actor):
@@ -71,6 +81,168 @@ def current_focus(actor):
     if current > cap:
         return set_focus(actor, cap)
     return current
+
+
+def _subclass_table():
+    try:
+        return GemRB.LoadTable("cisub", False, True)
+    except Exception:
+        return None
+
+
+def _subclass_info_by_id(value):
+    table = _subclass_table()
+    if not table:
+        return {
+            "key": BASE_SUBCLASS,
+            "id": 0,
+            "resref": "",
+            "focus_cap_mod": 0,
+            "power_cost_mod": 0,
+            "weapon_focus_units": 1,
+            "enabled": True,
+        } if int(value) == 0 else None
+    try:
+        for index in range(table.GetRowCount()):
+            key = str(table.GetRowName(index)).upper()
+            if int(table.GetValue(key, "ID")) != int(value):
+                continue
+            resref = str(table.GetValue(key, "RESREF")).upper()
+            if resref == "****":
+                resref = ""
+            return {
+                "key": key,
+                "id": int(value),
+                "resref": resref,
+                "focus_cap_mod": int(table.GetValue(key, "FOCUS_CAP_MOD")),
+                "power_cost_mod": int(table.GetValue(key, "POWER_COST_MOD")),
+                "weapon_focus_units": max(1, int(table.GetValue(key, "WEAPON_FOCUS_UNITS"))),
+                "enabled": bool(int(table.GetValue(key, "ENABLED"))),
+            }
+    except Exception:
+        return None
+    return None
+
+
+def subclass_id(actor):
+    if not is_cipher(actor):
+        return 0
+    try:
+        found, value = PersistentState.read(
+            actor, SUBCLASS_STATE_OPCODE, SUBCLASS_STATE_MARKER, SUBCLASS_STATE_RESOURCE,
+        )
+    except Exception as error:
+        GemRB.Log(2, "Cipher", "subclass state read failed: %s" % error)
+        return 0
+    return max(0, int(value)) if found else 0
+
+
+def subclass_info(actor):
+    return _subclass_info_by_id(subclass_id(actor)) or _subclass_info_by_id(0)
+
+
+def has_subclass(actor):
+    return subclass_id(actor) != 0
+
+
+def is_subclass(actor, key):
+    info = subclass_info(actor)
+    return bool(info and info["key"] == str(key or "").upper())
+
+
+def _sync_subclass_mirror(actor):
+    if not is_cipher(actor):
+        return
+    GemRB.SetPlayerStat(actor, SUBCLASS_STAT, subclass_id(actor))
+
+
+def _write_subclass(actor, value):
+    info = _subclass_info_by_id(value)
+    if not is_cipher(actor) or not info or not info["enabled"]:
+        return False
+    PersistentState.write(
+        actor, SUBCLASS_STATE_OPCODE, SUBCLASS_STATE_MARKER, SUBCLASS_STATE_RESOURCE,
+        info["id"], SUBCLASS_STATE_SOURCE,
+    )
+    _sync_subclass_mirror(actor)
+    return subclass_id(actor) == info["id"]
+
+
+def subclass_choice_info(resref):
+    key = str(resref or "").upper()
+    table = _subclass_table()
+    if not table:
+        return None
+    try:
+        for index in range(table.GetRowCount()):
+            row = str(table.GetRowName(index)).upper()
+            value = int(table.GetValue(row, "ID"))
+            if value == 0:
+                continue
+            candidate = str(table.GetValue(row, "RESREF")).upper()
+            if candidate != key:
+                continue
+            info = _subclass_info_by_id(value)
+            if not info:
+                return None
+            return {
+                "kind": "subclass_choice",
+                "resref": key,
+                "parent": key,
+                "subclass": row,
+                "subclass_id": value,
+                "cost": 0,
+                "selector": False,
+            }
+    except Exception:
+        return None
+    return None
+
+
+def available_subclass_choices(actor):
+    if not is_cipher(actor) or has_subclass(actor):
+        return []
+    table = _subclass_table()
+    if not table:
+        return []
+    result = []
+    try:
+        for index in range(table.GetRowCount()):
+            row = str(table.GetRowName(index)).upper()
+            value = int(table.GetValue(row, "ID"))
+            if value == 0 or not int(table.GetValue(row, "ENABLED")):
+                continue
+            resref = str(table.GetValue(row, "RESREF")).upper()
+            if resref and resref != "****":
+                result.append(resref)
+    except Exception:
+        return []
+    return result
+
+
+def _choose_subclass(actor, resref):
+    info = subclass_choice_info(resref)
+    if not info or has_subclass(actor) or resref not in available_subclass_choices(actor):
+        return False
+    return _write_subclass(actor, info["subclass_id"])
+
+
+def subclass_focus_cap(actor, base_cap):
+    info = subclass_info(actor)
+    return max(0, int(base_cap) + (int(info["focus_cap_mod"]) if info else 0))
+
+
+def effective_power_cost(actor, info):
+    base = max(0, int(info.get("cost", 0)))
+    subclass = subclass_info(actor)
+    return max(0, base + (int(subclass["power_cost_mod"]) if subclass else 0))
+
+
+def focus_gain_units(actor, source_kind="weapon"):
+    subclass = subclass_info(actor)
+    if source_kind == "weapon" and subclass:
+        return max(1, int(subclass["weapon_focus_units"]))
+    return 1
 
 
 def _power_pick_table():
@@ -228,6 +400,7 @@ def restore_party():
     for actor in range(1, GemRB.GetPartySize() + 1):
         try:
             if is_cipher(actor):
+                _sync_subclass_mirror(actor)
                 set_focus(actor, STARTING_FOCUS)
                 _ensure_power_selector_known(actor)
         except Exception:
@@ -240,7 +413,7 @@ def can_manifest(actor, resref):
         info
         and is_cipher(actor)
         and cipher_level(actor) >= info["unlock"]
-        and current_focus(actor) >= info["cost"]
+        and current_focus(actor) >= effective_power_cost(actor, info)
     )
 
 
@@ -252,6 +425,17 @@ def action_info(resref):
         if info:
             info["internal_resref"] = key
         return info
+    if key == SUBCLASS_SELECTOR_RESOURCE:
+        return {
+            "kind": "subclass_selector",
+            "resref": key,
+            "parent": key,
+            "cost": 0,
+            "selector": True,
+        }
+    subclass_choice = subclass_choice_info(key)
+    if subclass_choice:
+        return subclass_choice
     if key == POWER_SELECTOR_RESOURCE:
         return {
             "kind": "power_selector",
@@ -343,6 +527,11 @@ def prepare_action_entry(spellbook, actor, entry):
 def filter_spellinfo(actor, resrefs):
     filtered = []
     for resref in resrefs:
+        subclass_choice = subclass_choice_info(resref)
+        if subclass_choice:
+            if resref in available_subclass_choices(actor):
+                filtered.append(resref)
+            continue
         choice = power_choice_info(resref)
         if choice:
             if can_learn_power(actor, resref):
@@ -356,6 +545,8 @@ def _is_reusable_innate(actor, resref):
     key = str(resref or "").upper()
     if power_info(key):
         return True
+    if key == SUBCLASS_SELECTOR_RESOURCE:
+        return bool(available_subclass_choices(actor))
     if key == POWER_SELECTOR_RESOURCE:
         return bool(available_power_choices(actor))
     return False
@@ -364,6 +555,7 @@ def _is_reusable_innate(actor, resref):
 def refresh_innate_charges(actor):
     if not is_cipher(actor):
         return 0
+    _sync_subclass_mirror(actor)
     _ensure_power_selector_known(actor)
     try:
         return InnateCharges.refresh(
@@ -382,6 +574,20 @@ def begin_manifest(actor, resref):
     if not info:
         return True
 
+    if info["kind"] == "subclass_selector":
+        cancel_pending(actor)
+        return bool(available_subclass_choices(actor))
+
+    if info["kind"] == "subclass_choice":
+        key = info["resref"]
+        return Transactions.begin(
+            TRANSACTION_NAMESPACE,
+            actor,
+            ("SUBCLASS", key),
+            lambda: key in available_subclass_choices(actor),
+            lambda: _choose_subclass(actor, key),
+        )
+
     if info["kind"] == "power_selector":
         cancel_pending(actor)
         return bool(available_power_choices(actor))
@@ -396,7 +602,8 @@ def begin_manifest(actor, resref):
             lambda: _learn_power(actor, key),
         )
 
-    transaction = (info["resref"], info["cost"])
+    cost = effective_power_cost(actor, info)
+    transaction = (info["resref"], cost)
 
     def legal():
         allowed = can_manifest(actor, info["resref"])
@@ -405,7 +612,7 @@ def begin_manifest(actor, resref):
         return allowed
 
     def commit():
-        set_focus(actor, current_focus(actor) - info["cost"])
+        set_focus(actor, current_focus(actor) - effective_power_cost(actor, info))
         return True
 
     return Transactions.begin(TRANSACTION_NAMESPACE, actor, transaction, legal, commit)

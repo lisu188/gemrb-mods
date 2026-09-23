@@ -31,6 +31,11 @@ def load_runtime():
     innate.refresh = lambda *args, **kwargs: 0
     sys.modules["InnateCharges"] = innate
 
+    persistent = types.ModuleType("PersistentState")
+    persistent.read = lambda *args, **kwargs: (False, 0)
+    persistent.write = lambda *args, **kwargs: args[4] if len(args) > 4 else 0
+    sys.modules["PersistentState"] = persistent
+
     selectors = types.ModuleType("Selectors")
     selectors.resolve_temporary = lambda *args, **kwargs: None
     sys.modules["Selectors"] = selectors

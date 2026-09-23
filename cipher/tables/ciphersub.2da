@@ -1,0 +1,5 @@
+2DA V1.0
+****
+             ID   RESREF    FOCUS_CAP_MOD   POWER_COST_MOD   WEAPON_FOCUS_UNITS   ENABLED
+BASE         0    ****      0               0                1                    1
+SOUL_BLADE   1    CISBLAD   0               5                2                    1

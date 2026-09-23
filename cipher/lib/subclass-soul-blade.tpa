@@ -1,0 +1,30 @@
+// Data-driven Cipher subclass selector and Soul Blade choice proxy.
+
+LAF cipher_create_power
+  INT_VAR
+    ci_tier = 1
+    ci_target = 5
+    ci_range = 0x7fff
+    ci_projectile = ci_none_projectile
+  STR_VAR
+    ci_resref = ~CISUB~
+    ci_name = ~Choose Cipher Subclass~
+    ci_description = ~Choose a Cipher subclass. The choice is permanent for this character. Existing Ciphers without a subclass continue to use the base Cipher rules.~
+    ci_icon = ~spwi105~
+END
+COPY_EXISTING ~CISUB.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~CISUBP~ END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR
+    ci_tier = 1
+    ci_target = 5
+    ci_range = 0x7fff
+    ci_projectile = ci_none_projectile
+  STR_VAR
+    ci_resref = ~CISBLAD~
+    ci_name = ~Soul Blade~
+    ci_description = ~Become a Soul Blade. Weapon hits generate 10 Focus instead of 5, while Cipher powers cost 5 additional Focus. This choice is permanent.~
+    ci_icon = ~spwi105~
+END

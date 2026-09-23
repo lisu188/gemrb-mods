@@ -27,6 +27,7 @@ COPY_EXISTING ~splprot.2da~ ~override~
   FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
     SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1%LNL%~
   END
+  SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_SUBCLASS_BASE 166 0 1%LNL%CIPHER_SOUL_BLADE 166 1 1%LNL%~
   SET ci_splprot_offset = BUFFER_LENGTH
   SET ci_splprot_length = STRING_LENGTH ~%ci_splprot_append%~
   INSERT_BYTES ci_splprot_offset ci_splprot_length
@@ -36,6 +37,8 @@ BUT_ONLY
 
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
+OUTER_SET ci_base_subclass_splprot = ci_splprot_rows + 36
+OUTER_SET ci_soul_blade_splprot = ci_splprot_rows + 37
 
 // Persist the exact numeric opcode-326 target row for later compatibility
 // components. Component 0 is the authority because it creates CIPHER_HOSTILE.
@@ -79,11 +82,28 @@ COPY_EXISTING ~CIFSTEP.spl~ ~override~
   END
 BUT_ONLY
 
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTP2~ END
+COPY_EXISTING ~CIFSTP2.spl~ ~override~
+  FOR (ci_unit = 32; ci_unit >= 0; --ci_unit) BEGIN
+    SET ci_row = ci_splprot_rows + 2 + ci_unit
+    SET ci_next = ci_unit + 2
+    SPRINT ci_setter ~CIFS%ci_next%~
+    LPF ADD_SPELL_EFFECT
+      INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_row
+      STR_VAR resource = ~%ci_setter%~
+    END
+  END
+BUT_ONLY
+
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFGAIN~ END
 COPY_EXISTING ~CIFGAIN.spl~ ~override~
   LPF ADD_SPELL_EFFECT
-    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_class_splprot
+    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_base_subclass_splprot
     STR_VAR resource = ~CIFSTEP~
+  END
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_soul_blade_splprot
+    STR_VAR resource = ~CIFSTP2~
   END
 BUT_ONLY
 
