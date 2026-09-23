@@ -318,6 +318,44 @@ def main() -> None:
         initial_cap = module.maximum_pool(1)
         assert initial_cap == 383
         assert module.ensure_pool(1) == initial_cap
+
+        apply_effect(
+            1, module.STATE_EFFECT_OPCODE, 0, 0,
+            "PSIPP10", "", "", "PSIMIND", 2,
+        )
+        assert module.equipment_capacity_bonus(1) == 10
+        assert module.maximum_pool(1) == initial_cap + 10
+        assert module.ensure_pool(1) == initial_cap
+        assert module.ensure_pool(1, True) == initial_cap + 10
+        effects[1] = [
+            effect for effect in effects[1]
+            if effect.get("Resource1") != "PSIPP10"
+        ]
+        assert module.maximum_pool(1) == initial_cap
+        assert module.ensure_pool(1) == initial_cap
+
+        apply_effect(
+            1, module.STATE_EFFECT_OPCODE, 0, 0,
+            "PSICNC2", "", "", "PSICNTR", 2,
+        )
+        assert module.equipment_skill_bonus(1, "CONCENTRATION") == 2
+        assert module.concentration_check(1, 20, roll=12)
+        effects[1] = [
+            effect for effect in effects[1]
+            if effect.get("Resource1") != "PSICNC2"
+        ]
+
+        apply_effect(
+            1, module.STATE_EFFECT_OPCODE, 0, 0,
+            "PSIDC1", "", "", "PSIDC1", 2,
+        )
+        assert module.equipment_dc_bonus(1) == 1
+        assert module._dc_modifier(1) == 5
+        effects[1] = [
+            effect for effect in effects[1]
+            if effect.get("Resource1") != "PSIDC1"
+        ]
+        assert module._dc_modifier(1) == 4
         assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | initial_cap
         persistent = get_effects(1, module.STATE_EFFECT_OPCODE)
         pool = [effect for effect in persistent if effect["Param2"] == module.POOL_EFFECT_MARKER]
