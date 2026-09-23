@@ -23,7 +23,7 @@ COPY_EXISTING ~splprot.2da~ ~override~
   PATCH_IF NOT (~%ci_splprot_last%~ STRING_EQUAL ~%LNL%~) BEGIN
     SPRINT ci_splprot_prefix ~%LNL%~
   END
-  SPRINT ci_splprot_append ~%ci_splprot_prefix%CIPHER_CLASS 0x10d %ci_class_id% 1%LNL%CIPHER_HOSTILE 0x108 2 1%LNL%~
+  SPRINT ci_splprot_append ~%ci_splprot_prefix%CIPHER_CLASS 0x10d %ci_class_id% 1%LNL%CIPHER_HOSTILE 0x108 2 1%LNL%CIPHER_SOUL_BLADE 164 1 1%LNL%~
   FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
     SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1%LNL%~
   END
@@ -36,6 +36,7 @@ BUT_ONLY
 
 OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
+OUTER_SET ci_soul_blade_splprot = ci_splprot_rows + 2
 
 // Persist the exact numeric opcode-326 target row for later compatibility
 // components. Component 0 is the authority because it creates CIPHER_HOSTILE.
@@ -69,7 +70,7 @@ END
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTEP~ END
 COPY_EXISTING ~CIFSTEP.spl~ ~override~
   FOR (ci_unit = 33; ci_unit >= 0; --ci_unit) BEGIN
-    SET ci_row = ci_splprot_rows + 2 + ci_unit
+    SET ci_row = ci_splprot_rows + 3 + ci_unit
     SET ci_next = ci_unit + 1
     SPRINT ci_setter ~CIFS%ci_next%~
     LPF ADD_SPELL_EFFECT
@@ -83,6 +84,12 @@ LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFGAIN~ END
 COPY_EXISTING ~CIFGAIN.spl~ ~override~
   LPF ADD_SPELL_EFFECT
     INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_class_splprot
+    STR_VAR resource = ~CIFSTEP~
+  END
+  // Soul Blade's derived ScriptingState9 mirror adds one extra shared Focus
+  // step. Both steps still terminate in the same CIFS<n> setter family.
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_soul_blade_splprot
     STR_VAR resource = ~CIFSTEP~
   END
 BUT_ONLY
