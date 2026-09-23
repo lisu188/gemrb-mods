@@ -1,0 +1,5 @@
+2DA V1.0
+*
+           ID CHOICE  CAP_MOD COST_DELTA GAIN_UNITS PASSIVE WEAPON     ENABLED
+BASE       0  *       0       0          1          *       BASE       1
+SOUL_BLADE 1  CISBLD  10      5          2          CISB1   SOUL_BLADE 1
