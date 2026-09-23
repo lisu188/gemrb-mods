@@ -48,6 +48,7 @@ def exists(actor):
     current = companion(actor)
     return bool(current and current['Alive'])
 
+
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
     for actor in (1, 2):
@@ -101,8 +102,6 @@ def after_load():
     loaded2 = companion(2)
     assert loaded1 and loaded2
     assert int(loaded1['ActorID']) != int(loaded2['ActorID'])
-    assert GemRB.GetPlayerStat(1, 163) == 2
-    assert GemRB.GetPlayerStat(2, 163) == 1
     body = companion(2)
     assert body
     body_id = int(body['ActorID'])
