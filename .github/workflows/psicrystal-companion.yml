@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: lisu188/gemrb
-          ref: 28d8a9d2ebd19f0de560856e67dc3cd7a7b74204
+          ref: 5e5f45da0d801674174a118aad9d5c49ec224542
           path: vendor/gemrb
       - name: Install native test dependencies
         run: |
@@ -45,6 +45,8 @@ jobs:
           executable="$(find "$RUNNER_TEMP/weidu" -type f -name weidu -print -quit)"
           chmod +x "$executable"
           echo "$(dirname "$executable")" >> "$GITHUB_PATH"
+      - name: Validate install, uninstall and reinstall lifecycle
+        run: python3 psion/tests/validate_psicrystal_install.py "$(command -v weidu)" vendor/gemrb
       - name: Install and validate generated resources
         run: |
           python3 psion/tests/seed_savewiz_fixture.py vendor/gemrb
