@@ -10,6 +10,7 @@ MARK_END = "# GEMRB MOD CORE END"
 CAST_CHECK_MARKER = "# GEMRB MOD CORE CAST CHECK v2"
 QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
+ENGINE_HOOK_BOOTSTRAP = "GemRBModCore.install_engine_hooks()\n"
 COMMON_MODULES = (
     "GemRBModCore.py",
     "GemRBModClassChoice.py",
@@ -29,6 +30,15 @@ def _insert_import(text, path):
     if needle not in text:
         raise RuntimeError(f"{path.name} GemRB import not found")
     return text.replace(needle, needle + "import GemRBModCore\n", 1)
+
+
+def _ensure_engine_hook_bootstrap(text, path):
+    if ENGINE_HOOK_BOOTSTRAP in text:
+        return text
+    needle = "import GemRBModCore\n"
+    if needle not in text:
+        raise RuntimeError(f"{path.name} GemRBModCore import not found")
+    return text.replace(needle, needle + ENGINE_HOOK_BOOTSTRAP, 1)
 
 
 def _insert_named_import(text, path, module):
@@ -233,12 +243,14 @@ def _patch_rest(text, path):
 def render_patch(text, kind, path):
     if MARK_BEGIN in text:
         if kind == "actions":
-            upgraded = _upgrade_spell_pressed(text, path) or text
+            upgraded = _ensure_engine_hook_bootstrap(text, path)
+            upgraded = _upgrade_spell_pressed(upgraded, path) or upgraded
             upgraded = _upgrade_quickspell(upgraded, path) or upgraded
             return upgraded if upgraded != text else None
         return None
     text = _insert_import(text, path)
     if kind == "actions":
+        text = _ensure_engine_hook_bootstrap(text, path)
         text = _patch_spell_pressed(text)
         text = _patch_quickspell(text)
         text = _patch_open(text, "ActionInnatePressed", True)
