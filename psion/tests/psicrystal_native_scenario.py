@@ -97,8 +97,8 @@ def before_save():
 def after_load():
     assert GemRB.GetPartySize() == 2
     assert exists(1) and exists(2)
-    assert Psionics._psicrystal_owner_token(1) == 2
-    assert Psionics._psicrystal_owner_token(2) == 1
+    assert int(companion(1)['ActorID']) == bodies[1]
+    assert int(companion(2)['ActorID']) == bodies[0]
     assert GemRB.GetPlayerStat(1, 163) == 2
     assert GemRB.GetPlayerStat(2, 163) == 1
     body = companion(2)
