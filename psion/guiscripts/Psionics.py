@@ -1584,24 +1584,34 @@ def psicrystal_companion(actor, mode=0):
     return GemRB.ManageCompanion(actor, PSICRYSTAL_BODY, mode)
 
 
+def _psicrystal_used_state(actor):
+    latest = 0
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            if int(effect.get("Param2", -1)) != PSICRYSTAL_USED_MARKER:
+                continue
+            if str(effect.get("Resource1", "")).upper() != PSICRYSTAL_USED_RESOURCE:
+                continue
+            latest = max(latest, max(0, int(effect.get("Param1", 0))))
+    except Exception as error:
+        raise RuntimeError("Psicrystal rest-use state read failed for actor %s" % actor) from error
+    return latest
+
+
 def _psicrystal_used(actor):
-    found, value = _read_private_value(
-        actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
-    )
-    return bool(value) if found else False
+    return bool(_psicrystal_used_state(actor) & 1)
 
 
 def _write_psicrystal_used(actor, value):
-    if value:
-        _write_private_value(
-            actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
-            1, PSICRYSTAL_EFFECT_SOURCE,
-        )
-    else:
-        PersistentState.remove(actor, STATE_EFFECT_OPCODE, PSICRYSTAL_USED_MARKER)
-    if _psicrystal_used(actor) != bool(value):
+    previous = _psicrystal_used_state(actor)
+    generation = (previous // 2) + 1
+    encoded = generation * 2 + int(bool(value))
+    GemRB.ApplyEffect(
+        actor, STATE_EFFECT_OPCODE, encoded, PSICRYSTAL_USED_MARKER,
+        PSICRYSTAL_USED_RESOURCE, "", "", PSICRYSTAL_EFFECT_SOURCE,
+    )
+    if _psicrystal_used_state(actor) != encoded or _psicrystal_used(actor) != bool(value):
         raise RuntimeError("Psicrystal rest-use state could not be persisted")
-
 
 def can_summon_psicrystal(actor):
     if not is_psion(actor) or not hasattr(GemRB, "ManageCompanion"):
