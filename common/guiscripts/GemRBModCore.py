@@ -152,6 +152,42 @@ def confirm_spell(actor, resref):
     return True
 
 
+
+def confirm_nonparty_spell(actor, resref):
+    """Authorize one accepted scripted cast and return its executable resource."""
+    actual = str(resref or "").upper()
+    for handler in _handlers():
+        planner = getattr(handler, "manifestation_plan", None)
+        commit = getattr(handler, "commit_manifestation", None)
+        owns_actor = getattr(handler, "is_psion", None)
+        metadata = getattr(handler, "power_info", None)
+        if not planner or not commit or not owns_actor or not metadata:
+            continue
+        if not owns_actor(actor) or not metadata(actual):
+            continue
+        plan = planner(actor, actual)
+        if not plan.get("allowed"):
+            return False
+        canonical = str(plan.get("resref") or actual).upper()
+        if not commit(actor, canonical):
+            return False
+        executable = str(plan.get("cast_resref") or canonical).upper()
+        return executable if executable != actual else True
+    return True
+
+
+def install_engine_hooks():
+    """Install callbacks owned by the current GameControl when supported."""
+    import GemRB
+    setter = getattr(GemRB, "SetNonPartySpellCastCheck", None)
+    if not setter:
+        return False
+    try:
+        setter(confirm_nonparty_spell)
+    except RuntimeError:
+        return False
+    return True
+
 def action_info(resref):
     if not is_managed_action(resref):
         return None
@@ -215,3 +251,11 @@ def _native_spell_selection(spellbook, actor, raw_spell):
 def spell_error(spellbook, actor, raw_spell, error):
     abort_action(actor, error)
     return _native_spell_selection(spellbook, actor, raw_spell)
+
+
+try:
+    import GemRB
+except ImportError:
+    pass
+else:
+    install_engine_hooks()
