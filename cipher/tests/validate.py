@@ -57,6 +57,7 @@ def test_tables():
     for resref in powers:
         assert f"GA_{resref}" not in clab
     assert clab.count("GA_CILRN") == 1
+    assert clab.count("GA_CISUBCL") == 1
     assert "AP_CIFCORE" in clab
     assert "AP_CIFSW15" in clab
     assert "AP_CIFSW20" in clab
@@ -65,8 +66,8 @@ def test_tables():
     assert all(len(row) == 20 for row in clab_abilities.values())
     grants = {(level, token) for row in clab_abilities.values()
               for level, token in enumerate(row, 1) if token != "****"}
-    assert grants == {(1, "AP_CIFCORE"), (1, "GA_CILRN"), (10, "AP_CIFSW15"), (20, "AP_CIFSW20")}, grants
-    assert sum(token != "****" for row in clab_abilities.values() for token in row) == 4
+    assert grants == {(1, "AP_CIFCORE"), (1, "GA_CILRN"), (1, "GA_CISUBCL"), (10, "AP_CIFSW15"), (20, "AP_CIFSW20")}, grants
+    assert sum(token != "****" for row in clab_abilities.values() for token in row) == 5
 
 
 def test_sources():
@@ -80,6 +81,7 @@ def test_sources():
         "cipher/lib/class-thac0-fix.tpa",
         "cipher/lib/powers.tpa",
         "cipher/lib/power-learning.tpa",
+        "cipher/lib/subclass-soul-blade.tpa",
         "cipher/lib/power-thac0-fix.tpa",
         "cipher/lib/soul-whip-fix.tpa",
         "cipher/lib/focus.tpa",
@@ -93,8 +95,10 @@ def test_sources():
     assert "override/mxpsion.2da" not in setup
     assert "cipherknown.2da" in setup
     assert "cipick.2da" in setup
+    assert "ciphersub.2da" in setup
+    assert "cisubpk.2da" in setup
     assert "generate_learning_proxies.py" in setup
-    assert "VERSION ~0.2.0~" in setup
+    assert "VERSION ~0.3.0~" in setup
 
     class_rules = (CIPHER / "lib" / "class.tpa").read_text(encoding="utf-8")
     assert "SET ci_mage_start = INDEX_BUFFER (~^MAGE[ %TAB%]+~)" in class_rules
@@ -106,8 +110,16 @@ def test_sources():
         "import Transactions",
         "import InnateCharges",
         "import Selectors",
+        "import PersistentState",
         "from ie_spells import LS_MEMO",
         'POWER_SELECTOR_RESOURCE = "CILRN"',
+        'SUBCLASS_SELECTOR_RESOURCE = "CISUBCL"',
+        "def subclass_id(actor):",
+        "def focus_cap(actor, base_cap):",
+        "def power_cost(actor, info, base_cost=None):",
+        "def focus_gain_units(actor, source_kind, base_units=1):",
+        "def passive_resource(actor):",
+        "def weapon_policy(actor):",
         "def power_learning_limits(actor):",
         "def available_power_choices(actor):",
         "def filter_spellinfo(actor, resrefs):",
@@ -126,7 +138,9 @@ def test_sources():
     focus_item_patch = (CIPHER / "lib" / "focus-item-patch.tpa").read_text(encoding="utf-8")
     late_focus = (CIPHER / "lib" / "focus-items-late.tpa").read_text(encoding="utf-8")
     assert "CIPHER_HOSTILE 0x108 2 1" in focus
+    assert "CIPHER_SOUL_BLADE 164 1 1" in focus
     assert "ci_hostile_splprot" in focus
+    assert "ci_soul_blade_splprot" in focus
     assert "INSERT_BYTES ci_splprot_offset ci_splprot_length" in focus
     assert "WRITE_ASCIIE ci_splprot_offset" in focus
     assert "APPEND ~splprot.2da~" not in focus
@@ -210,20 +224,29 @@ def test_sources():
 
 
 def load_runtime():
-    state = {34: 10, 165: 4}
+    states = {
+        1: {34: 10, 164: 0, 165: 4},
+        2: {34: 10, 164: 0, 165: 4},
+    }
+    effects = {1: [], 2: []}
     applied = []
-    known_innates = [
+    initial_powers = [
         {"SpellResRef": "CI1WHSP"},
         {"SpellResRef": "CI2MBND"},
         {"SpellResRef": "CI3PUPP"},
         {"SpellResRef": "CI4PBLK"},
     ]
-    memorized_innates = [dict(spell, Flags=1) for spell in known_innates]
+    known_innates = {actor: [dict(spell) for spell in initial_powers] for actor in states}
+    memorized_innates = {
+        actor: [dict(spell, Flags=1) for spell in initial_powers]
+        for actor in states
+    }
 
     table_files = {
         "cipowers": "cipherpowers.2da",
         "ciknown": "cipherknown.2da",
         "cipick": "cipick.2da",
+        "cisub": "ciphersub.2da",
     }
 
     class Table:
@@ -241,46 +264,102 @@ def load_runtime():
             return self.names[index]
 
     def apply_spell(actor, resref, caster=None):
-        applied.append((actor, resref, caster))
-        if resref.startswith("CIFS"):
-            state[165] = int(resref[4:])
+        key = str(resref).upper()
+        applied.append((actor, key, caster))
+        if key.startswith("CIFS") and key[4:].isdigit():
+            states[actor][165] = int(key[4:])
+        elif key == "CISB0":
+            states[actor][164] = 0
+        elif key == "CISB1":
+            states[actor][164] = 1
 
     def learn_spell(actor, resref, flags=0, *args):
         key = str(resref).upper()
-        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates):
+        if any(str(spell["SpellResRef"]).upper() == key for spell in known_innates[actor]):
             return 1
-        known_innates.append({"SpellResRef": key})
+        known_innates[actor].append({"SpellResRef": key})
         if int(flags) & 8:
-            memorized_innates.append({"SpellResRef": key, "Flags": 1})
+            memorized_innates[actor].append({"SpellResRef": key, "Flags": 1})
         return 0
 
+    def remove_spell(actor, resref, *args):
+        key = str(resref).upper()
+        before = len(known_innates[actor])
+        known_innates[actor][:] = [
+            spell for spell in known_innates[actor]
+            if str(spell["SpellResRef"]).upper() != key
+        ]
+        memorized_innates[actor][:] = [
+            spell for spell in memorized_innates[actor]
+            if str(spell["SpellResRef"]).upper() != key
+        ]
+        return before != len(known_innates[actor])
+
     def unmemorize(actor, spell_type, level, index):
-        memorized_innates.pop(index)
+        memorized_innates[actor].pop(index)
         return True
 
     def memorize(actor, spell_type, level, known_index, usable):
-        memorized_innates.append({
-            "SpellResRef": known_innates[known_index]["SpellResRef"],
+        memorized_innates[actor].append({
+            "SpellResRef": known_innates[actor][known_index]["SpellResRef"],
             "Flags": 1 if usable else 0,
         })
         return True
 
+    def get_effects(actor, opcode):
+        return [
+            {key: value for key, value in effect.items() if key != "Opcode"}
+            for effect in effects[actor]
+            if effect["Opcode"] == opcode
+        ]
+
+    def dispel_effect(actor, opcode, param2):
+        effects[actor][:] = [
+            effect for effect in effects[actor]
+            if not (effect["Opcode"] == opcode and int(effect["Param2"]) == int(param2))
+        ]
+
+    def apply_effect(
+        actor,
+        opcode,
+        param1,
+        param2,
+        resource1="",
+        resource2="",
+        resource3="",
+        source="",
+        timing=9,
+    ):
+        effects[actor].append({
+            "Opcode": opcode,
+            "Param1": int(param1),
+            "Param2": int(param2),
+            "Resource1": str(resource1),
+            "Resource2": str(resource2),
+            "Resource3": str(resource3),
+            "Source": str(source),
+            "Timing": int(timing),
+        })
+
     gemrb = types.ModuleType("GemRB")
-    gemrb.GetPartySize = lambda: 1
-    gemrb.GetPlayerStat = lambda actor, stat, *args: state.get(stat, 0)
+    gemrb.GetPartySize = lambda: len(states)
+    gemrb.GetPlayerStat = lambda actor, stat, *args: states[actor].get(stat, 0)
     gemrb.ApplySpell = apply_spell
-    # Match native ResRef truncation instead of accepting filesystem-only names.
     gemrb.LoadTable = lambda name, *args: Table(str(name).lower()[:8])
     gemrb.DisplayString = lambda *args: None
     gemrb.Log = lambda *args: None
-    gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates)
-    gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[index])
-    gemrb.GetMemorizedSpellsCount = lambda actor, spell_type, level, real: len(memorized_innates)
-    gemrb.GetMemorizedSpell = lambda actor, spell_type, level, index: dict(memorized_innates[index])
+    gemrb.GetKnownSpellsCount = lambda actor, spell_type, level: len(known_innates[actor])
+    gemrb.GetKnownSpell = lambda actor, spell_type, level, index: dict(known_innates[actor][index])
+    gemrb.GetMemorizedSpellsCount = lambda actor, spell_type, level, real: len(memorized_innates[actor])
+    gemrb.GetMemorizedSpell = lambda actor, spell_type, level, index: dict(memorized_innates[actor][index])
     gemrb.LearnSpell = learn_spell
+    gemrb.RemoveSpell = remove_spell
     gemrb.UnmemorizeSpell = unmemorize
     gemrb.MemorizeSpell = memorize
     gemrb.GetSpelldata = lambda actor: []
+    gemrb.GetEffects = get_effects
+    gemrb.DispelEffect = dispel_effect
+    gemrb.ApplyEffect = apply_effect
     sys.modules["GemRB"] = gemrb
 
     gui_common = types.ModuleType("GUICommon")
@@ -291,18 +370,24 @@ def load_runtime():
     ie_spells.LS_MEMO = 8
     sys.modules["ie_spells"] = ie_spells
 
-    sys.modules.pop("InnateCharges", None)
-    sys.modules.pop("Selectors", None)
+    for name in ("InnateCharges", "Selectors", "PersistentState", "Transactions"):
+        sys.modules.pop(name, None)
     spec = importlib.util.spec_from_file_location("cipher_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module, state, applied, known_innates, memorized_innates
+    return module, states, applied, known_innates, memorized_innates, effects
 
 
 def test_runtime():
-    runtime, state, applied, known_innates, _ = load_runtime()
+    runtime, states, applied, known_innates, _, effects = load_runtime()
     runtime.cancel_pending()
+    base_info = runtime.power_info("CI2MBND")
+    assert runtime.subclass_id(1) == 0
+    assert runtime.subclass_info(1)["key"] == "BASE"
     assert runtime.maximum_focus(1) == 70
+    assert runtime.power_cost(1, base_info) == 15
+    assert runtime.focus_gain_units(1, "weapon") == 1
+    assert runtime.weapon_policy(1) == "BASE"
     assert runtime.current_focus(1) == 20
     runtime.set_focus(1, 200)
     assert runtime.current_focus(1) == 70
@@ -317,16 +402,60 @@ def test_runtime():
     assert applied[-1] == (1, "CIFS2", 1)
     assert not runtime.can_manifest(1, "CI2MBND")
 
-    # A migrated level-10 Cipher with four old fixed powers has one choice under
-    # the new five-power cap. Restore grants the selector without revoking old powers.
     runtime.restore_party()
-    assert state[165] == 4
-    assert (1, "CIFS4", 1) in applied[-6:]
+    assert states[1][165] == 4 and states[2][165] == 4
     assert runtime.current_focus(1) == 20
-    known_refs = {str(spell["SpellResRef"]).upper() for spell in known_innates}
-    assert runtime.POWER_SELECTOR_RESOURCE in known_refs
+    assert runtime.current_focus(2) == 20
+    for actor in (1, 2):
+        known_refs = {str(spell["SpellResRef"]).upper() for spell in known_innates[actor]}
+        assert runtime.POWER_SELECTOR_RESOURCE in known_refs
+        assert runtime.SUBCLASS_SELECTOR_RESOURCE in known_refs
     assert runtime.power_learning_limits(1) == (5, 5)
     assert runtime.power_choices_remaining(1) == 1
+
+    power_refs_before = runtime.known_power_refs(1)
+    assert runtime.available_subclass_choices(1) == ["CISBLD"]
+    assert runtime.action_info(runtime.SUBCLASS_SELECTOR_RESOURCE)["kind"] == "subclass_selector"
+    assert runtime.action_info("CISBLD")["kind"] == "subclass_choice"
+    assert runtime.begin_manifest(1, runtime.SUBCLASS_SELECTOR_RESOURCE)
+    assert runtime.begin_manifest(1, "CISBLD")
+    assert runtime.subclass_id(1) == 0
+    assert runtime.begin_manifest(1, "CISBLD")
+    assert runtime.subclass_id(1) == 1
+    assert runtime.subclass_id(2) == 0
+    assert runtime.known_power_refs(1) == power_refs_before
+    assert runtime.maximum_focus(1) == 80
+    assert runtime.maximum_focus(2) == 70
+    assert runtime.power_cost(1, base_info) == 20
+    assert runtime.power_cost(2, base_info) == 15
+    assert runtime.focus_gain_units(1, "weapon") == 2
+    assert runtime.focus_gain_units(2, "weapon") == 1
+    assert runtime.passive_resource(1) == "CISB1"
+    assert runtime.weapon_policy(1) == "SOUL_BLADE"
+    assert states[1][164] == 1 and states[2][164] == 0
+    assert len([
+        effect for effect in effects[1]
+        if effect["Opcode"] == runtime.SUBCLASS_STATE_OPCODE
+        and effect["Param2"] == runtime.SUBCLASS_STATE_MARKER
+        and effect["Resource1"] == runtime.SUBCLASS_STATE_RESOURCE
+    ]) == 1
+    states[1][164] = 0
+    runtime._sync_subclass_passive(1)
+    assert states[1][164] == 1
+    assert runtime.subclass_id(1) == 1
+
+    runtime.set_focus(1, 20)
+    assert runtime.can_manifest(1, "CI2MBND")
+    assert runtime.begin_manifest(1, "CI2MBND")
+    assert runtime.begin_manifest(1, "CI2MBND")
+    assert runtime.current_focus(1) == 0
+    assert runtime.current_focus(2) == 20
+
+    assert runtime._write_subclass(1, 0)
+    assert runtime.subclass_id(1) == 0
+    assert states[1][164] == 0
+    assert runtime.maximum_focus(1) == 70
+    assert runtime.power_cost(1, base_info) == 15
 
     _, picks = read_2da(CIPHER / "tables" / "cipick.2da")
     tier5_proxy = picks["CI5BINS"][0]
@@ -337,13 +466,13 @@ def test_runtime():
     assert runtime.action_info(tier5_proxy)["kind"] == "power_choice"
     assert runtime.begin_manifest(1, runtime.POWER_SELECTOR_RESOURCE)
     assert runtime.begin_manifest(1, tier5_proxy)
-    assert "CI5BINS" not in {str(spell["SpellResRef"]).upper() for spell in known_innates}
+    assert "CI5BINS" not in {str(spell["SpellResRef"]).upper() for spell in known_innates[1]}
     assert runtime.begin_manifest(1, tier5_proxy)
-    assert "CI5BINS" in {str(spell["SpellResRef"]).upper() for spell in known_innates}
+    assert "CI5BINS" in {str(spell["SpellResRef"]).upper() for spell in known_innates[1]}
     assert runtime.power_choices_remaining(1) == 0
     assert not runtime.begin_manifest(1, runtime.POWER_SELECTOR_RESOURCE)
 
-    state[34] = 11
+    states[1][34] = 11
     assert runtime.power_learning_limits(1) == (6, 6)
     assert runtime.power_choices_remaining(1) == 1
     assert tier6_proxy in runtime.available_power_choices(1)
