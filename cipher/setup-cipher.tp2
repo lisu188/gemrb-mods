@@ -14,6 +14,8 @@ REQUIRE_PREDICATE GAME_IS ~tutu tutu_totsc bgee ca bgt bg2ee eet~ @2
 COPY ~cipher/tables/cipherpowers.2da~ ~override/cipowers.2da~
 COPY ~cipher/tables/cipherknown.2da~ ~override/ciknown.2da~
 COPY ~cipher/tables/cipick.2da~ ~override/cipick.2da~
+COPY ~cipher/tables/ciphersub.2da~ ~override/cisub.2da~
+COPY ~cipher/tables/ciphersubpick.2da~ ~override/cisubp.2da~
 COPY ~cipher/tables/clabciph.2da~ ~override/clabciph.2da~
 COPY ~cipher/tables/mxcipher.2da~ ~override/mxcipher.2da~
 
@@ -25,6 +27,7 @@ INCLUDE ~cipher/lib/class-skills-fix.tpa~
 INCLUDE ~cipher/lib/class-thac0-fix.tpa~
 INCLUDE ~cipher/lib/powers.tpa~
 INCLUDE ~cipher/lib/power-learning.tpa~
+INCLUDE ~cipher/lib/subclass-soul-blade.tpa~
 INCLUDE ~cipher/lib/power-thac0-fix.tpa~
 INCLUDE ~cipher/lib/soul-whip-fix.tpa~
 INCLUDE ~cipher/lib/high-tier-fidelity.tpa~
