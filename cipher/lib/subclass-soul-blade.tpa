@@ -1,0 +1,37 @@
+// Cipher subclass selector and Soul Blade derived-state resources.
+// The stable subclass ID is persisted by Cipher.py. ScriptingState9 (stat 164,
+// opcode-282 selector 8) is only a derived mirror for SPLPROT routing.
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR
+    ci_resref = ~CISUBCL~
+    ci_name = ~Choose Cipher Subclass~
+    ci_description = ~Choose an optional Cipher subclass. Existing and unselected Ciphers remain BASE. The first available subclass is Soul Blade.~
+    ci_icon = ~spcl321~
+END
+COPY_EXISTING ~CISUBCL.spl~ ~override~
+  LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~CISUBPK~ END
+BUT_ONLY
+
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR
+    ci_resref = ~CISBLD~
+    ci_name = ~Soul Blade~
+    ci_description = ~Become a Soul Blade. Maximum Focus increases by 10 and weapon hits generate 10 Focus instead of 5, but every Cipher power costs 5 additional Focus. The choice is persistent.~
+    ci_icon = ~spcl321~
+END
+
+ACTION_FOR_EACH ci_subclass_id IN 0 1 BEGIN
+  OUTER_SPRINT ci_subclass_setter ~CISB%ci_subclass_id%~
+  LAF cipher_create_power
+    INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+    STR_VAR ci_resref = ~%ci_subclass_setter%~ ci_name = ~~ ci_description = ~~ ci_icon = ~spcl321~
+  END
+  COPY_EXISTING ~%ci_subclass_setter%.spl~ ~override~
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 STR_VAR resource = ~CISB0~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 321 target = 1 timing = 1 STR_VAR resource = ~CISB1~ END
+    LPF ADD_SPELL_EFFECT INT_VAR opcode = 282 target = 1 timing = 9 parameter1 = ci_subclass_id parameter2 = 8 END
+  BUT_ONLY
+END
