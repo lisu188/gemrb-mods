@@ -45,6 +45,8 @@ jobs:
           executable="$(find "$RUNNER_TEMP/weidu" -type f -name weidu -print -quit)"
           chmod +x "$executable"
           echo "$(dirname "$executable")" >> "$GITHUB_PATH"
+      - name: Validate install, uninstall and reinstall lifecycle
+        run: python3 psion/tests/validate_psicrystal_install.py "$(command -v weidu)" vendor/gemrb
       - name: Install and validate generated resources
         run: |
           python3 psion/tests/seed_savewiz_fixture.py vendor/gemrb
