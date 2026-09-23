@@ -1059,12 +1059,13 @@ def prepare_action_entry(spellbook, actor, entry):
     canonical = _dc_canonical_resref(selected)
     if canonical != selected:
         return entry
+    plan = manifestation_plan(actor, canonical)
     info = power_info(canonical)
     if not info or info.get("selector", False):
         return entry
 
-    replacement = _dc_variant_resref(canonical, _dc_modifier(actor))
-    if replacement == canonical or not _dc_resource_exists(replacement):
+    replacement = plan["cast_resref"]
+    if replacement == canonical:
         return entry
 
     if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:
@@ -1084,8 +1085,79 @@ def _meets_base_requirements(actor, info):
     return GemRB.GetPlayerStat(actor, INT_STAT) >= 10 + info["level"]
 
 
+def _pool_snapshot(actor):
+    if not is_psion(actor):
+        return 0
+    cap = min(maximum_pool(actor), POOL_VALUE_MASK)
+    initialized, current = _decode_pool_state(actor)
+    if initialized:
+        return max(0, min(current, cap))
+    persisted, current = _read_persistent_pool_state(actor)
+    if persisted:
+        return max(0, min(current, cap))
+    return cap
+
+
+def manifestation_plan(actor, resref):
+    key = _dc_canonical_resref(resref)
+    info = power_info(key)
+    if not info:
+        return {
+            "allowed": False,
+            "reason": "unknown_power",
+            "resref": key,
+            "cast_resref": key,
+            "cost": 0,
+            "pool": _pool_snapshot(actor),
+        }
+
+    canonical = str(info["resref"]).upper()
+    current = _pool_snapshot(actor)
+    cost = int(info["cost"])
+    cast_resref = canonical
+    if not info.get("selector", False):
+        candidate = _dc_variant_resref(canonical, _dc_modifier(actor))
+        if candidate != canonical and _dc_resource_exists(candidate):
+            cast_resref = candidate
+
+    reason = ""
+    allowed = True
+    if info.get("selector", False):
+        allowed = False
+        reason = "selector_requires_variant"
+    elif not _meets_base_requirements(actor, info):
+        allowed = False
+        reason = "requirements"
+    elif cost > manifester_level(actor):
+        allowed = False
+        reason = "manifester_level"
+    elif current < cost:
+        allowed = False
+        reason = "power_points"
+
+    return {
+        "allowed": allowed,
+        "reason": reason,
+        "resref": canonical,
+        "cast_resref": cast_resref,
+        "parent": str(info.get("parent") or canonical).upper(),
+        "cost": cost,
+        "pool": current,
+        "level": int(info.get("level", 0)),
+        "discipline": str(info.get("discipline", "")).upper(),
+    }
+
+
+def commit_manifestation(actor, resref):
+    plan = manifestation_plan(actor, resref)
+    if not plan["allowed"]:
+        return False
+    _write_pool_state(actor, plan["pool"] - plan["cost"])
+    return True
+
+
 def _variant_is_affordable(actor, info):
-    return info["cost"] <= manifester_level(actor) and ensure_pool(actor) >= info["cost"]
+    return info["cost"] <= manifester_level(actor) and _pool_snapshot(actor) >= info["cost"]
 
 
 def can_manifest(actor, resref):
@@ -1094,7 +1166,7 @@ def can_manifest(actor, resref):
         return False
     if info["selector"]:
         return bool(available_variants(actor, info["resref"], check_parent=False))
-    return _variant_is_affordable(actor, info)
+    return manifestation_plan(actor, resref)["allowed"]
 
 
 def available_variants(actor, parent, check_parent=True):
@@ -1247,18 +1319,17 @@ def begin_manifest(actor, resref):
         cancel_pending(actor)
         return can_manifest(actor, info["resref"])
 
-    transaction = (info["resref"], info["cost"])
+    plan = manifestation_plan(actor, info["resref"])
+    transaction = (plan["resref"], plan["cost"])
 
     def legal():
-        allowed = can_manifest(actor, info["resref"])
+        allowed = manifestation_plan(actor, plan["resref"])["allowed"]
         if not allowed:
             GemRB.DisplayString(10417, 0xFFFFFF, actor)
         return allowed
 
     def commit():
-        current = ensure_pool(actor)
-        _write_pool_state(actor, current - info["cost"])
-        return True
+        return commit_manifestation(actor, plan["resref"])
 
     return Transactions.begin(
         TRANSACTION_NAMESPACE, actor, transaction, legal, commit,

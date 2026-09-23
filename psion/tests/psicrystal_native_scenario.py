@@ -8,16 +8,6 @@ import Psionics
 import Spellbook
 
 bodies = []
-creation = GemRB.CreateCreature
-
-
-def observe_creation(*args):
-    result = creation(*args)
-    bodies.append(result)
-    return result
-
-
-GemRB.CreateCreature = observe_creation
 
 
 def record(name, **data):
@@ -38,31 +28,45 @@ def schedule(function, delay=1800):
 def cast(actor, resource):
     GemRB.GameSelectPC(actor, True, 1)
     Psionics.refresh_innate_charges(actor)
+    before = Psionics.psicrystal_companion(actor) if resource == 'PXCRSUM' else None
     entry = next(entry for entry in Spellbook.GetUsableMemorizedSpells(actor, 2)
                  if entry['SpellResRef'].upper() == resource)
     assert GemRBModCore.begin_spell(Spellbook, actor, entry['SpellIndex'])
     GemRB.SpellCast(actor, 4, entry['SpellIndex'] % 1000)
+    if resource == 'PXCRSUM':
+        after = Psionics.psicrystal_companion(actor)
+        assert after and after['Alive']
+        if not before or not before['Alive']:
+            bodies.append(int(after['ActorID']))
+
+
+def companion_for_token(token):
+    for actor in range(1, GemRB.GetPartySize() + 1):
+        if Psionics._psicrystal_owner_token(actor) != token:
+            continue
+        companion = Psionics.psicrystal_companion(actor)
+        return companion if companion and companion['Alive'] else None
+    return None
 
 
 def exists(token):
-    return GemRB.EvaluateString('Exists("PSCR%03d")' % token, True)
-
+    return bool(companion_for_token(token))
 
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
     for actor in (1, 2):
         Psionics._write_private_value(actor, Psionics.PSICRYSTAL_PERSONALITY_MARKER,
             Psionics.PSICRYSTAL_PERSONALITY_RESOURCE, 4, Psionics.PSICRYSTAL_EFFECT_SOURCE)
-        Psionics._ensure_psicrystal_companion_actions(actor)
+        Psionics.refresh_innate_charges(actor)
     GemRB.GameSelectPC(1, True, 1)
     entry = next(entry for entry in Spellbook.GetUsableMemorizedSpells(1, 2)
-                 if entry['SpellResRef'].upper() == 'PXCSUM')
+                 if entry['SpellResRef'].upper() == 'PXCRSUM')
     assert GemRBModCore.begin_spell(Spellbook, 1, entry['SpellIndex'])
     assert not bodies and not GemRB.GetGameVar('PSCRNEXT')
     GemRBModCore.cancel_pending()
     assert not bodies
-    cast(1, 'PXCSUM')
-    cast(2, 'PXCSUM')
+    cast(1, 'PXCRSUM')
+    cast(2, 'PXCRSUM')
     assert len(bodies) == 2
     record('accepted_cast', bodies=len(bodies))
     schedule(before_save)
@@ -76,7 +80,7 @@ def before_save():
         assert GemRB.GetPlayerStat(body, 8) == 0
         assert GemRB.GetPlayerStat(body, 34) == 5
         assert GemRB.GetPlayerStat(body, 38) == 8
-    assert not Psionics.can_use_psicrystal_companion(1, True)
+    assert Psionics.can_dismiss_psicrystal(1)
     GemRB.GameSwapPCs(1, 2)
     assert Psionics._psicrystal_owner_token(1) == 2
     assert Psionics._psicrystal_owner_token(2) == 1
@@ -101,17 +105,20 @@ def after_load():
     assert Psionics._psicrystal_owner_token(2) == 1
     assert GemRB.GetPlayerStat(1, 163) == 2
     assert GemRB.GetPlayerStat(2, 163) == 1
-    assert GemRB.EvaluateString('CheckStat("PSCR001",17,0)', True)
-    assert GemRB.EvaluateString('CheckStat("PSCR001",0,8)', True)
+    body = companion_for_token(1)
+    assert body
+    body_id = int(body['ActorID'])
+    assert GemRB.GetPlayerStat(body_id, 0) == 17
+    assert GemRB.GetPlayerStat(body_id, 8) == 0
     assert len(bodies) == 2
     record('loaded', no_duplicate=True, hp_preserved=True, zero_attacks=True)
-    cast(2, 'PXCDISM')
+    cast(2, 'PXCRDIS')
     schedule(after_dismiss)
 
 
 def after_dismiss():
     assert not exists(1) and exists(2)
-    cast(2, 'PXCSUM')
+    cast(2, 'PXCRSUM')
     assert len(bodies) == 3
     record('dismiss_and_remanifest', epoch=GemRB.GetGameVar('PSCR001'))
     GemRB.GameSelectPC(0, True)
@@ -122,7 +129,7 @@ def after_dismiss():
 def after_area():
     assert GemRB.GetCurrentArea() == 'AR0110', GemRB.GetCurrentArea()
     assert not exists(1) and not exists(2)
-    cast(2, 'PXCSUM')
+    cast(2, 'PXCRSUM')
     assert len(bodies) == 4
     assert exists(1)
     record('area_remanifest', epoch=GemRB.GetGameVar('PSCR001'))
@@ -134,7 +141,7 @@ def after_area():
 def old_area():
     assert GemRB.GetCurrentArea() == 'AR0100'
     assert not exists(1)
-    cast(2, 'PXCSUM')
+    cast(2, 'PXCRSUM')
     assert len(bodies) == 5
     GemRB.SetPlayerStat(bodies[-1], 0, 0)
     schedule(after_death, 3000)
@@ -142,7 +149,7 @@ def old_area():
 
 def after_death():
     assert not exists(1)
-    cast(2, 'PXCSUM')
+    cast(2, 'PXCRSUM')
     assert len(bodies) == 6
     GemRB.GameSelectPC(1, True, 1)
     GemRB.GameSetProtagonistMode(2)
@@ -153,7 +160,7 @@ def after_death():
 
 def owner_dead():
     assert not exists(1)
-    assert not Psionics.can_use_psicrystal_companion(2, True)
+    assert not Psionics.psicrystal_companion(2)
     record('owner_death_cleanup')
     print('PSICRYSTAL_NATIVE_PASS', flush=True)
     GemRB.Quit()
