@@ -1,0 +1,10 @@
+// Psion-owned equipment restrictions. Runtime bonuses are derived from equipped
+// marker effects; this file never mutates PP, focus, or purchased skill state.
+
+COPY_EXISTING ~PSISHP.itm~ ~override~
+  LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_seer_id END
+  LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_kineticist_id END
+  LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_egoist_id END
+  LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_nomad_id END
+  LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_telepath_id END
+BUT_ONLY
