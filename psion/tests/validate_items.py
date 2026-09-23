@@ -47,6 +47,12 @@ def main():
     assert "psionitems.2da" in setup
     assert "generate_items.py" in setup
     assert "psion/lib/equipment.tpa" in setup
+    assert "DESIGNATED 200" in setup
+    assert "FILE_EXISTS_IN_GAME ~ribald.sto~" in setup
+    assert "FILE_EXISTS_IN_GAME ~highhedg.sto~" in setup
+    for resref in [row["RESREF"] for row in registry]:
+        assert setup.count("REMOVE_STORE_ITEM ~%s~" % resref) == 2
+        assert setup.count("ADD_STORE_ITEM ~%s~" % resref) == 2
     runtime = (ROOT / "guiscripts/Psionics.py").read_text(encoding="utf-8")
     for row in registry:
         assert row["TAG"] in runtime
