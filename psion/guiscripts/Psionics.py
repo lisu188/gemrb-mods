@@ -116,7 +116,7 @@ TEMPORARY_SPELLINFO_TYPE = 255
 DC_BASELINE_MODIFIER = 2
 DC_MODIFIER_SUFFIXES = {
     -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",
-    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
+    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8",
 }
 DC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}
 
@@ -578,7 +578,12 @@ def skill_check_total(actor, skill, roll=None):
         return None
     if roll is None:
         roll = int(GemRB.Roll(1, 20, 0))
-    return int(roll) + skill_rank(actor, info["skill"]) + _ability_modifier(actor, info["ability"])
+    return (
+        int(roll)
+        + skill_rank(actor, info["skill"])
+        + _ability_modifier(actor, info["ability"])
+        + equipment_skill_bonus(actor, info["skill"])
+    )
 
 
 def concentration_check(actor, dc=20, roll=None):
@@ -648,6 +653,54 @@ def available_feat_choices(actor):
     return available
 
 
+EQUIPMENT_TAGS = {
+    "PSIPP10": {"pool": 10},
+    "PSICNC2": {"skill": "CONCENTRATION", "bonus": 2},
+    "PSIFOC2": {"skill": "SELF_DISCIPLINE", "bonus": 2, "focus": True},
+    "PSISHP3": {"skill": "ECTOPLASMIC_CRAFT", "bonus": 3, "discipline": "SHAPER"},
+    "PSIDC1": {"dc": 1},
+}
+
+
+def _equipment_entries(actor):
+    if not is_psion(actor):
+        return []
+    entries = []
+    try:
+        for effect in GemRB.GetEffects(actor, STATE_EFFECT_OPCODE):
+            tag = str(effect.get("Resource1", "")).upper()
+            info = EQUIPMENT_TAGS.get(tag)
+            if not info:
+                continue
+            required = info.get("discipline")
+            if required and required != discipline(actor):
+                continue
+            entries.append(info)
+    except Exception as error:
+        GemRB.Log(2, "Psionics", "equipment marker scan failed: %s" % error)
+    return entries
+
+
+def equipment_capacity_bonus(actor):
+    return sum(int(info.get("pool", 0)) for info in _equipment_entries(actor))
+
+
+def equipment_skill_bonus(actor, skill):
+    key = str(skill or "").upper()
+    total = 0
+    for info in _equipment_entries(actor):
+        if info.get("skill") != key:
+            continue
+        if info.get("focus") and not is_focused(actor):
+            continue
+        total += int(info.get("bonus", 0))
+    return total
+
+
+def equipment_dc_bonus(actor):
+    return sum(int(info.get("dc", 0)) for info in _equipment_entries(actor))
+
+
 def maximum_pool(actor):
     level = manifester_level(actor)
     if not level:
@@ -656,7 +709,12 @@ def maximum_pool(actor):
     modifier = max(0, (intelligence - 10) // 2)
     table = GemRB.LoadTable("pspool", False, True)
     base = int(table.GetValue(str(level), "BASE_POOL"))
-    return max(0, base + (modifier * level) // 2 + psionic_talent_bonus(actor))
+    return max(
+        0,
+        base + (modifier * level) // 2
+        + psionic_talent_bonus(actor)
+        + equipment_capacity_bonus(actor),
+    )
 
 
 def _decode_pool_state(actor):
@@ -931,7 +989,7 @@ def _has_variants(parent):
 
 def _dc_modifier(actor):
     intelligence = max(0, min(25, int(GemRB.GetPlayerStat(actor, INT_STAT))))
-    return (intelligence - 10) // 2
+    return (intelligence - 10) // 2 + equipment_dc_bonus(actor)
 
 
 def _dc_variant_resref(resref, modifier):

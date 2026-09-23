@@ -49,6 +49,7 @@ def main():
 
     assert MOD.variant_resref("PS1MTHR", -5) == "PS1MTHRV"
     assert MOD.variant_resref("PSMT20", 7) == "PSMT207"
+    assert MOD.variant_resref("PSMT20", 8) == "PSMT208"
     assert MOD.variant_resref("PS1MTHR", 2) == "PS1MTHR"
 
     with tempfile.TemporaryDirectory() as tmp:

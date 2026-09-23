@@ -19,6 +19,7 @@ COPY ~psion/tables/psionskills.2da~ ~override/psskills.2da~
 COPY ~psion/tables/psskill.2da~ ~override/psskill.2da~
 COPY ~psion/tables/pscryst.2da~ ~override/pscryst.2da~
 COPY ~psion/tables/pscrlvl.2da~ ~override/pscrlvl.2da~
+COPY ~psion/tables/psionitems.2da~ ~override/psitems.2da~
 COPY ~psion/tables/psionfeats.2da~ ~override/psfeats.2da~
 COPY ~psion/tables/psionfeatpick.2da~ ~override/psfeatpk.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
@@ -46,6 +47,14 @@ COPY ~psion/tables/clabptel.2da~ ~override/clabptel.2da~
 INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/powers.tpa~
 
+AT_NOW ~python "psion/tools/generate_items.py" --output ".psion-item-build"~
+COPY ~.psion-item-build/PSIMIND.itm~ ~override/PSIMIND.itm~ SAY NAME1 @200 SAY NAME2 @200 SAY DESC @201
+COPY ~.psion-item-build/PSICNTR.itm~ ~override/PSICNTR.itm~ SAY NAME1 @202 SAY NAME2 @202 SAY DESC @203
+COPY ~.psion-item-build/PSIFOC.itm~ ~override/PSIFOC.itm~ SAY NAME1 @204 SAY NAME2 @204 SAY DESC @205
+COPY ~.psion-item-build/PSISHP.itm~ ~override/PSISHP.itm~ SAY NAME1 @206 SAY NAME2 @206 SAY DESC @207
+COPY ~.psion-item-build/PSIDC1.itm~ ~override/PSIDC1.itm~ SAY NAME1 @208 SAY NAME2 @208 SAY DESC @209
+AT_NOW ~python "psion/tools/generate_items.py" --output ".psion-item-build" --cleanup~
+
 // Selector choices use harmless proxy SPLs so choosing a power to learn never
 // manifests the real power or inherits hostile-cast flags from it.
 AT_NOW ~python "psion/tools/generate_learning_proxies.py" --override "override" --output ".psion-learn-build"~
@@ -66,6 +75,7 @@ INCLUDE ~psion/lib/class-saves.tpa~
 INCLUDE ~psion/lib/class-layout.tpa~
 INCLUDE ~psion/lib/class-progression.tpa~
 INCLUDE ~psion/lib/class-common.tpa~
+INCLUDE ~psion/lib/equipment.tpa~
 INCLUDE ~psion/lib/item-usability.tpa~
 INCLUDE ~psion/lib/class-startup.tpa~
 INCLUDE ~psion/lib/class-skills.tpa~
@@ -76,4 +86,40 @@ REQUIRE_COMPONENT ~psion/setup-psion.tp2~ ~0~ ~Install the main Psion component 
 INCLUDE ~common/weidu/spell-functions.tpa~
 INCLUDE ~common/weidu/class-item-usability.tpa~
 INCLUDE ~psion/lib/class-detect.tpa~
+INCLUDE ~psion/lib/equipment.tpa~
 INCLUDE ~psion/lib/item-usability.tpa~
+
+
+BEGIN ~Psion equipment placement~
+DESIGNATED 200
+REQUIRE_COMPONENT ~psion/setup-psion.tp2~ ~0~ ~Install the main Psion component first.~
+
+ACTION_IF FILE_EXISTS_IN_GAME ~ribald.sto~ THEN BEGIN
+  COPY_EXISTING ~ribald.sto~ ~override~
+    REMOVE_STORE_ITEM ~PSIMIND~
+    REMOVE_STORE_ITEM ~PSICNTR~
+    REMOVE_STORE_ITEM ~PSIFOC~
+    REMOVE_STORE_ITEM ~PSISHP~
+    REMOVE_STORE_ITEM ~PSIDC1~
+    ADD_STORE_ITEM ~PSIMIND~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSICNTR~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSIFOC~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSISHP~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSIDC1~ #0 #0 #0 ~IDENTIFIED~ #1
+  BUT_ONLY
+END
+
+ACTION_IF FILE_EXISTS_IN_GAME ~highhedg.sto~ THEN BEGIN
+  COPY_EXISTING ~highhedg.sto~ ~override~
+    REMOVE_STORE_ITEM ~PSIMIND~
+    REMOVE_STORE_ITEM ~PSICNTR~
+    REMOVE_STORE_ITEM ~PSIFOC~
+    REMOVE_STORE_ITEM ~PSISHP~
+    REMOVE_STORE_ITEM ~PSIDC1~
+    ADD_STORE_ITEM ~PSIMIND~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSICNTR~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSIFOC~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSISHP~ #0 #0 #0 ~IDENTIFIED~ #1
+    ADD_STORE_ITEM ~PSIDC1~ #0 #0 #0 ~IDENTIFIED~ #1
+  BUT_ONLY
+END

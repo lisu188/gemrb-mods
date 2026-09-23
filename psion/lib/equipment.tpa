@@ -1,0 +1,45 @@
+// Psion-owned equipment restrictions. Runtime bonuses are derived from equipped
+// marker effects; this file never mutates PP, focus, or purchased skill state.
+
+DEFINE_PATCH_FUNCTION PSION_RESTRICT_EQUIPMENT
+INT_VAR shaper_only = 0
+BEGIN
+  FOR (ps_eq_class = 1; ps_eq_class <= 31; ++ps_eq_class) BEGIN
+    SET ps_eq_allowed = 0
+    PATCH_IF shaper_only = 1 BEGIN
+      PATCH_IF ps_eq_class = ps_shaper_id BEGIN SET ps_eq_allowed = 1 END
+    END ELSE BEGIN
+      PATCH_IF (ps_eq_class = ps_seer_id)
+        OR (ps_eq_class = ps_shaper_id)
+        OR (ps_eq_class = ps_kineticist_id)
+        OR (ps_eq_class = ps_egoist_id)
+        OR (ps_eq_class = ps_nomad_id)
+        OR (ps_eq_class = ps_telepath_id) BEGIN
+        SET ps_eq_allowed = 1
+      END
+    END
+    PATCH_IF ps_eq_allowed = 0 BEGIN
+      LPF GEMRB_ADD_CLASS_ITEM_RESTRICTION INT_VAR class_id = ps_eq_class END
+    END
+  END
+END
+
+COPY_EXISTING ~PSIMIND.itm~ ~override~
+  LPF PSION_RESTRICT_EQUIPMENT END
+BUT_ONLY
+
+COPY_EXISTING ~PSICNTR.itm~ ~override~
+  LPF PSION_RESTRICT_EQUIPMENT END
+BUT_ONLY
+
+COPY_EXISTING ~PSIFOC.itm~ ~override~
+  LPF PSION_RESTRICT_EQUIPMENT END
+BUT_ONLY
+
+COPY_EXISTING ~PSIDC1.itm~ ~override~
+  LPF PSION_RESTRICT_EQUIPMENT END
+BUT_ONLY
+
+COPY_EXISTING ~PSISHP.itm~ ~override~
+  LPF PSION_RESTRICT_EQUIPMENT INT_VAR shaper_only = 1 END
+BUT_ONLY

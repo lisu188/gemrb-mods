@@ -255,13 +255,40 @@ GitHub Actions validates:
 - official WeiDU parsing of the complete installer and every included TPA;
 - install, verification, uninstall and reinstall across normalized, native EE and legacy class-table layouts;
 - BG2/ToB startup-table lifecycles and semantic item restoration;
-- binary SPL bounds and preservation of original TLK/table data after uninstall.
+- binary SPL bounds and preservation of original TLK/table data after uninstall;
+- generated Psion equipment resources, class restrictions, and derived PP/skill/DC runtime bonuses.
 
 These automated checks do not by themselves claim live-game qualification. The real-engine cross-mod acceptance gate is tracked in #50.
 
 ## Next work
 
-Remaining expansion work includes psionic items, enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+Remaining expansion work includes enemy Psions, deeper augmentation for high-tier powers, and higher-fidelity runtime support for the approximations listed above.
+
+## Optional Psion equipment
+
+The main component installs five original Psion-owned equipment resources without
+changing campaign stores. Optional WeiDU component **200 — Psion equipment
+placement** adds one copy of each item to Ribald's store when `RIBALD.STO` is
+present and to High Hedge when `HIGHHEDG.STO` is present. Before adding them it
+removes any existing copy of these mod-owned resrefs, making forced reinstall
+idempotent. Campaigns without either store keep the item resources available for
+other encounter/store mods without receiving automatic placement.
+
+- **Cognizance Crystal (`PSIMIND`)**: Psion-only, +10 maximum PP capacity.
+  Equipping it does not refill PP. Removing it lets the normal pool synchronizer
+  clamp current PP to the reduced maximum.
+- **Crystal of Centering (`PSICNTR`)**: Psion-only, +2 Concentration.
+- **Focus Prism (`PSIFOC`)**: Psion-only, +2 Self-Discipline while focused.
+  It never grants or restores psionic focus.
+- **Shaper's Prism (`PSISHP`)**: Shaper-only, +3 Ectoplasmic Craft.
+- **Lens of Exacting Thought (`PSIDC1`)**: Psion-only, +1 save DC for Psion
+  powers. It reuses the exact-current-Intelligence DC-resource path rather than
+  rewriting power resources or persistent actor state.
+
+Equipment bonuses are read from equipped item marker effects. They do not write
+the persistent PP ledger, purchased skill ranks, feat state, or focus state.
+The compact registry is installed as `PSITEMS.2DA`; source metadata lives in
+`psion/tables/psionitems.2da`.
 
 ### Psicrystal personality availability
 
