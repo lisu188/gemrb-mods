@@ -3,7 +3,7 @@
 ## Implemented contract
 
 Personality selection and the existing owner skill bonus are unchanged. A chosen
-personality grants PXCSUM (Manifest Psicrystal) and PXCDISM (Dismiss Psicrystal).
+personality grants PXCRSUM (Manifest Psicrystal) and PXCRDIS (Dismiss Psicrystal).
 These are TARGET_NONE instant innates accepted through SetSpellCastCheck, not
 queued creature-target casts. Creation occurs synchronously inside the accepted
 transaction. Cancellation does not allocate an owner, create a creature or spend
@@ -86,7 +86,7 @@ These are disclosed fixture adaptations, not mocked companion behavior.
 python psion/tests/validate_psicrystal_native.py --engine-source /path/to/gemrb-source --runtime /path/to/installed-gemrb --installed /path/to/weidu-fixture --output /path/to/new-output-directory
 ```
 
-CI builds lisu188/gemrb commit 91e64d19c90f169530f99f5a08ecf96f1402cf67 and runs
+CI builds lisu188/gemrb commit 5e5f45da0d801674174a118aad9d5c49ec224542 and runs
 that scenario. It checks accepted creation, cancellation, two owners, party
 reorder, saved injury/zero APR, load without duplication, post-load dismissal,
 area remanifestation/stale cleanup, creature death and owner death.
