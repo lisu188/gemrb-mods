@@ -30,7 +30,7 @@ def prepare(root, engine_source, runtime, installed):
                 old.unlink()
         shutil.copy2(path, override / name)
     avatars = next(path for path in (installed / "override").iterdir() if path.name.casefold() == "avatars.2da")
-    row = next(line for line in avatars.read_text().splitlines() if "PSCRANIM" in line)
+    row = next(line for line in avatars.read_text().splitlines() if "PSCRANI" in line.upper())
     with (override / "avatars.2da").open("a") as out:
         out.write("\n" + row + "\n")
     for path in (ROOT / "common/guiscripts").glob("*.py"):
