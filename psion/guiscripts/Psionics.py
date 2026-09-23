@@ -1581,6 +1581,9 @@ def psicrystal_companion(actor, mode=0):
         return None
     if not hasattr(GemRB, "ManageCompanion"):
         raise RuntimeError("Psicrystal companions require GemRB.ManageCompanion")
+    if mode != 2 and int(GemRB.GetPlayerStat(actor, 0)) <= 0:
+        GemRB.ManageCompanion(actor, PSICRYSTAL_BODY, 2)
+        return None
     return GemRB.ManageCompanion(actor, PSICRYSTAL_BODY, mode)
 
 
