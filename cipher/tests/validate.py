@@ -53,6 +53,15 @@ def test_tables():
     assert metadata_header == ["VALUE"]
     assert metadata == {"HOSTILE": ["0"]}
 
+    subclass_header, subclasses = read_2da(CIPHER / "tables" / "ciphersub.2da")
+    assert subclass_header == ["ID", "RESREF", "FOCUS_CAP_MOD", "POWER_COST_MOD", "WEAPON_FOCUS_UNITS", "ENABLED"]
+    assert subclasses["BASE"] == ["0", "****", "0", "0", "1", "1"]
+    assert subclasses["SOUL_BLADE"] == ["1", "CISBLAD", "0", "5", "2", "1"]
+
+    subclass_pick_header, subclass_picks = read_2da(CIPHER / "tables" / "ciphersubpick.2da")
+    assert subclass_pick_header == ["ResRef", "Type"]
+    assert subclass_picks == {"SOUL_BLADE": ["CISBLAD", "3"]}
+
     clab = (CIPHER / "tables" / "clabciph.2da").read_text(encoding="utf-8")
     for resref in powers:
         assert f"GA_{resref}" not in clab
@@ -65,8 +74,8 @@ def test_tables():
     assert all(len(row) == 20 for row in clab_abilities.values())
     grants = {(level, token) for row in clab_abilities.values()
               for level, token in enumerate(row, 1) if token != "****"}
-    assert grants == {(1, "AP_CIFCORE"), (1, "GA_CILRN"), (10, "AP_CIFSW15"), (20, "AP_CIFSW20")}, grants
-    assert sum(token != "****" for row in clab_abilities.values() for token in row) == 4
+    assert grants == {(1, "AP_CIFCORE"), (1, "GA_CILRN"), (1, "GA_CISUB"), (10, "AP_CIFSW15"), (20, "AP_CIFSW20")}, grants
+    assert sum(token != "****" for row in clab_abilities.values() for token in row) == 5
 
 
 def test_sources():
@@ -80,6 +89,7 @@ def test_sources():
         "cipher/lib/class-thac0-fix.tpa",
         "cipher/lib/powers.tpa",
         "cipher/lib/power-learning.tpa",
+        "cipher/lib/subclass-soul-blade.tpa",
         "cipher/lib/power-thac0-fix.tpa",
         "cipher/lib/soul-whip-fix.tpa",
         "cipher/lib/focus.tpa",
@@ -93,6 +103,8 @@ def test_sources():
     assert "override/mxpsion.2da" not in setup
     assert "cipherknown.2da" in setup
     assert "cipick.2da" in setup
+    assert "ciphersub.2da" in setup
+    assert "ciphersubpick.2da" in setup
     assert "generate_learning_proxies.py" in setup
     assert "VERSION ~0.2.0~" in setup
 
@@ -105,9 +117,14 @@ def test_sources():
     for fragment in (
         "import Transactions",
         "import InnateCharges",
+        "import PersistentState",
         "import Selectors",
         "from ie_spells import LS_MEMO",
         'POWER_SELECTOR_RESOURCE = "CILRN"',
+        'SUBCLASS_SELECTOR_RESOURCE = "CISUB"',
+        "def subclass_id(actor):",
+        "def effective_power_cost(actor, info):",
+        "def focus_gain_units(actor, source_kind=\"weapon\"):",
         "def power_learning_limits(actor):",
         "def available_power_choices(actor):",
         "def filter_spellinfo(actor, resrefs):",
@@ -148,6 +165,10 @@ def test_sources():
     assert "opcode = 326" in focus
     assert "timing = 9 parameter1 = ci_unit parameter2 = 9" in focus
     assert "ci_unit = 33; ci_unit >= 0; --ci_unit" in focus
+    assert "CIPHER_SUBCLASS_BASE 166 0 1" in focus
+    assert "CIPHER_SOUL_BLADE 166 1 1" in focus
+    assert "CIFSTP2" in focus
+    assert "ci_soul_blade_splprot" in focus
     assert "ci_location = 1" in focus_item_patch
     assert "ci_attack_type = 1" in focus_item_patch
     assert "ci_attack_type = 2" in focus_item_patch
@@ -224,6 +245,7 @@ def load_runtime():
         "cipowers": "cipherpowers.2da",
         "ciknown": "cipherknown.2da",
         "cipick": "cipick.2da",
+        "cisub": "ciphersub.2da",
     }
 
     class Table:
@@ -267,8 +289,32 @@ def load_runtime():
 
     gemrb = types.ModuleType("GemRB")
     gemrb.GetPartySize = lambda: 1
+    effects = {}
+
+    def get_effects(actor, opcode):
+        return [dict(effect) for effect in effects.get(actor, []) if effect["Opcode"] == opcode]
+
+    def dispel_effect(actor, opcode, marker):
+        effects[actor] = [
+            effect for effect in effects.get(actor, [])
+            if not (effect["Opcode"] == opcode and int(effect["Param2"]) == int(marker))
+        ]
+
+    def apply_effect(actor, opcode, param1, param2, resource1="", resource2="", resource3="", source="", *args):
+        effects.setdefault(actor, []).append({
+            "Opcode": opcode,
+            "Param1": int(param1),
+            "Param2": int(param2),
+            "Resource1": str(resource1),
+            "Source": str(source),
+        })
+
     gemrb.GetPlayerStat = lambda actor, stat, *args: state.get(stat, 0)
+    gemrb.SetPlayerStat = lambda actor, stat, value: state.__setitem__(stat, int(value))
     gemrb.ApplySpell = apply_spell
+    gemrb.GetEffects = get_effects
+    gemrb.DispelEffect = dispel_effect
+    gemrb.ApplyEffect = apply_effect
     # Match native ResRef truncation instead of accepting filesystem-only names.
     gemrb.LoadTable = lambda name, *args: Table(str(name).lower()[:8])
     gemrb.DisplayString = lambda *args: None
@@ -347,6 +393,25 @@ def test_runtime():
     assert runtime.power_learning_limits(1) == (6, 6)
     assert runtime.power_choices_remaining(1) == 1
     assert tier6_proxy in runtime.available_power_choices(1)
+
+    assert runtime.subclass_id(1) == 0
+    assert runtime.focus_gain_units(1) == 1
+    assert runtime.effective_power_cost(1, runtime.power_info("CI2MBND")) == 15
+    assert runtime.SUBCLASS_SELECTOR_RESOURCE not in {
+        str(spell["SpellResRef"]).upper() for spell in known_innates
+    }
+    assert runtime.action_info(runtime.SUBCLASS_SELECTOR_RESOURCE)["kind"] == "subclass_selector"
+    assert runtime.available_subclass_choices(1) == ["CISBLAD"]
+    assert runtime.begin_manifest(1, runtime.SUBCLASS_SELECTOR_RESOURCE)
+    assert runtime.begin_manifest(1, "CISBLAD")
+    assert runtime.subclass_id(1) == 0
+    assert runtime.begin_manifest(1, "CISBLAD")
+    assert runtime.subclass_id(1) == 1
+    assert state[runtime.SUBCLASS_STAT] == 1
+    assert runtime.is_subclass(1, "SOUL_BLADE")
+    assert runtime.focus_gain_units(1) == 2
+    assert runtime.effective_power_cost(1, runtime.power_info("CI2MBND")) == 20
+    assert runtime.available_subclass_choices(1) == []
 
 
 def test_power_learning_proxy():
