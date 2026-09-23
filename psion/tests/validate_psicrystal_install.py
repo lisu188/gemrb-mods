@@ -56,6 +56,14 @@ def lifecycle(weidu, gemrb, parent):
     subprocess.run(
         [
             sys.executable,
+            str(ROOT / "psion/tests/seed_savewiz_fixture.py"),
+            str(gemrb),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
             str(ROOT / "psion/tests/make_weidu_fixture.py"),
             "--gemrb-root",
             str(gemrb),
