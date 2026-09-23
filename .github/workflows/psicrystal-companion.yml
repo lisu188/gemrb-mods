@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: lisu188/gemrb
-          ref: 91e64d19c90f169530f99f5a08ecf96f1402cf67
+          ref: 28d8a9d2ebd19f0de560856e67dc3cd7a7b74204
           path: vendor/gemrb
       - name: Install native test dependencies
         run: |
