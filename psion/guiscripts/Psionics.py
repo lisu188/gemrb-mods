@@ -1592,10 +1592,13 @@ def _psicrystal_used(actor):
 
 
 def _write_psicrystal_used(actor, value):
-    _write_private_value(
-        actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
-        int(bool(value)), PSICRYSTAL_EFFECT_SOURCE,
-    )
+    if value:
+        _write_private_value(
+            actor, PSICRYSTAL_USED_MARKER, PSICRYSTAL_USED_RESOURCE,
+            1, PSICRYSTAL_EFFECT_SOURCE,
+        )
+    else:
+        PersistentState.remove(actor, STATE_EFFECT_OPCODE, PSICRYSTAL_USED_MARKER)
     if _psicrystal_used(actor) != bool(value):
         raise RuntimeError("Psicrystal rest-use state could not be persisted")
 
