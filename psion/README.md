@@ -267,10 +267,12 @@ Remaining expansion work includes enemy Psions, deeper augmentation for high-tie
 ## Optional Psion equipment
 
 The main component installs five original Psion-owned equipment resources without
-placing them into campaign stores or encounters automatically. This keeps the
-class package portable across Tutu, BGEE, BGT, BG2EE, EET and conversion games;
-campaign-specific placement can add the resources normally without changing
-their mechanics.
+changing campaign stores. Optional WeiDU component **200 — Psion equipment
+placement** adds one copy of each item to Ribald's store when `RIBALD.STO` is
+present and to High Hedge when `HIGHHEDG.STO` is present. Before adding them it
+removes any existing copy of these mod-owned resrefs, making forced reinstall
+idempotent. Campaigns without either store keep the item resources available for
+other encounter/store mods without receiving automatic placement.
 
 - **Cognizance Crystal (`PSIMIND`)**: Psion-only, +10 maximum PP capacity.
   Equipping it does not refill PP. Removing it lets the normal pool synchronizer
