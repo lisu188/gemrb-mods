@@ -93,7 +93,7 @@ def main() -> None:
     roll_value = {"value": 20}
     gemrb_vars = {}
     prepared_casts = []
-    dc_resources = {"PS1CHAR4", "PS1MTHR4", "PSMT034"}
+    dc_resources = {"PS1CHAR4", "PSMT034"}
 
     gui.GetClassRowName = lambda actor: "PSION_EGOIST" if actor == 1 else ""
 
@@ -261,10 +261,10 @@ def main() -> None:
 
         assert stats[(1, 239)] == 0
         assert not get_effects(1, module.STATE_EFFECT_OPCODE)
-        plan = module.manifestation_plan(1, "PS1MTHR")
+        plan = module.manifestation_plan(1, "PSMT03")
         assert plan["allowed"]
-        assert plan["resref"] == "PS1MTHR"
-        assert plan["cast_resref"] == "PS1MTHR4"
+        assert plan["resref"] == "PSMT03"
+        assert plan["cast_resref"] == "PSMT034"
         assert plan["pool"] == module.maximum_pool(1)
         assert stats[(1, 239)] == 0
         assert not get_effects(1, module.STATE_EFFECT_OPCODE)
@@ -330,8 +330,8 @@ def main() -> None:
         assert initial_cap == 383
         assert module.ensure_pool(1) == initial_cap
         assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | initial_cap
-        commit_plan = module.manifestation_plan(1, "PS1MTHR")
-        assert module.commit_manifestation(1, "PS1MTHR")
+        commit_plan = module.manifestation_plan(1, "PSMT03")
+        assert module.commit_manifestation(1, "PSMT03")
         assert module.ensure_pool(1) == initial_cap - commit_plan["cost"]
         assert module.ensure_pool(1, True) == initial_cap
         persistent = get_effects(1, module.STATE_EFFECT_OPCODE)
