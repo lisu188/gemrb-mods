@@ -48,6 +48,8 @@ jobs:
 
       - name: Validate fake-GemRB runtime
         run: python psion/tests/validate_runtime.py
+      - name: Validate enemy Psion accepted-cast runtime
+        run: python psion/tests/validate_enemy_runtime.py
       - name: Validate GUI patch lifecycle
         run: python psion/tests/validate_patcher.py
       - name: Validate level-3 powers
