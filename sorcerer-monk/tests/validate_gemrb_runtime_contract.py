@@ -52,8 +52,16 @@ def validate_multiclass_clabs(source: str) -> None:
     )
     require(multi is not None, "GemRB runtime contract changed: ApplyKit multiclass branch not found")
     body = multi.group("body")
+    if re.search(r"ApplyClab2MC\s*\(\s*clab\s*,\s*diff\s*,\s*remove\s*,\s*kitclass\s*\)", body):
+        helper = re.search(
+            r"void\s+Actor::ApplyClab2MC\s*\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+            source,
+            re.S,
+        )
+        require(helper is not None, "GemRB runtime contract changed: Actor::ApplyClab2MC not found")
+        body = helper.group("body")
     require(
-        re.search(r"max\s*=\s*GetLevelInClass\s*\(\s*i\s*\)\s*;", body) is not None,
+        re.search(r"(?:ieDword\s+)?max\s*=\s*GetLevelInClass\s*\(\s*i\s*\)\s*;", body) is not None,
         "GemRB no longer derives multiclass CLAB level from GetLevelInClass(i)",
     )
     require(
