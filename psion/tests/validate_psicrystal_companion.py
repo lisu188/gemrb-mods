@@ -37,7 +37,9 @@ class CompanionTests(unittest.TestCase):
         self.fx.effects[4] = []
         self.fx.known[4] = []
         self.fx.stats[1, 1] = 30
+        self.fx.stats[1, 0] = 30
         self.fx.stats[4, 1] = 80
+        self.fx.stats[4, 0] = 80
         self.fx.stats[4, 34] = 12
         self.fx.seed(self.psion.PSICRYSTAL_PERSONALITY_MARKER, self.psion.PSICRYSTAL_PERSONALITY_RESOURCE, 4)
         self.fx.seed(self.psion.PSICRYSTAL_PERSONALITY_MARKER, self.psion.PSICRYSTAL_PERSONALITY_RESOURCE, 1, 4)
@@ -204,6 +206,12 @@ class CompanionTests(unittest.TestCase):
         self.assertEqual(self.bodies[4]["ActorID"], second)
         self.assertEqual(self.fx.stats[second, 1], 40)
         self.assertEqual(self.psion.psicrystal_personality(4), 1)
+
+    def test_owner_death_cleans_up_companion(self):
+        self.manifest()
+        self.fx.stats[1, 0] = 0
+        self.assertIsNone(self.psion.psicrystal_companion(1))
+        self.assertNotIn(1, self.bodies)
 
     def test_area_and_selection_sync_never_spawns_missing_bodies(self):
         body = self.manifest()
