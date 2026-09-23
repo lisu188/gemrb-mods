@@ -53,7 +53,7 @@ def start():
     for actor in (1, 2):
         Psionics._write_private_value(actor, Psionics.PSICRYSTAL_PERSONALITY_MARKER,
             Psionics.PSICRYSTAL_PERSONALITY_RESOURCE, 4, Psionics.PSICRYSTAL_EFFECT_SOURCE)
-        Psionics._ensure_psicrystal_actions(actor)
+        Psionics.refresh_innate_charges(actor)
     GemRB.GameSelectPC(1, True, 1)
     entry = next(entry for entry in Spellbook.GetUsableMemorizedSpells(1, 2)
                  if entry['SpellResRef'].upper() == 'PXCRSUM')
