@@ -55,7 +55,7 @@ jobs:
       - name: Validate lifecycle, resources and native save-load
         run: |
           python3 psion/tests/validate_psicrystal_companion.py
-          python3 psion/tests/validate_psicrystal_install.py --game "$RUNNER_TEMP/game"
+          python3 psion/tests/verify_psicrystal_install.py "$RUNNER_TEMP/game"
           python3 psion/tests/validate_psicrystal_native.py --engine-source vendor/gemrb --runtime "$RUNNER_TEMP/runtime" --installed "$RUNNER_TEMP/game" --output "$RUNNER_TEMP/native-companion"
       - name: Preserve test evidence without redistributing game assets
         if: always()
