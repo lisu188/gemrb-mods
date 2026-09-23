@@ -8,16 +8,6 @@ import Psionics
 import Spellbook
 
 bodies = []
-creation = GemRB.CreateCreature
-
-
-def observe_creation(*args):
-    result = creation(*args)
-    bodies.append(result)
-    return result
-
-
-GemRB.CreateCreature = observe_creation
 
 
 def record(name, **data):
@@ -38,10 +28,16 @@ def schedule(function, delay=1800):
 def cast(actor, resource):
     GemRB.GameSelectPC(actor, True, 1)
     Psionics.refresh_innate_charges(actor)
+    before = Psionics.psicrystal_companion(actor) if resource == 'PXCRSUM' else None
     entry = next(entry for entry in Spellbook.GetUsableMemorizedSpells(actor, 2)
                  if entry['SpellResRef'].upper() == resource)
     assert GemRBModCore.begin_spell(Spellbook, actor, entry['SpellIndex'])
     GemRB.SpellCast(actor, 4, entry['SpellIndex'] % 1000)
+    if resource == 'PXCRSUM':
+        after = Psionics.psicrystal_companion(actor)
+        assert after and after['Alive']
+        if not before or not before['Alive']:
+            bodies.append(int(after['ActorID']))
 
 
 def exists(token):
