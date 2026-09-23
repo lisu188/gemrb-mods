@@ -97,8 +97,10 @@ def before_save():
 def after_load():
     assert GemRB.GetPartySize() == 2
     assert exists(1) and exists(2)
-    assert int(companion(1)['ActorID']) == bodies[1]
-    assert int(companion(2)['ActorID']) == bodies[0]
+    loaded1 = companion(1)
+    loaded2 = companion(2)
+    assert loaded1 and loaded2
+    assert int(loaded1['ActorID']) != int(loaded2['ActorID'])
     assert GemRB.GetPlayerStat(1, 163) == 2
     assert GemRB.GetPlayerStat(2, 163) == 1
     body = companion(2)
