@@ -40,17 +40,14 @@ def cast(actor, resource):
             bodies.append(int(after['ActorID']))
 
 
-def companion_for_token(token):
-    for actor in range(1, GemRB.GetPartySize() + 1):
-        if Psionics._psicrystal_owner_token(actor) != token:
-            continue
-        companion = Psionics.psicrystal_companion(actor)
-        return companion if companion and companion['Alive'] else None
-    return None
+def companion(actor):
+    return Psionics.psicrystal_companion(actor)
 
 
-def exists(token):
-    return bool(companion_for_token(token))
+def exists(actor):
+    current = companion(actor)
+    return bool(current and current['Alive'])
+
 
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
@@ -82,8 +79,8 @@ def before_save():
         assert GemRB.GetPlayerStat(body, 38) == 8
     assert Psionics.can_dismiss_psicrystal(1)
     GemRB.GameSwapPCs(1, 2)
-    assert Psionics._psicrystal_owner_token(1) == 2
-    assert Psionics._psicrystal_owner_token(2) == 1
+    assert int(companion(1)['ActorID']) == bodies[1]
+    assert int(companion(2)['ActorID']) == bodies[0]
     GemRB.SetPlayerStat(bodies[0], 0, 17)
     Psionics.refresh_innate_charges(2)
     assert GemRB.GetPlayerStat(bodies[0], 0) == 17
@@ -101,11 +98,11 @@ def before_save():
 def after_load():
     assert GemRB.GetPartySize() == 2
     assert exists(1) and exists(2)
-    assert Psionics._psicrystal_owner_token(1) == 2
-    assert Psionics._psicrystal_owner_token(2) == 1
-    assert GemRB.GetPlayerStat(1, 163) == 2
-    assert GemRB.GetPlayerStat(2, 163) == 1
-    body = companion_for_token(1)
+    loaded1 = companion(1)
+    loaded2 = companion(2)
+    assert loaded1 and loaded2
+    assert int(loaded1['ActorID']) != int(loaded2['ActorID'])
+    body = companion(2)
     assert body
     body_id = int(body['ActorID'])
     assert GemRB.GetPlayerStat(body_id, 0) == 17
@@ -117,10 +114,11 @@ def after_load():
 
 
 def after_dismiss():
-    assert not exists(1) and exists(2)
+    assert exists(1) and not exists(2)
+    Psionics.restore_party()
     cast(2, 'PXCRSUM')
     assert len(bodies) == 3
-    record('dismiss_and_remanifest', epoch=GemRB.GetGameVar('PSCR001'))
+    record('dismiss_and_remanifest', body=int(companion(2)['ActorID']))
     GemRB.GameSelectPC(0, True)
     GemRB.MoveToArea('AR0110')
     schedule(after_area)
@@ -128,11 +126,13 @@ def after_dismiss():
 
 def after_area():
     assert GemRB.GetCurrentArea() == 'AR0110', GemRB.GetCurrentArea()
-    assert not exists(1) and not exists(2)
+    before = companion(2)
+    assert before and before['Alive']
+    body_id = int(before['ActorID'])
     cast(2, 'PXCRSUM')
-    assert len(bodies) == 4
-    assert exists(1)
-    record('area_remanifest', epoch=GemRB.GetGameVar('PSCR001'))
+    assert int(companion(2)['ActorID']) == body_id
+    assert len(bodies) == 3
+    record('area_remanifest', body=body_id)
     GemRB.GameSelectPC(0, True)
     GemRB.MoveToArea('AR0100')
     schedule(old_area, 3000)
@@ -140,17 +140,22 @@ def after_area():
 
 def old_area():
     assert GemRB.GetCurrentArea() == 'AR0100'
-    assert not exists(1)
+    before = companion(2)
+    assert before and before['Alive']
+    body_id = int(before['ActorID'])
     cast(2, 'PXCRSUM')
-    assert len(bodies) == 5
-    GemRB.SetPlayerStat(bodies[-1], 0, 0)
+    assert int(companion(2)['ActorID']) == body_id
+    assert len(bodies) == 3
+    GemRB.SetPlayerStat(body_id, 0, 0)
     schedule(after_death, 3000)
 
 
 def after_death():
-    assert not exists(1)
+    assert not exists(2)
+    assert not Psionics.can_summon_psicrystal(2)
+    Psionics.restore_party()
     cast(2, 'PXCRSUM')
-    assert len(bodies) == 6
+    assert len(bodies) == 4
     GemRB.GameSelectPC(1, True, 1)
     GemRB.GameSetProtagonistMode(2)
     GemRB.SetPlayerStat(2, 0, 0)
@@ -159,7 +164,7 @@ def after_death():
 
 
 def owner_dead():
-    assert not exists(1)
+    assert not exists(2)
     assert not Psionics.psicrystal_companion(2)
     record('owner_death_cleanup')
     print('PSICRYSTAL_NATIVE_PASS', flush=True)
