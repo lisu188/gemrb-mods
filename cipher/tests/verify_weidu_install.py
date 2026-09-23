@@ -80,14 +80,23 @@ assert thac0["CIPHER"][:8] == ["20", "20", "19", "19", "18", "18", "17", "17"], 
 
 _, splprot = rows(override / "splprot.2da")
 assert splprot["CIPHER_HOSTILE"] == ["0x108", "2", "1"], (layout, splprot["CIPHER_HOSTILE"])
+assert splprot["CIPHER_SOUL_BLADE"] == ["164", "1", "1"], (layout, splprot["CIPHER_SOUL_BLADE"])
 hostile_row = row_index(override / "splprot.2da", "CIPHER_HOSTILE")
+soul_blade_row = row_index(override / "splprot.2da", "CIPHER_SOUL_BLADE")
 
 effects_ids = (override / "effects.ids").read_text(encoding="utf-8", errors="replace")
 assert "0x155 CastSpellOnCriticalHit" in effects_ids, layout
 
-for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CIFCRIT", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34"):
+for resref in ("CIFCORE", "CIFSW15", "CIFSW20", "CIFCRIT", "CI1WHSP", "CI9SCOL", "CIFGAIN", "CIFSTEP", "CIFS0", "CIFS34", "CISUBCL", "CISBLD", "CISB0", "CISB1"):
     assert spl_path(resref).is_file(), (layout, resref)
 
+
+assert (override / "cisub.2da").is_file(), (layout, "missing CISUB")
+sub_header, subclasses = rows(override / "cisub.2da")
+assert sub_header == ["ID", "CHOICE", "CAP_MOD", "COST_DELTA", "GAIN_UNITS", "PASSIVE", "WEAPON", "ENABLED"], (layout, sub_header)
+assert subclasses["BASE"] == ["0", "*", "0", "0", "1", "*", "BASE", "1"], (layout, subclasses["BASE"])
+assert subclasses["SOUL_BLADE"] == ["1", "CISBLD", "10", "5", "2", "CISB1", "SOUL_BLADE", "1"], (layout, subclasses["SOUL_BLADE"])
+assert (override / "cisubpk.2da").is_file(), (layout, "missing CISUBPK")
 
 def resource(data, offset):
     return data[offset:offset + 8].split(b"\0", 1)[0].decode("ascii")
@@ -138,6 +147,19 @@ for resref, bonus in soul_whip.items():
 
 critical = spell_effects(spl_path("CIFCRIT"))
 assert critical == [(326, 2, 0, hostile_row, 1, "CIFGAIN")], (layout, critical)
+
+gain = spell_effects(spl_path("CIFGAIN"))
+assert (326, 1, 0, class_row, 1, "CIFSTEP") in gain, (layout, gain)
+assert (326, 1, 0, soul_blade_row, 1, "CIFSTEP") in gain, (layout, gain)
+
+selector = spell_effects(spl_path("CISUBCL"))
+assert any(effect[0] == 214 and effect[5] == "CISUBPK" for effect in selector), (layout, selector)
+for resref, identifier in (("CISB0", 0), ("CISB1", 1)):
+    effects = spell_effects(spl_path(resref))
+    state = [effect for effect in effects if effect[0] == 282]
+    assert state == [(282, 1, identifier, 8, 9, "")], (layout, resref, state)
+    removals = {effect[5] for effect in effects if effect[0] == 321}
+    assert {"CISB0", "CISB1"} <= removals, (layout, resref, removals)
 
 setter = spell_effects(spl_path("CIFS4"))
 removals = [effect for effect in setter if effect[0] == 321]
