@@ -3,43 +3,31 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[2]
-README = ROOT / "psion" / "README.md"
+POWERS = ROOT / "psion" / "tables" / "psionpowers.2da"
 MATRIX = ROOT / "psion" / "docs" / "high-tier-fidelity.md"
 
 
-def approximation_names(text):
-    marker = "## High-level portable approximations"
-    section = text.split(marker, 1)[1]
-    section = section.split("\n## ", 1)[0]
-    names = []
-    for line in section.splitlines():
-        if not line.startswith("- "):
+def high_tier_resrefs():
+    result = set()
+    for line in POWERS.read_text(encoding="utf-8").splitlines()[3:]:
+        columns = line.split()
+        if len(columns) < 3:
             continue
-        name = line[2:].split(" expresses ", 1)[0]
-        name = name.split(" deals ", 1)[0]
-        name = name.split(" and Greater", 1)[0] if name.startswith("Fusion and Greater") else name
-        if line.startswith("- Fusion and Greater Metamorphosis"):
-            names.extend(["Fusion", "Greater Metamorphosis"])
-        elif line.startswith("- Mass Time Hop"):
-            names.append("Time Hop, Mass")
-        elif line.startswith("- Teleportation Circle"):
-            names.append("Teleportation Circle (Psionic)")
-        elif line.startswith("- Psychic Chirurgery"):
-            names.append("Psychic Chirurgery")
-        else:
-            names.append(name)
-    return names
+        if columns[2].isdigit() and 6 <= int(columns[2]) <= 9:
+            result.add(columns[0])
+    return result
 
 
 def main():
-    readme = README.read_text(encoding="utf-8")
     matrix = MATRIX.read_text(encoding="utf-8")
-    expected = set(approximation_names(readme))
-    rows = set(re.findall(r"^\| ([^|]+?) \| PS[0-9A-Z]+ \|", matrix, re.MULTILINE))
+    rows = set(re.findall(r"^\| [^|]+ \| (PS[0-9A-Z]+) \|", matrix, re.MULTILINE))
+    expected = high_tier_resrefs()
     missing = expected - rows
-    assert not missing, "High-tier fidelity matrix missing README approximations: " + ", ".join(sorted(missing))
-    assert rows == expected, "Matrix contains stale/untracked rows: " + ", ".join(sorted(rows - expected))
-    print("Psion high-tier fidelity matrix matches README approximations.")
+    stale = rows - expected
+    assert not missing, "High-tier fidelity matrix missing powers: " + ", ".join(sorted(missing))
+    assert not stale, "High-tier fidelity matrix contains stale powers: " + ", ".join(sorted(stale))
+    assert len(rows) == 24, len(rows)
+    print("Psion high-tier fidelity matrix covers all 24 level 6-9 powers.")
 
 
 if __name__ == "__main__":
