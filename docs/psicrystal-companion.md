@@ -3,7 +3,7 @@
 ## Implemented contract
 
 Personality selection and the existing owner skill bonus are unchanged. A chosen
-personality grants PXCSUM (Manifest Psicrystal) and PXCDISM (Dismiss Psicrystal).
+personality grants PXCRSUM (Manifest Psicrystal) and PXCRDIS (Dismiss Psicrystal).
 These are TARGET_NONE instant innates accepted through SetSpellCastCheck, not
 queued creature-target casts. Creation occurs synchronously inside the accepted
 transaction. Cancellation does not allocate an owner, create a creature or spend
