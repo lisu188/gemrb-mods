@@ -339,12 +339,12 @@ def main() -> None:
             "PSICNC2", "", "", "PSICNTR", 2,
         )
         assert module.equipment_skill_bonus(1, "CONCENTRATION") == 2
-        assert module.concentration_check(1, 20, roll=14)
+        assert module.concentration_check(1, 20, roll=16)
         effects[1] = [
             effect for effect in effects[1]
             if effect.get("Resource1") != "PSICNC2"
         ]
-        assert not module.concentration_check(1, 20, roll=14)
+        assert not module.concentration_check(1, 20, roll=16)
 
         apply_effect(
             1, module.STATE_EFFECT_OPCODE, 0, 0,
