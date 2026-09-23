@@ -104,7 +104,7 @@ def run(args):
     assert "PSICRYSTAL_NATIVE_PASS" in text and "PSICRYSTAL_NATIVE_FAIL" not in text, log
     assert [entry["checkpoint"] for entry in checkpoints] == list(CHECKPOINTS), checkpoints
     assert "Traceback" not in text and "Unhandled trigger" not in text, log
-    report = {"engine_contract_commit": "91e64d19c90f169530f99f5a08ecf96f1402cf67",
+    report = {"engine_contract_commit": "28d8a9d2ebd19f0de560856e67dc3cd7a7b74204",
               "fixture": "public GemRB demo plus actual WeiDU-installed Psion resources",
               "checkpoints": checkpoints, "campaign_acceptance": False}
     (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")
