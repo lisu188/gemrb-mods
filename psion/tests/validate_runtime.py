@@ -259,6 +259,17 @@ def main() -> None:
         assert temporary_entry["CastResRef"] == "PSMT034"
         assert not prepared_casts
 
+        assert stats[(1, 239)] == 0
+        assert not get_effects(1, module.STATE_EFFECT_OPCODE)
+        plan = module.manifestation_plan(1, "PS1CHAR")
+        assert plan["allowed"]
+        assert plan["resref"] == "PS1CHAR"
+        assert plan["cast_resref"] == "PS1CHAR4"
+        assert plan["pool"] == module.maximum_pool(1)
+        assert stats[(1, 239)] == 0
+        assert not get_effects(1, module.STATE_EFFECT_OPCODE)
+        assert module.manifestation_plan(1, "PSNOTMOD")["reason"] == "unknown_power"
+
         real_begin_manifest = module.begin_manifest
         callback_counts = {}
 
@@ -319,6 +330,10 @@ def main() -> None:
         assert initial_cap == 383
         assert module.ensure_pool(1) == initial_cap
         assert stats[(1, 239)] == module.POOL_STATE_SIGNATURE | initial_cap
+        commit_plan = module.manifestation_plan(1, "PS1CHAR")
+        assert module.commit_manifestation(1, "PS1CHAR")
+        assert module.ensure_pool(1) == initial_cap - commit_plan["cost"]
+        assert module.ensure_pool(1, True) == initial_cap
         persistent = get_effects(1, module.STATE_EFFECT_OPCODE)
         pool = [effect for effect in persistent if effect["Param2"] == module.POOL_EFFECT_MARKER]
         assert len(pool) == 1 and pool[0]["Param1"] == initial_cap
