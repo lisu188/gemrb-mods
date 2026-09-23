@@ -26,7 +26,10 @@ def validate(gemrb_root, table_directory):
     path = next(path for path in table_directory.iterdir() if path.name.casefold() == "clabciph.2da")
     delivered, applied = [], []
     engine = engine_callbacks(gemrb_root, {"clabciph": Table(path)}, delivered, applied)
-    selector = [(1, "CILRN", engine["IE_SPELL_TYPE_INNATE"], 0, 1, engine["LS_MEMO"])]
+    selector = [
+        (1, "CILRN", engine["IE_SPELL_TYPE_INNATE"], 0, 1, engine["LS_MEMO"]),
+        (1, "CISUB", engine["IE_SPELL_TYPE_INNATE"], 0, 1, engine["LS_MEMO"]),
+    ]
     for level in LEVELS:
         delivered.clear()
         applied.clear()
@@ -49,7 +52,7 @@ def main():
     parser.add_argument("--tables", type=Path, default=ROOT / "tables", help="Source tables or a disposable installed override directory")
     args = parser.parse_args()
     validate(args.gemrb_root.resolve(), args.tables.resolve())
-    print("Cipher CLAB passed actual GemRB callbacks: level-1 learning/core, Soul Whip upgrades at 10/20, and level-30 cap (synthetic API coverage only).")
+    print("Cipher CLAB passed actual GemRB callbacks: level-1 learning/subclass/core, Soul Whip upgrades at 10/20, and level-30 cap (synthetic API coverage only).")
 
 
 if __name__ == "__main__":
