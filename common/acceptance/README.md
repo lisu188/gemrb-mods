@@ -125,6 +125,66 @@ Do not combine checkpoints from failed/interrupted runs into a passing
 manifest. Scoped regression retries supplement the full matrix and do not
 replace it. Missing or unsupported required runs keep acceptance open.
 
+The family-specific player scenarios also require Base Cipher/Soul Blade
+selection, cancellation, persistent identity, subclass costs and Focus combat
+boundaries, with a non-Cipher control. Psion covers all five equipment items,
+their campaign vendor, capacity without refills, skill ranks versus bonuses,
+current-INT DC changes, and the complete two-owner Psicrystal lifecycle.
+Companion recall preserves injury and identity; dismissal/death does not refund
+creation, rest permits replacement without creating it, and scaling does not
+heal it. These are fresh-player requirements; enemy packages and existing-save
+migration are outside the matrix. Regular saves and quicksave/reload both need
+observations in the relevant persistence checkpoints.
+
+### Checking a retained matrix
+
+Run `common/tools/check_acceptance_matrix.py --evidence-root <private-root>
+--engine-commit <full-40-character-commit> --mods-commit <full-40-character-commit>`
+after collecting the matrix. `--output <report.json>` optionally retains its
+report. The checker fails missing/partial runs, stale revisions, altered logs
+or build artifacts, failed/duplicate checkpoints and incomplete lifecycle
+transitions. It rereads the current scenarios and retained engine logs instead
+of trusting a recorded success flag. It does not authenticate UI actions or
+the independence of expected values; reviewers must inspect the retained
+screenshots, oracle derivations and fixture preparation.
+
+Keep schema version 1. Supply the scenario recorder and shared-lifecycle runner
+with `--mods-commit` and `--provenance <private-run-provenance.json>` alongside
+their existing engine metadata. The recorder stores the provenance path and
+SHA-256 in `metadata.provenance`. The ToB scenario additionally needs
+`--campaign tob`. A provenance document contains:
+
+```json
+{
+  "engine_commit": "<full engine commit>",
+  "mods_commit": "<full mods commit>",
+  "fixture_id": "<disposable fixture identity>",
+  "game_type": "bgee",
+  "build": "<build.json>",
+  "build_sha256": "<SHA-256>",
+  "frozen_fixture": "<frozen-fixture.json>",
+  "frozen_fixture_sha256": "<SHA-256>",
+  "scenario": "<current scenario.json>",
+  "scenario_sha256": "<SHA-256>"
+}
+```
+
+The build document identifies `engine_commit`, empty `engine_status`,
+`install_root` and a nonempty `files` map from installed relative/absolute paths
+to SHA-256. The frozen fixture identifies `engine_commit`, `mods_commit`,
+`fixture_id`, and `family` or `game_type`. Keep the detailed installed GUI,
+override and rule hashes in that frozen document for review. Scenario fields
+are required for gameplay runs; lifecycle provenance omits them.
+
+Every checkpoint needs a meaningful `context.oracle` reference and
+`context.screenshot` or `context.screenshots` pointing to retained PNG files.
+Relative evidence paths resolve against the manifest directory. Each
+Sorcerer/Monk ownership manifest uses the existing first/last-owner and
+standalone structure, adding the same `metadata` revisions, `fixture_id` and
+hash-bound provenance reference as its associated lifecycle run. Its path is
+listed in the matrix's `ownership_manifest` field. Public synthetic checks in
+`common/tests/validate_acceptance_matrix.py` exercise these evidence gates.
+
 When inspecting rule tables from the live console, use the documented
 [eight-character runtime resource names](../../docs/runtime-resource-names.md),
 not the longer authoring filenames. The resource-name regression is
