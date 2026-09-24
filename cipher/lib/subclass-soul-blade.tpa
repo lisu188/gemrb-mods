@@ -12,6 +12,23 @@ LAF cipher_create_power
     ci_description = ~Choose a Cipher subclass. The choice is permanent for this character. Existing Ciphers without a subclass continue to use the base Cipher rules.~
     ci_icon = ~spwi105~
 END
+
+// Persist the native routing mirror as a normal actor effect. Stat 163 is
+// ScriptingState8; stat 166 is the engine's melee attack bonus and is unrelated.
+LAF cipher_create_power
+  INT_VAR ci_tier = 1 ci_target = 5 ci_range = 0x7fff ci_projectile = ci_none_projectile
+  STR_VAR ci_resref = ~CISUBFX~ ci_name = ~Soul Blade~ ci_description = ~~ ci_icon = ~~
+END
+COPY_EXISTING ~CISUBFX.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 321 target = 1 timing = 1 parameter2 = 0
+    STR_VAR resource = ~CISUBFX~
+  END
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 282 target = 1 timing = 9 parameter1 = 1 parameter2 = 7
+    STR_VAR resource = ~CISUBCLS~
+  END
+BUT_ONLY
 COPY_EXISTING ~CISUB.spl~ ~override~
   LPF ADD_SPELL_EFFECT INT_VAR opcode = 214 target = 1 timing = 1 STR_VAR resource = ~CISUBP~ END
 BUT_ONLY

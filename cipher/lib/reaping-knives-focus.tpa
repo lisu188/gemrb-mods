@@ -11,8 +11,11 @@ OUTER_SET ci_rk_set_melee = 248
 OUTER_SET ci_rk_set_ranged = 249
 
 COPY_EXISTING ~splprot.2da~ ~override~
+  // Focus rows omit optional columns such as COMMENT; they still occupy
+  // native row indexes and must be included in the owner-bank offset.
   COUNT_2DA_COLS ci_rk_splprot_cols
-  COUNT_2DA_ROWS ci_rk_splprot_cols ci_rk_splprot_count
+  COUNT_2DA_ROWS 3 ci_rk_splprot_count
+  PATCH_IF ci_rk_splprot_cols > 3 BEGIN SET ci_rk_splprot_count -= 1 END
   SPRINT ci_rk_splprot_prefix ~~
   READ_ASCII (BUFFER_LENGTH - 1) ci_rk_splprot_last (1)
   PATCH_IF NOT (~%ci_rk_splprot_last%~ STRING_EQUAL ~%LNL%~) BEGIN
@@ -76,7 +79,7 @@ END
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIRKSTEP~ END
 COPY_EXISTING ~CIRKSTEP.spl~ ~override~
   FOR (ci_rk_unit = 33; ci_rk_unit >= 0; --ci_rk_unit) BEGIN
-    SET ci_rk_focus_row = ci_splprot_rows + 2 + ci_rk_unit
+    SET ci_rk_focus_row = ci_gain_splprot + (ci_rk_unit * 3) + 2
     SET ci_rk_next = ci_rk_unit + 1
     SPRINT ci_rk_setter ~CIRKS%ci_rk_next%~
     LPF ADD_SPELL_EFFECT

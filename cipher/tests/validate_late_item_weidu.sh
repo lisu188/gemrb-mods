@@ -18,7 +18,7 @@ cp -R "$repo_root/cipher" "$game/cipher"
   weidu cipher/setup-cipher.tp2 --use-lang en_US --force-install 0 --no-exit-pause
 )
 
-python3 - "$game/override/CILATE.ITM" "$game/override/CILCHAIN.ITM" <<'PY'
+python3 - "$game" <<'PY'
 import struct
 import sys
 from pathlib import Path
@@ -45,8 +45,34 @@ def write_item(path, *, item_type=19, animation=b"  ", attack=False):
     path.write_bytes(data)
 
 
-write_item(Path(sys.argv[1]), attack=True)
-write_item(Path(sys.argv[2]), item_type=0x02, animation=b"3A")
+game = Path(sys.argv[1])
+override = game / "override"
+write_item(override / "CILATE.ITM", attack=True)
+write_item(override / "CILCHAIN.ITM", item_type=0x02, animation=b"3A")
+
+# Reproduce the old owned carrier beside effects which must remain byte-for-
+# byte intact, including one using CIFGAIN with a different SPLPROT row.
+hostile = next(int(line.split()[1]) for line in (override / "cifocus.2da").read_text().splitlines()
+               if line.split() and line.split()[0] == "HOSTILE")
+old = bytearray((override / "CILATE.ITM").read_bytes())
+header = struct.unpack_from("<I", old, 0x64)[0]
+struct.pack_into("<H", old, header + 0x1E, 3)
+struct.pack_into("<HH", old, 0x6E, 3, 1)
+for opcode, target, row, resource, high, low in (
+    (7, 1, 0, b"", 37, 13),
+    (326, 2, hostile, b"CIFGAIN", 0, 0),
+    (326, 2, hostile + 1, b"CIFGAIN", 13, 7),
+    (44, 1, 0, b"", 25, 12),
+):
+    entry = bytearray(0x30)
+    struct.pack_into("<HB", entry, 0, opcode, target)
+    struct.pack_into("<I", entry, 8, row)
+    entry[0x0C] = 1
+    entry[0x12:0x14] = bytes((high, low))
+    entry[0x14:0x1C] = resource.ljust(8, b"\0")
+    old.extend(entry)
+(override / "CILOLD.ITM").write_bytes(old)
+(game / "old-focus-item.bin").write_bytes(old)
 PY
 
 (
@@ -54,12 +80,15 @@ PY
   weidu cipher/setup-cipher.tp2 --use-lang en_US --force-install 100 --no-exit-pause
 )
 
-python3 - "$game/override/CILATE.ITM" "$game/override/CILCHAIN.ITM" "$game/override/class.ids" <<'PY'
+verify() {
+python3 - "$game" <<'PY'
 import struct
 import sys
 from pathlib import Path
 
-weapon = Path(sys.argv[1]).read_bytes()
+game = Path(sys.argv[1])
+override = game / "override"
+weapon = (override / "CILATE.ITM").read_bytes()
 header_offset = struct.unpack_from("<I", weapon, 0x64)[0]
 effect_offset = struct.unpack_from("<I", weapon, 0x6A)[0]
 count = struct.unpack_from("<H", weapon, header_offset + 0x1E)[0]
@@ -69,18 +98,19 @@ offset = effect_offset + first * 0x30
 assert struct.unpack_from("<H", weapon, offset)[0] == 326
 assert weapon[offset + 0x02] == 2
 assert weapon[offset + 0x0C] == 1
+assert weapon[offset + 0x12:offset + 0x14] == bytes((100, 0))
 resource = weapon[offset + 0x14:offset + 0x1C].rstrip(b"\x00").decode("ascii")
 assert resource == "CIFGAIN", resource
 
 class_id = None
-for line in Path(sys.argv[3]).read_text(encoding="utf-8", errors="replace").splitlines():
+for line in (override / "class.ids").read_text(encoding="utf-8", errors="replace").splitlines():
     fields = line.split()
     if len(fields) >= 2 and fields[1] == "CIPHER":
         class_id = int(fields[0], 0)
         break
 assert class_id is not None
 
-armor = Path(sys.argv[2]).read_bytes()
+armor = (override / "CILCHAIN.ITM").read_bytes()
 effect_offset = struct.unpack_from("<I", armor, 0x6A)[0]
 first = struct.unpack_from("<H", armor, 0x6E)[0]
 count = struct.unpack_from("<H", armor, 0x70)[0]
@@ -96,5 +126,20 @@ for index in range(count):
         matches += 1
 assert matches == 1, matches
 
-print("Cipher late weapon and equipment compatibility validation passed")
+# Only the owned carrier's probability may change. Header counts, offsets,
+# equipping effects and the similar unrelated carrier must be preserved.
+expected = bytearray((game / "old-focus-item.bin").read_bytes())
+effect_offset = struct.unpack_from("<I", expected, 0x6A)[0]
+expected[effect_offset + 0x30 + 0x12:effect_offset + 0x30 + 0x14] = bytes((100, 0))
+assert (override / "CILOLD.ITM").read_bytes() == expected
+
+print("Cipher late weapon, Focus probability upgrade and equipment validation passed")
 PY
+}
+
+verify
+(
+  cd "$game"
+  weidu cipher/setup-cipher.tp2 --use-lang en_US --force-install 100 --no-exit-pause
+)
+verify
