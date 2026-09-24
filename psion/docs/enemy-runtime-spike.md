@@ -40,7 +40,7 @@ documented engine contract.
 `psionai.2da` defines the deliberately small regression policy used to exercise
 four tactical roles without exposing the full catalogue to generic random AI:
 
-- OFFENSE: `PS1ERAY`, enemy target;
+- OFFENSE: `PS2CBLS`, enemy target;
 - DEFENSE: `PS1IARM`, self target;
 - CONTROL: `PS3THOP`, enemy target;
 - MOBILITY: `PS3SSTP`, point target.
@@ -57,9 +57,9 @@ offensive, defensive, control and mobility roles.
 
 `psion/tests/validate_enemy_psion_native.py` is the real-engine regression. It
 spawns a non-party creature in the public GemRB demo, assigns the installed
-PSION_SEER class, initializes canonical actor-local PP, executes a BCS
-`Spell(Player1,PS1ERAY)` action, observes the actual non-party accepted-cast
-callback, requires the INT-18 executable resource `PS1ERAY4`, checks one PP is
+PSION_NOMAD class, initializes canonical actor-local PP, executes a BCS
+`ForceSpellRES("PS2CBLS",Player1)` action, observes the actual non-party accepted-cast
+callback, requires the INT-18 executable resource `PS2CBLS4`, checks one PP is
 spent exactly once, then saves and reloads the area and verifies the committed
 pool and Psion identity survive. The fixture is deliberately not placed into a
 campaign.
