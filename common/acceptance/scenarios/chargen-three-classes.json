@@ -2,8 +2,14 @@
   "id": "chargen-three-classes",
   "description": "Real UI character creation with a Fighter baseline, Cipher, Sorcerer/Monk and all six Psion disciplines.",
   "timeout_seconds": 14400,
-  "expected_exit_codes": [0],
-  "supported_game_types": ["bgee", "bg2ee", "eet"],
+  "expected_exit_codes": [
+    0
+  ],
+  "supported_game_types": [
+    "bgee",
+    "bg2ee",
+    "eet"
+  ],
   "prerequisites": [
     "Disposable legal game fixture with the three current packages and their shared GUI handlers installed.",
     "Fresh screenshots of class help, restrictions and selectors; installed class tables provide the independent identity oracle.",
@@ -14,7 +20,8 @@
     "For each identity checkpoint, compare the engine's class row, class ID and kit/discipline with the installed tables after completing creation. Attach screenshot references in checkpoint context.",
     "For chargen.restrictions compare both allowed and rejected race/alignment/ability choices with installed rules for each custom class. Record per-class choices, observed enabled/disabled controls or enforced ability bounds, independent expected restrictions and screenshot references; one legal Human/Lawful flow is insufficient.",
     "For chargen.initial-spellbooks and chargen.action-bars compare known spells/powers and available buttons for each completed custom class with the installed rules.",
-    "Quit the engine normally after all actors and observations; an absent checkpoint is incomplete coverage."
+    "Quit the engine normally after all actors and observations; an absent checkpoint is incomplete coverage.",
+    "Include Base Cipher and Soul Blade selection and cancellation when observing Cipher identity and restrictions; use fresh player characters. Existing-save migration and enemy packages are outside this matrix."
   ],
   "required_checkpoints": [
     "chargen.fighter.identity",

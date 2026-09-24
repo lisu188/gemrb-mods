@@ -6,16 +6,50 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-CHECKPOINTS = ("accepted_cast", "saved", "loaded", "dismiss_and_remanifest",
+CHECKPOINTS = ("native_personality_selector", "accepted_cast", "saved", "loaded", "dismiss_and_remanifest",
                "area_remanifest", "body_death_resummon", "owner_death_cleanup")
 TABLES = {"trigger.ids", "action.ids", "object.ids", "gemtrig.ids", "classes.2da",
           "clastext.2da", "clskills.2da", "hpclass.2da", "qslots.2da", "class.ids",
           "proftype.2da", "weapprof.2da", "xplevel.2da", "thac0.2da", "xpcap.2da"}
+SCRIPT_IDS = {"trigger.ids", "action.ids", "object.ids"}
 
 
-def prepare(root, engine_source, runtime, installed):
+def copy_script_ids(root, installed, override, weidu):
+    """Use the installed game's script numbering, including BIFF-only tables."""
+    available = {path.name.casefold() for path in (installed / "override").iterdir()}
+    missing = sorted(SCRIPT_IDS - available)
+    if not missing:
+        return
+    executable = shutil.which(str(weidu))
+    if not executable:
+        raise RuntimeError("WeiDU is required to extract BIFF-only script IDS; pass --weidu")
+    log = root / "weidu-ids.log"
+    with tempfile.TemporaryDirectory(prefix="script-ids-", dir=root) as directory:
+        destination = Path(directory)
+        command = [str(Path(executable).resolve()), "--use-lang", "en_US",
+                   "--out", str(destination), "--log", str(root / "weidu-ids.debug"),
+                   "--no-exit-pause"]
+        for name in missing:
+            command += ["--biff-get", name]
+        with log.open("w") as output:
+            subprocess.run(command, cwd=installed, stdout=output,
+                           stderr=subprocess.STDOUT, check=True, timeout=60)
+        extracted = {path.name.casefold(): path for path in destination.iterdir() if path.is_file()}
+        # WeiDU can exit successfully after a fatal extraction error. Never
+        # silently retain the demo's incompatible script-numbering tables.
+        if any(name not in extracted for name in missing):
+            raise RuntimeError(f"Script IDS extraction incomplete; see {log}")
+        for name in missing:
+            for old in override.iterdir():
+                if old.name.casefold() == name:
+                    old.unlink()
+            shutil.copy2(extracted[name], override / name)
+
+
+def prepare(root, engine_source, runtime, installed, weidu="weidu"):
     game = root / "game"
     shutil.copytree(engine_source / "demo", game)
     scripts = root / "GUIScripts"
@@ -29,6 +63,7 @@ def prepare(root, engine_source, runtime, installed):
             if old.name.casefold() == name:
                 old.unlink()
         shutil.copy2(path, override / name)
+    copy_script_ids(root, installed, override, weidu)
     avatars = next(path for path in (installed / "override").iterdir() if path.name.casefold() == "avatars.2da")
     row = next(line for line in avatars.read_text().splitlines() if "PSCRANI" in line.upper())
     with (override / "avatars.2da").open("a") as out:
@@ -82,7 +117,7 @@ CaseSensitive=1
 def run(args):
     root = args.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
-    config = prepare(root, args.engine_source.resolve(), args.runtime.resolve(), args.installed.resolve())
+    config = prepare(root, args.engine_source.resolve(), args.runtime.resolve(), args.installed.resolve(), args.weidu)
     environment = os.environ.copy()
     runtime = args.runtime.resolve()
     paths = [str(runtime / "lib"), str(runtime / "lib/gemrb")]
@@ -116,5 +151,6 @@ if __name__ == "__main__":
     parser.add_argument("--engine-source", type=Path, required=True)
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--installed", type=Path, required=True)
+    parser.add_argument("--weidu", default="weidu", help="WeiDU executable for BIFF-only script IDS")
     parser.add_argument("--output", type=Path, required=True)
     run(parser.parse_args())

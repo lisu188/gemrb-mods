@@ -16,7 +16,7 @@ INNATE_LEVEL = 0
 CIPHER_CLASS = "CIPHER"
 POWER_SELECTOR_RESOURCE = "CILRN"
 SUBCLASS_SELECTOR_RESOURCE = "CISUB"
-SUBCLASS_STAT = 166
+SUBCLASS_STAT = 163
 SUBCLASS_STATE_OPCODE = "Protection:Spell"
 SUBCLASS_STATE_MARKER = 0x43495355
 SUBCLASS_STATE_RESOURCE = "CISUBCLS"
@@ -153,7 +153,14 @@ def is_subclass(actor, key):
 def _sync_subclass_mirror(actor):
     if not is_cipher(actor):
         return
-    GemRB.SetPlayerStat(actor, SUBCLASS_STAT, subclass_id(actor))
+    identity = subclass_id(actor)
+    if identity == 1:
+        # The native routing mirror must survive save/load before this actor
+        # is selected. A scripting-state effect also leaves melee bonuses alone.
+        if int(GemRB.GetPlayerStat(actor, SUBCLASS_STAT)) != identity:
+            GemRB.ApplySpell(actor, "CISUBFX", actor)
+    else:
+        GemRB.SetPlayerStat(actor, SUBCLASS_STAT, identity)
 
 
 def _write_subclass(actor, value):

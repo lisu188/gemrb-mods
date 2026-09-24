@@ -67,6 +67,41 @@ def main():
     assert driver.weidu_command(cipher, Path("/game"), "weidu", False)[-2:] == ["--force-uninstall", "0"]
 
     with tempfile.TemporaryDirectory() as folder_name:
+        game = Path(folder_name)
+        assert driver.resolve_game_language(game) is None  # classic game
+        for language in ("en_US", "pl_PL"):
+            folder = game / "lang" / language
+            folder.mkdir(parents=True)
+            (folder / "dialog.tlk").write_bytes(b"fixture")
+        try:
+            driver.resolve_game_language(game)
+        except RuntimeError as error:
+            assert "--game-language" in str(error)
+        else:
+            raise AssertionError("ambiguous EE language could prompt invisibly")
+        assert not (game / "weidu.conf").exists()
+        assert driver.resolve_game_language(game, "EN_us") == "en_US"
+        (game / "weidu.conf").write_text("lang_dir = pl_PL\n")
+        assert driver.resolve_game_language(game) == "pl_PL"
+        assert driver.resolve_game_language(game, "en_US") == "en_US"
+        for invalid in ("missing", "../../en_US"):
+            try:
+                driver.resolve_game_language(game, invalid)
+            except RuntimeError:
+                pass
+            else:
+                raise AssertionError("invalid game language accepted")
+        context = dict(cipher, game_language="pl_PL")
+        for install in (False, True):
+            command = driver.weidu_command(context, game, "weidu", install)
+            index = command.index("--use-lang")
+            assert command[index + 1] == "pl_PL"
+            assert "--no-exit-pause" in command
+        (game / "weidu.conf").unlink()
+        (game / "lang/pl_PL/dialog.tlk").unlink()
+        assert driver.resolve_game_language(game) == "en_US"
+
+    with tempfile.TemporaryDirectory() as folder_name:
         root = Path(folder_name) / "game"
         root.mkdir()
         write_package_root(root, runtime_api=2, package_api=1)

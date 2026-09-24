@@ -327,6 +327,28 @@ def test_class_choice_pagination():
         assert choices.skip_spell_selection()
         class_name["value"] = "SORCERER_MONK"
         assert not choices.skip_spell_selection()
+
+        # Exercise the rendered chooser, including disabled Monk combinations,
+        # when native EE RACES and CLSRCREQ disagree on Half-Orc spelling.
+        names.extend(["CIPHER", "PSION_SEER"])
+        gui_common.GetRaceRowName = lambda actor: "HALF_ORC"
+        for race_column in ("HALFORC", "HALF_ORC"):
+            class RaceTable:
+                def GetColumnIndex(self, name):
+                    return 0 if name == race_column else None
+
+                def GetValue(self, row, column, *args):
+                    assert column == race_column
+                    return int(row != "SORCERER_MONK")
+
+            gemrb.LoadTable = lambda *args: RaceTable()
+            window = Window()
+            choices.on_load(script)
+            offset = variables[choices.TOP_INDEX_VAR]
+            for row, enabled in (("CIPHER", True), ("PSION_SEER", True), ("SORCERER_MONK", False)):
+                position = next(i for i, value in enumerate(choices._class_rows) if value[1] == row)
+                control = window.GetControl(choices._button_ids[position - offset])
+                assert (control.state == defines.IE_GUI_BUTTON_ENABLED) == enabled
     finally:
         for name, previous in old.items():
             if previous is None:

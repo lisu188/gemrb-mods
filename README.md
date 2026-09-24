@@ -44,6 +44,13 @@ Install uses WeiDU first and then delegates GUI mutation to `common/tools/instal
 
 The existing class-specific WeiDU and `tools/install_guiscripts.py` commands remain supported as low-level compatibility entry points.
 
+Enhanced Edition installation uses the game language in `weidu.conf`, or the
+only installed `lang/<language>/dialog.tlk`. If several languages are available
+without a configured choice, add `--game-language en_US` (or another listed
+language) to `preflight`, `install`, or `uninstall`. The driver reports an
+ambiguous or missing language before installation instead of waiting for a
+hidden WeiDU prompt. This choice is separate from the mod's translation.
+
 ## Release archives
 
 Build any individual class package or combined release with the deterministic allowlisted builder:

@@ -203,20 +203,42 @@ def validate_gui_install(context, guiscripts):
         )
 
 
-def preflight_install(game, guiscripts, mod, weidu="weidu"):
+def resolve_game_language(game, requested=None):
+    """Resolve EE's game language before WeiDU can request interactive input."""
+    language_root = game / "lang"
+    available = sorted(path.name for path in language_root.iterdir()
+                       if path.is_dir() and (path / "dialog.tlk").is_file()) if language_root.is_dir() else []
+    if requested is None and (game / "weidu.conf").is_file():
+        config = (game / "weidu.conf").read_text(encoding="utf-8", errors="replace")
+        match = re.search(r"(?mi)^\s*lang_dir\s*=\s*([\w-]+)", config)
+        if match:
+            requested = match.group(1)
+    if requested is not None:
+        matches = [name for name in available if name.casefold() == requested.casefold()]
+        if len(matches) != 1:
+            raise RuntimeError(f"game language {requested!r} has no lang/<language>/dialog.tlk; available: {', '.join(available)}")
+        return matches[0]
+    if len(available) > 1:
+        raise RuntimeError("select the Enhanced Edition game language with --game-language: " + ", ".join(available))
+    return available[0] if available else None
+
+
+def preflight_install(game, guiscripts, mod, weidu="weidu", game_language=None):
     game = validate_game_root(game)
     guiscripts = validate_guiscripts_root(guiscripts)
     context = load_package_context(game, mod)
+    context["game_language"] = resolve_game_language(game, game_language)
     weidu = resolve_weidu(weidu)
     validate_weidu_parse(context, weidu)
     validate_gui_install(context, guiscripts)
     return context, game, guiscripts, weidu
 
 
-def preflight_uninstall(game, guiscripts, mod, weidu="weidu"):
+def preflight_uninstall(game, guiscripts, mod, weidu="weidu", game_language=None):
     game = validate_game_root(game)
     guiscripts = validate_guiscripts_root(guiscripts)
     context = load_package_context(game, mod)
+    context["game_language"] = resolve_game_language(game, game_language)
     weidu = resolve_weidu(weidu)
     validate_weidu_parse(context, weidu)
     load_gui_module(context)
@@ -316,7 +338,10 @@ def weidu_command(context, game, weidu, install):
         "--game", str(game),
         "--language", str(package["weidu"]["language"]),
         "--noautoupdate",
+        "--no-exit-pause",
     ]
+    if context.get("game_language"):
+        command.extend(["--use-lang", context["game_language"]])
     if install:
         command.extend(["--force-install-list", str(package["weidu"]["component"])])
     else:
@@ -332,8 +357,8 @@ def run_weidu(context, game, weidu, install):
         raise RuntimeError(f"WeiDU {phase} failed for {context['package']['name']} with exit code {result.returncode}")
 
 
-def install_package(game, guiscripts, mod, weidu="weidu"):
-    context, game, guiscripts, weidu = preflight_install(game, guiscripts, mod, weidu)
+def install_package(game, guiscripts, mod, weidu="weidu", game_language=None):
+    context, game, guiscripts, weidu = preflight_install(game, guiscripts, mod, weidu, game_language)
     run_weidu(context, game, weidu, True)
     gui_module = load_gui_module(context)
     try:
@@ -354,8 +379,8 @@ def install_package(game, guiscripts, mod, weidu="weidu"):
     return state
 
 
-def uninstall_package(game, guiscripts, mod, weidu="weidu"):
-    context, game, guiscripts, weidu = preflight_uninstall(game, guiscripts, mod, weidu)
+def uninstall_package(game, guiscripts, mod, weidu="weidu", game_language=None):
+    context, game, guiscripts, weidu = preflight_uninstall(game, guiscripts, mod, weidu, game_language)
     gui_module = load_gui_module(context)
     gui_module.uninstall_handler(guiscripts, context["package"]["handler"])
     try:
@@ -398,6 +423,7 @@ def build_parser():
         sub.add_argument("--game", type=Path, required=True)
         sub.add_argument("--guiscripts", type=Path, required=True)
         sub.add_argument("--weidu", default="weidu")
+        sub.add_argument("--game-language", help="Enhanced Edition language directory, e.g. en_US; defaults to weidu.conf or the only installed language")
     status = subparsers.add_parser("status")
     status.add_argument("--game", type=Path, required=True)
     status.add_argument("--guiscripts", type=Path, required=True)
@@ -409,13 +435,13 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         if args.command == "install":
-            state = install_package(args.game, args.guiscripts, args.mod, args.weidu)
+            state = install_package(args.game, args.guiscripts, args.mod, args.weidu, args.game_language)
             print_status([state])
         elif args.command == "uninstall":
-            state = uninstall_package(args.game, args.guiscripts, args.mod, args.weidu)
+            state = uninstall_package(args.game, args.guiscripts, args.mod, args.weidu, args.game_language)
             print_status([state])
         elif args.command == "preflight":
-            context, _, _, _ = preflight_install(args.game, args.guiscripts, args.mod, args.weidu)
+            context, _, _, _ = preflight_install(args.game, args.guiscripts, args.mod, args.weidu, args.game_language)
             print(
                 f"{args.mod}: preflight passed "
                 f"(package {context['package']['version']}, runtime API "

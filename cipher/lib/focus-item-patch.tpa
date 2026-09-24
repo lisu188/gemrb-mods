@@ -27,12 +27,17 @@ BEGIN
             READ_SHORT ci_effect ci_opcode
             READ_BYTE (ci_effect + 0x02) ci_target
             READ_LONG (ci_effect + 0x08) ci_parameter2
-            READ_ASCII (ci_effect + 0x14) ci_resource (8)
+            READ_ASCII (ci_effect + 0x14) ci_resource (8) NULL
             PATCH_IF (ci_opcode = 326)
               AND (ci_target = 2)
               AND (ci_parameter2 = ci_hostile_splprot)
               AND (~%ci_resource%~ STRING_EQUAL_CASE ~CIFGAIN~) BEGIN
               SET ci_has_focus_effect = 1
+              // Older installs left both probability bytes at zero, making
+              // this carrier fire on only one percent of successful hits.
+              // Repair our existing effect without duplicating it.
+              WRITE_BYTE (ci_effect + 0x12) 100
+              WRITE_BYTE (ci_effect + 0x13) 0
             END
           END
 
@@ -48,6 +53,8 @@ BEGIN
             WRITE_LONG (ci_new_effect + 0x04) 0
             WRITE_LONG (ci_new_effect + 0x08) ci_hostile_splprot
             WRITE_BYTE (ci_new_effect + 0x0c) 1
+            WRITE_BYTE (ci_new_effect + 0x12) 100
+            WRITE_BYTE (ci_new_effect + 0x13) 0
             WRITE_ASCIIE (ci_new_effect + 0x14) ~CIFGAIN~ #8
             WRITE_SHORT (ci_header + 0x1e) (ci_effect_count + 1)
 
