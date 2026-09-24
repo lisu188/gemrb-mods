@@ -51,10 +51,24 @@ def exists(actor):
 
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
-    for actor in (1, 2):
-        Psionics._write_private_value(actor, Psionics.PSICRYSTAL_PERSONALITY_MARKER,
-            Psionics.PSICRYSTAL_PERSONALITY_RESOURCE, 4, Psionics.PSICRYSTAL_EFFECT_SOURCE)
-        Psionics.refresh_innate_charges(actor)
+    cast(1, 'PXCRYST')
+    # Self-targeted selector spells enter the native action queue. Observe
+    # their delivered opcode instead of treating queue acceptance as delivery.
+    schedule(lambda: personality_selected(1), 6000)
+
+
+def personality_selected(actor):
+    choices = [resource.upper() for resource in GemRB.GetSpelldata(actor)]
+    assert choices == ['PXCART', 'PXCFRND', 'PXCOBS', 'PXCSAGE', 'PXCSING'], choices
+    raw_spell = 255000 + choices.index('PXCSAGE')
+    assert GemRBModCore.begin_spell(Spellbook, actor, raw_spell)
+    GemRB.SpellCast(actor, -3, 0, 'PXCSAGE')
+    assert Psionics.psicrystal_personality(actor) == 4
+    if actor == 1:
+        cast(2, 'PXCRYST')
+        schedule(lambda: personality_selected(2), 6000)
+        return
+    record('native_personality_selector', owners=2, personality='SAGE')
     GemRB.GameSelectPC(1, True, 1)
     entry = next(entry for entry in Spellbook.GetUsableMemorizedSpells(1, 2)
                  if entry['SpellResRef'].upper() == 'PXCRSUM')

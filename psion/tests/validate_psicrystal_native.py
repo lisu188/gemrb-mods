@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-CHECKPOINTS = ("accepted_cast", "saved", "loaded", "dismiss_and_remanifest",
+CHECKPOINTS = ("native_personality_selector", "accepted_cast", "saved", "loaded", "dismiss_and_remanifest",
                "area_remanifest", "body_death_resummon", "owner_death_cleanup")
 TABLES = {"trigger.ids", "action.ids", "object.ids", "gemtrig.ids", "classes.2da",
           "clastext.2da", "clskills.2da", "hpclass.2da", "qslots.2da", "class.ids",
