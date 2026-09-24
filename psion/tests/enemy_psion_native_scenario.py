@@ -30,6 +30,8 @@ def start():
     assert GemRBModCore.install_engine_hooks()
     enemy = GemRB.CreateCreature(1, "PSCRBODY")
     assert enemy > 1000
+    for script_index in range(8):
+        GemRB.SetPlayerScript(enemy, "", script_index)
     class_id = int(GemRB.LoadTable("clastext", False, True).GetValue("PSION_NOMAD", "CLASSID"))
     GemRB.SetPlayerStat(enemy, 232, class_id)
     GemRB.SetPlayerStat(enemy, 34, 5)
