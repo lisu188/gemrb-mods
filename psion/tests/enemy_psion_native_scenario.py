@@ -53,7 +53,7 @@ def start():
         return result
 
     GemRB.SetNonPartySpellCastCheck(accepted)
-    GemRB.ExecuteString('ForceSpellRES("PS1ERAY",Player1)', enemy)
+    GemRB.ExecuteString('ForceSpellRES("PS2CBLS",Player1)', enemy)
     schedule(after_cast, 2600)
 
 
