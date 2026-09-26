@@ -58,8 +58,8 @@ offensive, defensive, control and mobility roles.
 `psion/tests/validate_enemy_psion_native.py` is the real-engine regression. It
 spawns a non-party creature in the public GemRB demo, assigns the installed
 PSION_NOMAD class, initializes canonical actor-local PP, executes a BCS
-`ForceSpellRES("PS2CBLS",Player1)` action, observes the actual non-party accepted-cast
-callback, requires the INT-18 executable resource `PS2CBLS4`, checks one PP is
+`ForceSpellRES("PS2BRLK",Player1)` action, observes the actual non-party accepted-cast
+callback, requires the INT-18 executable resource `PS2BRLK4`, checks three PP are
 spent exactly once, then saves and reloads the area and verifies the committed
 pool and Psion identity survive. The fixture is deliberately not placed into a
 campaign.
