@@ -10,7 +10,8 @@ MARK_END = "# GEMRB MOD CORE END"
 CAST_CHECK_MARKER = "# GEMRB MOD CORE CAST CHECK v2"
 QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
-ENGINE_HOOK_BOOTSTRAP = "GemRBModCore.install_engine_hooks()\n"
+ENGINE_HOOK_BOOTSTRAP = "\tGemRBModCore.install_engine_hooks()\n"
+LEGACY_ENGINE_HOOK_BOOTSTRAP = "GemRBModCore.install_engine_hooks()\n"
 COMMON_MODULES = (
     "GemRBModCore.py",
     "GemRBModClassChoice.py",
@@ -33,12 +34,19 @@ def _insert_import(text, path):
 
 
 def _ensure_engine_hook_bootstrap(text, path):
+    if LEGACY_ENGINE_HOOK_BOOTSTRAP in text:
+        text = text.replace(LEGACY_ENGINE_HOOK_BOOTSTRAP, "", 1)
     if ENGINE_HOOK_BOOTSTRAP in text:
         return text
-    needle = "import GemRBModCore\n"
-    if needle not in text:
-        raise RuntimeError(f"{path.name} GemRBModCore import not found")
-    return text.replace(needle, needle + ENGINE_HOOK_BOOTSTRAP, 1)
+    for function_name in ("OpenActionsWindowControls", "UpdateActionsWindow"):
+        if f"def {function_name}" not in text:
+            continue
+        start, _ = _function_bounds(text, function_name)
+        line_end = text.find("\n", start)
+        if line_end < 0:
+            break
+        return text[:line_end + 1] + ENGINE_HOOK_BOOTSTRAP + text[line_end + 1:]
+    raise RuntimeError(f"{path.name} action-window initialization not recognized")
 
 
 def _insert_named_import(text, path, module):
