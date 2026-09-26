@@ -34,8 +34,9 @@ def _insert_import(text, path):
 
 
 def _ensure_engine_hook_bootstrap(text, path):
-    if LEGACY_ENGINE_HOOK_BOOTSTRAP in text:
-        text = text.replace(LEGACY_ENGINE_HOOK_BOOTSTRAP, "", 1)
+    legacy_block = "import GemRBModCore\n" + LEGACY_ENGINE_HOOK_BOOTSTRAP
+    if legacy_block in text:
+        text = text.replace(legacy_block, "import GemRBModCore\n", 1)
     if ENGINE_HOOK_BOOTSTRAP in text:
         return text
     for function_name in ("OpenActionsWindowControls", "UpdateActionsWindow"):
