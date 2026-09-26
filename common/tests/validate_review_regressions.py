@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 GUI = ROOT / "common/guiscripts"
 ACTIONS = '''import GemRB
 
+def UpdateActionsWindow ():
+	pass
+
 def SpellPressed():
 	pc = GemRB.GameGetFirstSelectedActor ()
 	Spell = GemRB.GetVar ("Spell")
