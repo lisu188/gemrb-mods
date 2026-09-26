@@ -53,15 +53,15 @@ def start():
         return result
 
     GemRB.SetNonPartySpellCastCheck(accepted)
-    GemRB.ExecuteString('ForceSpellRES("PS2CBLS",Player1)', enemy)
+    GemRB.ExecuteString('ForceSpellRES("PS2BRLK",Player1)', enemy)
     schedule(after_cast, 2600)
 
 
 def after_cast():
     assert len(observed) == 1, observed
     requested, executable, pool = observed[0]
-    assert requested == "PS2CBLS"
-    assert executable == "PS2CBLS4", executable
+    assert requested == "PS2BRLK"
+    assert executable == "PS2BRLK4", executable
     assert pool == pool_before - 3
     assert Psionics.ensure_pool(enemy) == pool_before - 3
     record("pp_spent_once", before=pool_before, after=pool)
