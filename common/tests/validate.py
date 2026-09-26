@@ -433,6 +433,8 @@ def exercise_order(first, second):
             "(GameCheck.IsBG2OrEE () or GameCheck.IsBGEE ())"
         ) == 2
         assert "import GemRBModCore" in actions
+        assert "def UpdateActionsWindow ():\n\tGemRBModCore.install_engine_hooks()\n" in actions
+        assert "import GemRBModCore\nGemRBModCore.install_engine_hooks()\n" not in actions
         assert "GemRBModCore.begin_spell" in actions
         assert "GemRBModCore.action_info" in actions
         assert (folder / ".gemrbmodcore.psionics.active").exists()
