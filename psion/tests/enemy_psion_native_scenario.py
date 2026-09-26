@@ -42,28 +42,29 @@ def start():
     assert Psionics.is_psion(enemy)
     assert Psionics.discipline(enemy) == "NOMAD"
     pool_before = Psionics.ensure_pool(enemy, True)
-    assert pool_before > 3
+    assert pool_before > 5
 
     def accepted(actor, resref):
+        plan = Psionics.manifestation_plan(actor, resref) if actor == enemy else None
         result = GemRBModCore.confirm_nonparty_spell(actor, resref)
         if actor == enemy:
             observed.append((str(resref).upper(), result, Psionics.ensure_pool(actor)))
             record("accepted_hook", actor=actor, requested=str(resref).upper(),
-                   executable=str(result), pool=Psionics.ensure_pool(actor))
+                   executable=str(result), pool=Psionics.ensure_pool(actor), plan=plan)
         return result
 
     GemRB.SetNonPartySpellCastCheck(accepted)
-    GemRB.ExecuteString('ForceSpellRES("PS2BRLK",Player1)', enemy)
+    GemRB.ExecuteString('ForceSpellRES("PS3THOP",Player1)', enemy)
     schedule(after_cast, 2600)
 
 
 def after_cast():
     assert len(observed) == 1, observed
     requested, executable, pool = observed[0]
-    assert requested == "PS2BRLK"
-    assert executable == "PS2BRLK4", executable
-    assert pool == pool_before - 3
-    assert Psionics.ensure_pool(enemy) == pool_before - 3
+    assert requested == "PS3THOP"
+    assert executable == "PS3THOP4", executable
+    assert pool == pool_before - 5
+    assert Psionics.ensure_pool(enemy) == pool_before - 5
     record("pp_spent_once", before=pool_before, after=pool)
     result = GemRB.SaveGame(None, "Enemy Psion runtime", 0, GemRB.GetGamePreview())
     assert result == 0, result
@@ -77,7 +78,7 @@ def after_cast():
 
 def after_load():
     current = Psionics.ensure_pool(enemy)
-    assert current == pool_before - 3, (current, pool_before)
+    assert current == pool_before - 5, (current, pool_before)
     assert Psionics.is_psion(enemy)
     record("loaded", pool=current, actor=enemy)
     print("ENEMY_PSION_NATIVE_PASS", flush=True)
