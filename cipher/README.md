@@ -113,7 +113,7 @@ bash cipher/tests/validate_weidu.sh
 
 CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal/critical/Reaping-Knives Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
 
-These automated checks are the current release evidence; the real-engine cross-mod acceptance suite is tracked separately in #50.
+These automated checks are focused release evidence; current real-engine campaign coverage is reported separately in [the compatibility matrix](../docs/compatibility.md).
 
 ### Reaping Knives owner identity
 

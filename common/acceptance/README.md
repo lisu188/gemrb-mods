@@ -298,12 +298,28 @@ The recorder supports an explicit `soundset` capture. When the disposable GemRB 
 
 Screenshots are evidence, not the primary oracle. New deterministic scenarios should prefer engine logs, installed resources and explicit actor/state assertions wherever a stable probe exists.
 
-## Remaining live scenario families
+## Completion evidence and bounded workspaces
 
-The acceptance infrastructure from #50 is in place. Legal external BG-family fixtures are still required to produce real-engine evidence for:
+The current exact engine/mod revisions and verified coverage are reported in
+[completion PR #93](https://github.com/lisu188/gemrb-mods/pull/93), paired with
+[engine PR #7](https://github.com/lisu188/gemrb/pull/7). A successful focused
+regression, one completed scenario, or closed infrastructure issue does not
+complete the 11-scenario campaign inventory. Publish the matrix check result
+alongside the revision and CI summary; keep proprietary assets, saves and raw
+UI/log evidence local.
 
-1. shared Cipher/Psion lifecycle execution on BGEE and BG2EE-family fixtures;
-2. Cipher, Psion and Sorcerer/Monk live class smoke tests;
-3. Focus/PP/rest/save-load/quickslot/minimal-combat state transitions;
-4. low/mid/high-level level-up coverage;
-5. the #65 soundset A/B baseline and persistence check.
+Retain source installations and previous evidence. Reuse a game tree only as
+verified immutable input: record its complete hashes, reject changed inputs,
+and give every engine run private GUI scripts, cache, profile and saves. A GUI-
+only engine repair can reuse unchanged native/data inputs when the source diff
+and file hashes establish that identity. Record the new GUI tree and delivery
+revision separately, preserving the earlier build manifest and its files.
+WeiDU lifecycle tests need an independent mutable game workspace; never share
+mutable fixture files through hard links, symlinks or a common writable tree.
+
+Use a task-local `python` launcher on the WeiDU subprocess `PATH` when the host
+provides only `python3`; record the interpreter and WeiDU binary hashes. Avoid
+changing the host's Python installation. Estimate peak scratch/capture space,
+retain only the output needed for the checks, and reclaim reproducible inactive
+intermediates under the workspace's artifact policy. Unique failure diagnostics,
+required screenshots, saves and provenance remain evidence.

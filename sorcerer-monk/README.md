@@ -4,7 +4,7 @@ This mod adds a true Sorcerer/Monk multiclass to Infinity Engine games running t
 
 **Current version: `2.0`**
 
-Repository-level support status is tracked in [the compatibility matrix](../docs/compatibility.md). Version 2.0 has extensive source-contract and real-WeiDU lifecycle validation; full live GemRB campaign qualification is tracked separately in #51 and must not be inferred from the automated fixture coverage.
+Repository-level support status and current campaign coverage are tracked in [the compatibility matrix](../docs/compatibility.md). Version 2.0 has extensive source-contract and real-WeiDU lifecycle validation; full live GemRB campaign qualification requires the complete campaign matrix and must not be inferred from automated fixture coverage.
 
 Install it before creating the character and do not uninstall it while a save still contains Sorcerer/Monk characters.
 

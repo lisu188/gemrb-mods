@@ -74,11 +74,12 @@ def validate_psion_current_docs():
 
 def validate_acceptance_language():
     compatibility = read(ROOT / "docs" / "compatibility.md")
-    sm_readme = read(ROOT / "sorcerer-monk" / "README.md")
-    assert "live campaign qualification pending in #51" in compatibility
-    assert "full live GemRB campaign qualification is tracked separately in #51" in sm_readme
-    assert "real-engine cross-mod acceptance gate is tracked in #50" in read(ROOT / "psion" / "README.md")
-    assert "real-engine cross-mod acceptance suite is tracked separately in #50" in read(ROOT / "cipher" / "README.md")
+    assert "https://github.com/lisu188/gemrb-mods/pull/93" in compatibility
+    assert "requires 11 complete campaign runs and both lifecycle matrices" in compatibility
+    assert "Qualification remains open" in compatibility
+    assert "for any missing, failed or stale entry" in compatibility
+    for folder in MODS:
+        assert "../docs/compatibility.md" in read(ROOT / folder / "README.md")
 
 
 def main():
