@@ -10,7 +10,7 @@ TOOLS = Path(__file__).resolve().parent
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
-from gemrb_acceptance import MANIFEST_SCHEMA_VERSION, utc_now, write_manifest
+from gemrb_acceptance import MANIFEST_SCHEMA_VERSION, provenance_reference, utc_now, write_manifest
 from prepare_acceptance_fixture import load_fixture
 
 MODS = {
@@ -219,7 +219,7 @@ def execute_case(case, game, guiscripts, output, weidu, python):
     }
 
 
-def run_matrix(matrix, fixture, output, weidu="weidu", python=sys.executable, case_id=None):
+def run_matrix(matrix, fixture, output, weidu="weidu", python=sys.executable, case_id=None, metadata=None):
     fixture_data, game, guiscripts = load_fixture(fixture)
     required = {"common", "cipher", "psion"}
     packages = set(fixture_data.get("packages", []))
@@ -243,6 +243,7 @@ def run_matrix(matrix, fixture, output, weidu="weidu", python=sys.executable, ca
         failure = str(error)
     manifest = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
+        "metadata": dict(metadata or {}),
         "matrix": {
             "id": matrix["id"],
             "description": matrix["description"],
@@ -273,12 +274,18 @@ def parse_args(argv=None):
     parser.add_argument("--weidu", default="weidu")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--case")
+    parser.add_argument("--gemrb-commit", default="")
+    parser.add_argument("--mods-commit", default="")
+    parser.add_argument("--provenance", type=Path)
     return parser.parse_args(argv)
 
 
 def main(argv=None):
     args = parse_args(argv)
     matrix = load_matrix(args.matrix)
+    metadata = {"gemrb_commit": args.gemrb_commit, "mods_commit": args.mods_commit}
+    if args.provenance:
+        metadata["provenance"] = provenance_reference(args.provenance)
     manifest_path, manifest = run_matrix(
         matrix,
         args.fixture,
@@ -286,6 +293,7 @@ def main(argv=None):
         args.weidu,
         args.python,
         args.case,
+        metadata,
     )
     print(manifest_path)
     if manifest["status"] != "success":

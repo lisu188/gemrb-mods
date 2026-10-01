@@ -75,19 +75,22 @@
       "id": "bgee.cipher-psion-shared-runtime",
       "game_type": "bgee",
       "matrix": "matrices/cipher-psion-lifecycle.json",
-      "manifest": "bgee/cipher-psion-shared-runtime/lifecycle-manifest.json"
+      "manifest": "bgee/cipher-psion-shared-runtime/lifecycle-manifest.json",
+      "ownership_manifest": "bgee/sorcerer-monk-ownership/manifest.json"
     },
     {
       "id": "bg2ee.cipher-psion-shared-runtime",
       "game_type": "bg2ee",
       "matrix": "matrices/cipher-psion-lifecycle.json",
-      "manifest": "bg2ee/cipher-psion-shared-runtime/lifecycle-manifest.json"
+      "manifest": "bg2ee/cipher-psion-shared-runtime/lifecycle-manifest.json",
+      "ownership_manifest": "bg2ee/sorcerer-monk-ownership/manifest.json"
     }
   ],
   "completion_requirements": [
     "Each scenario entry needs its own complete successful schema-v1 manifest, matching scenario ID and game type, independent installed-rule oracles, exact engine/build and fixture provenance, and retained real UI/log evidence. Do not combine checkpoints from failed runs into a passing manifest.",
     "Both lifecycle entries must contain all four install/uninstall cases with successful handler transitions and exact final restoration. Retain separate Sorcerer/Monk first/last-owner and standalone installation evidence for both families.",
     "Chargen restrictions must include allowed and rejected race/alignment/ability combinations for each custom class. Initial spellbook/action and six-discipline observations do not replace those restrictions.",
-    "The ToB HLA entry requires an actual ToB campaign. Missing, interrupted, blocked, unsupported or mismatched entries keep qualification open. EET is outside this inventory."
+    "The ToB HLA entry requires an actual ToB campaign. Missing, interrupted, blocked, unsupported or mismatched entries keep qualification open. EET is outside this inventory.",
+    "Every scenario and lifecycle manifest must identify the same exact engine and mods commits and hash-bound build/fixture provenance. Fresh player campaigns cover Base Cipher/Soul Blade and all five Psion items plus the owned Psicrystal lifecycle; enemy packages and existing-save migration are excluded."
   ]
 }

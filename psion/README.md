@@ -258,7 +258,7 @@ GitHub Actions validates:
 - binary SPL bounds and preservation of original TLK/table data after uninstall;
 - generated Psion equipment resources, class restrictions, and derived PP/skill/DC runtime bonuses.
 
-These automated checks do not by themselves claim live-game qualification. The real-engine cross-mod acceptance gate is tracked in #50.
+These automated checks do not by themselves claim live-game qualification. Current real-engine campaign coverage is reported in [the compatibility matrix](../docs/compatibility.md).
 
 ## Next work
 
@@ -343,4 +343,6 @@ ownership registry is rejected rather than silently assigned a duplicate.
 Companion regression tests cover runtime behavior, original resource formats,
 real WeiDU installation/restoration, and native engine lifecycle boundaries.
 The open-demo engine test separately exercises actual save/reload. Full
-BGEE/BG2EE/ToB campaign qualification remains the existing #50 acceptance gate.
+BGEE/BG2EE/ToB campaign qualification requires the complete matrix linked from
+[the compatibility status](../docs/compatibility.md), independently of closed
+infrastructure issues.

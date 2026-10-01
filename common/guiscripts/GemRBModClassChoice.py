@@ -138,6 +138,10 @@ def on_load(script):
 
 	races = GemRB.LoadTable("clsrcreq")
 	race_name = GUICommon.GetRaceRowName(my_char)
+	# EE's RACES row may use HALF_ORC while CLSRCREQ uses HALFORC.
+	# Preserve the real row name when this table already supports it.
+	if race_name == "HALF_ORC" and races.GetColumnIndex(race_name) is None:
+		race_name = "HALFORC"
 	has_multi = False
 	psion_added = False
 	_class_rows = []

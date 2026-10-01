@@ -16,8 +16,13 @@ END
 
 OUTER_SET ci_splprot_rows = 0
 COPY_EXISTING ~splprot.2da~ ~override~
+  // COMMENT is optional; count every STAT/VALUE/RELATION row, including rows
+  // appended by mods without that extra column.
   COUNT_2DA_COLS ci_splprot_cols
-  COUNT_2DA_ROWS ci_splprot_cols ci_splprot_count
+  COUNT_2DA_ROWS 3 ci_splprot_count
+  // A header with COMMENT itself has four tokens and is included by WeiDU's
+  // minimum-width counter. It is not a row in GemRB's native table indexes.
+  PATCH_IF ci_splprot_cols > 3 BEGIN SET ci_splprot_count -= 1 END
   SPRINT ci_splprot_prefix ~~
   READ_ASCII (BUFFER_LENGTH - 1) ci_splprot_last (1)
   PATCH_IF NOT (~%ci_splprot_last%~ STRING_EQUAL ~%LNL%~) BEGIN
@@ -27,7 +32,17 @@ COPY_EXISTING ~splprot.2da~ ~override~
   FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
     SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_FOCUS_%ci_unit% 165 %ci_unit% 1%LNL%~
   END
-  SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_SUBCLASS_BASE 166 0 1%LNL%CIPHER_SOUL_BLADE 166 1 1%LNL%~
+  SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_SUBCLASS_BASE 163 0 1%LNL%CIPHER_SOUL_BLADE 163 1 1%LNL%~
+  // A +5 transition is legal only below this actor's level-based cap. 0x104
+  // is NOT (row A OR row B), so reject a different state or insufficient level.
+  // Evaluate these native conditions on every hit, including while unselected.
+  FOR (ci_unit = 0; ci_unit < 34; ++ci_unit) BEGIN
+    SET ci_other_state = ci_splprot_count + 38 + (ci_unit * 3)
+    SET ci_low_level = ci_other_state + 1
+    SET ci_min_level = 1
+    PATCH_IF ci_unit > 4 BEGIN SET ci_min_level = ci_unit - 3 END
+    SPRINT ci_splprot_append ~%ci_splprot_append%CIPHER_OTHER_%ci_unit% 165 %ci_unit% 5%LNL%CIPHER_LOW_%ci_unit% 34 %ci_min_level% 2%LNL%CIPHER_GAIN_%ci_unit% 0x104 %ci_other_state% %ci_low_level%%LNL%~
+  END
   SET ci_splprot_offset = BUFFER_LENGTH
   SET ci_splprot_length = STRING_LENGTH ~%ci_splprot_append%~
   INSERT_BYTES ci_splprot_offset ci_splprot_length
@@ -39,6 +54,7 @@ OUTER_SET ci_class_splprot = ci_splprot_rows
 OUTER_SET ci_hostile_splprot = ci_splprot_rows + 1
 OUTER_SET ci_base_subclass_splprot = ci_splprot_rows + 36
 OUTER_SET ci_soul_blade_splprot = ci_splprot_rows + 37
+OUTER_SET ci_gain_splprot = ci_splprot_rows + 38
 
 // Persist the exact numeric opcode-326 target row for later compatibility
 // components. Component 0 is the authority because it creates CIPHER_HOSTILE.
@@ -72,7 +88,7 @@ END
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTEP~ END
 COPY_EXISTING ~CIFSTEP.spl~ ~override~
   FOR (ci_unit = 33; ci_unit >= 0; --ci_unit) BEGIN
-    SET ci_row = ci_splprot_rows + 2 + ci_unit
+    SET ci_row = ci_gain_splprot + (ci_unit * 3) + 2
     SET ci_next = ci_unit + 1
     SPRINT ci_setter ~CIFS%ci_next%~
     LPF ADD_SPELL_EFFECT
@@ -84,19 +100,26 @@ BUT_ONLY
 
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSTP2~ END
 COPY_EXISTING ~CIFSTP2.spl~ ~override~
-  FOR (ci_unit = 32; ci_unit >= 0; --ci_unit) BEGIN
-    SET ci_row = ci_splprot_rows + 2 + ci_unit
-    SET ci_next = ci_unit + 2
-    SPRINT ci_setter ~CIFS%ci_next%~
+  // Reuse the capped single step twice: with only 5 capacity left, the first
+  // step reaches the cap and the second is a no-op (including 165 -> 170).
+  FOR (ci_step = 0; ci_step < 2; ++ci_step) BEGIN
     LPF ADD_SPELL_EFFECT
-      INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_row
-      STR_VAR resource = ~%ci_setter%~
+      INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_class_splprot
+      STR_VAR resource = ~CIFSTEP~
     END
   END
 BUT_ONLY
 
 LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFGAIN~ END
 COPY_EXISTING ~CIFGAIN.spl~ ~override~
+  LPF ADD_SPELL_EFFECT
+    INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_class_splprot
+    STR_VAR resource = ~CIFSUB~
+  END
+BUT_ONLY
+
+LAF cipher_create_internal_spell STR_VAR ci_resref = ~CIFSUB~ END
+COPY_EXISTING ~CIFSUB.spl~ ~override~
   LPF ADD_SPELL_EFFECT
     INT_VAR opcode = 326 target = 1 timing = 1 parameter2 = ci_base_subclass_splprot
     STR_VAR resource = ~CIFSTEP~

@@ -165,8 +165,8 @@ def test_sources():
     assert "opcode = 326" in focus
     assert "timing = 9 parameter1 = ci_unit parameter2 = 9" in focus
     assert "ci_unit = 33; ci_unit >= 0; --ci_unit" in focus
-    assert "CIPHER_SUBCLASS_BASE 166 0 1" in focus
-    assert "CIPHER_SOUL_BLADE 166 1 1" in focus
+    assert "CIPHER_SUBCLASS_BASE 163 0 1" in focus
+    assert "CIPHER_SOUL_BLADE 163 1 1" in focus
     assert "CIFSTP2" in focus
     assert "ci_soul_blade_splprot" in focus
     assert "ci_location = 1" in focus_item_patch
@@ -266,6 +266,8 @@ def load_runtime():
         applied.append((actor, resref, caster))
         if resref.startswith("CIFS"):
             state[165] = int(resref[4:])
+        if resref == "CISUBFX":
+            state[163] = 1
 
     def learn_spell(actor, resref, flags=0, *args):
         key = str(resref).upper()
@@ -338,6 +340,7 @@ def load_runtime():
     sys.modules["ie_spells"] = ie_spells
 
     sys.modules.pop("InnateCharges", None)
+    sys.modules.pop("PersistentState", None)
     sys.modules.pop("Selectors", None)
     spec = importlib.util.spec_from_file_location("cipher_runtime", CIPHER / "guiscripts" / "Cipher.py")
     module = importlib.util.module_from_spec(spec)
@@ -414,6 +417,51 @@ def test_runtime():
     assert runtime.available_subclass_choices(1) == []
 
 
+def test_subclass_transactions_and_caps():
+    runtime, state, _, known, _ = load_runtime()
+    runtime.cancel_pending()
+    original_known = [dict(spell) for spell in known]
+    state[166] = 7  # An unrelated melee to-hit bonus must remain untouched.
+    assert runtime.begin_manifest(1, "CISBLAD")
+    runtime.cancel_pending(1)
+    assert runtime.subclass_id(1) == 0
+    assert known == original_known
+    assert runtime.begin_manifest(1, "CISBLAD")
+    assert runtime.begin_manifest(1, "CISBLAD")
+    assert runtime.subclass_id(1) == 1
+    assert state[166] == 7
+    assert known == original_known
+    runtime.cancel_pending(1)
+    assert not runtime.begin_manifest(1, "CISBLAD")
+
+    # Selection is free; cancellation never spends Focus; confirmation uses
+    # the subclass surcharge and rechecks affordability at the commit boundary.
+    runtime.set_focus(1, 20)
+    assert runtime.begin_manifest(1, "CI2MBND")
+    runtime.cancel_pending(1)
+    assert runtime.current_focus(1) == 20
+    assert runtime.begin_manifest(1, "CI2MBND")
+    runtime.set_focus(1, 15)
+    assert not runtime.begin_manifest(1, "CI2MBND")
+    assert runtime.current_focus(1) == 15
+    runtime.set_focus(1, 20)
+    assert runtime.begin_manifest(1, "CI2MBND")
+    assert runtime.begin_manifest(1, "CI2MBND")
+    assert runtime.current_focus(1) == 0
+
+    # A stale mirror is reconstructed from persistent actor state, including
+    # after rest. Class level, not subclass, remains the authority for the cap.
+    state[runtime.SUBCLASS_STAT] = 0
+    runtime.refresh_innate_charges(1)
+    assert state[runtime.SUBCLASS_STAT] == 1
+    for level, expected in ((1, 25), (10, 70), (29, 165), (30, 170), (40, 170)):
+        state[34] = level
+        runtime.set_focus(1, 999)
+        assert runtime.current_focus(1) == expected
+    runtime.restore_party()
+    assert runtime.subclass_id(1) == 1 and runtime.current_focus(1) == 20
+
+
 def test_power_learning_proxy():
     path = CIPHER / "tests" / "validate_power_learning.py"
     spec = importlib.util.spec_from_file_location("cipher_power_learning_validation", path)
@@ -441,6 +489,7 @@ def test_shared_gui_lifecycle():
 
 
 def main():
+    test_subclass_transactions_and_caps()
     test_tables()
     test_sources()
     test_runtime()

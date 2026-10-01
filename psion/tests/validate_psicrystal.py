@@ -50,12 +50,18 @@ def fake_table(name):
 
 
 def static_checks():
+    # Native opcode 214 reads column zero, regardless of its heading. Keep the
+    # selectable SPL resources first; personality IDs are runtime metadata.
+    assert header("pscryst.2da")[0] == "ResRef"
     personality_rows = rows("pscryst.2da")
+    columns = header("pscryst.2da")
+    named_rows = {row[0]: dict(zip(columns, row[1:])) for row in personality_rows}
     parsed = {
-        row[0]: (int(row[1]), row[2], row[4], int(row[5]))
-        for row in personality_rows
+        name: (int(row["ID"]), row["ResRef"], row["SKILL"], int(row["BONUS"]))
+        for name, row in named_rows.items()
     }
     assert parsed == EXPECTED, parsed
+    assert [row[1] for row in personality_rows] == [value[1] for value in EXPECTED.values()]
     assert len({value[0] for value in EXPECTED.values()}) == len(EXPECTED)
     assert all(len(value[1]) <= 8 for value in EXPECTED.values())
 

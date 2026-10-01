@@ -4,6 +4,10 @@ This development revision of Psion/Cipher requires the companion GemRB
 `SetSpellCastCheck` API. A version string such as `0.9.5-git` is not enough to
 establish that capability. The companion engine changes are being delivered
 to the user-maintained fork in [GemRB PR #3](https://github.com/lisu188/gemrb/pull/3).
+The fresh-character completion candidate additionally uses the companion
+save/reload, EE GUI and HLA fixes in
+[GemRB PR #7](https://github.com/lisu188/gemrb/pull/7); Psicrystal management
+uses the existing `ManageCompanion` interface and saved-state format.
 The separate [upstream proposal](https://github.com/gemrb/gemrb/pull/2525)
 does not establish that an upstream release contains this API; do not interpret
 this branch as qualification of an unmodified released GemRB build.

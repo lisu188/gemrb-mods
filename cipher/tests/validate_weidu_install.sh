@@ -36,6 +36,7 @@ verify() {
   python3 "$repo_root/cipher/tests/verify_item_usability.py" "$game"
   python3 "$repo_root/cipher/tests/verify_power_learning.py" "$game"
   python3 "$repo_root/cipher/tests/verify_high_tier_weidu.py" "$game"
+  python3 "$repo_root/cipher/tests/verify_focus_combat.py" "$game"
 }
 
 install
