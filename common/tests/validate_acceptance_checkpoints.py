@@ -103,7 +103,23 @@ def validate_campaign_inventory(harness):
                           for value in legacy["required_checkpoints"]]
         expected_bg2ee.insert(expected_bg2ee.index(name + ".rest.inn") + 1,
                               name + ".temple-healing")
-        assert bg2ee["required_checkpoints"] == expected_bg2ee
+        # Campaign qualification grows independently of unchanged legacy scenarios.
+        additions = {
+            "cipher": {"cipher.subclass.selection", "cipher.subclass.cancel", "cipher.subclass.persistence",
+                       "cipher.focus.class-isolation", "cipher.soul-blade.cost", "cipher.soul-blade.hostile-hit",
+                       "cipher.soul-blade.critical-hit", "cipher.soul-blade.miss-friendly",
+                       "cipher.soul-blade.cap", "cipher.soul-blade.quickslot"},
+            "psion": {"psion.equipment." + suffix for suffix in (
+                "restrictions", "capacity", "skills", "current-int-dc", "persistence", "vendor")}
+                | {"psion.psicrystal." + suffix for suffix in (
+                    "prerequisites", "personalities", "two-owners", "once-per-rest", "recall",
+                    "dismiss-death", "rest-replacement", "scaling", "area-transition",
+                    "save-reload", "owner-death")},
+            "sorcerer-monk": set(),
+        }[name]
+        assert bg2ee["required_checkpoints"][:len(expected_bg2ee)] == expected_bg2ee
+        assert set(bg2ee["required_checkpoints"]) - set(expected_bg2ee) == additions
+        expected_bg2ee += sorted(additions)
         original = set(expected_bg2ee)
         current = set(bgee["required_checkpoints"])
         removed = {
@@ -314,6 +330,8 @@ def main():
     tob = harness.load_scenario(SCENARIOS / "sorcerer-monk-tob-hla.json")
     assert "bgee" not in tob["supported_game_types"]
     validate_campaign_inventory(harness)
+    matrix_tests = load_module("validate_acceptance_matrix", ROOT / "common/tests/validate_acceptance_matrix.py")
+    matrix_tests.main()
     print("Structured acceptance checkpoint validation passed (synthetic harness coverage only)")
 
 

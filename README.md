@@ -14,9 +14,9 @@ Some simple mods require only setting tweaks. For those, see the GemRB modding p
 
 | Mod | Current version | Shared runtime | Release status |
 | --- | --- | --- | --- |
-| [Cipher](cipher/README.md) | 0.2.0 | `common/` + `GemRBModCore` | automated validation; real-engine acceptance tracked in #50 |
-| [Psion](psion/README.md) | 1.4.0 | `common/` + `GemRBModCore` | automated validation; real-engine acceptance tracked in #50 |
-| [Sorcerer/Monk](sorcerer-monk/README.md) | 2.0 | shared chargen layer | automated/WeiDU validation complete; live campaign qualification tracked in #51 |
+| [Cipher](cipher/README.md) | 0.2.0 | `common/` + `GemRBModCore` | automated validation; campaign results in the compatibility matrix |
+| [Psion](psion/README.md) | 1.4.0 | `common/` + `GemRBModCore` | automated validation; campaign results in the compatibility matrix |
+| [Sorcerer/Monk](sorcerer-monk/README.md) | 2.0 | shared chargen layer | automated/WeiDU validation; campaign results in the compatibility matrix |
 
 See [the compatibility and release matrix](docs/compatibility.md) for supported game families, runtime requirements, and the distinction between automated validation and live-engine acceptance.
 
@@ -43,6 +43,13 @@ The driver rejects a mismatched class/common runtime API, a package/TP2 version 
 Install uses WeiDU first and then delegates GUI mutation to `common/tools/install_guiscripts.py`. Uninstall removes that class's GUI handler first and then invokes WeiDU. If a second phase fails, the driver reports the resulting partial state rather than claiming an atomic rollback. `status` distinguishes `not installed`, `weidu only`, `runtime only/inconsistent`, `installed`, and `installed with other handlers`.
 
 The existing class-specific WeiDU and `tools/install_guiscripts.py` commands remain supported as low-level compatibility entry points.
+
+Enhanced Edition installation uses the game language in `weidu.conf`, or the
+only installed `lang/<language>/dialog.tlk`. If several languages are available
+without a configured choice, add `--game-language en_US` (or another listed
+language) to `preflight`, `install`, or `uninstall`. The driver reports an
+ambiguous or missing language before installation instead of waiting for a
+hidden WeiDU prompt. This choice is separate from the mod's translation.
 
 ## Release archives
 

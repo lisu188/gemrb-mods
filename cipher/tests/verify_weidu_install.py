@@ -187,12 +187,14 @@ def header_effects(path):
                 struct.unpack_from("<I", data, offset + 0x08)[0],
                 data[offset + 0x0C],
                 resource(data, offset + 0x14),
+                data[offset + 0x12],
+                data[offset + 0x13],
             ))
         result.append((attack_type, location, effects))
     return result
 
 
-expected_focus_hit = (326, 2, 0, hostile_row, 1, "CIFGAIN")
+expected_focus_hit = (326, 2, 0, hostile_row, 1, "CIFGAIN", 100, 0)
 
 
 def verify_item_focus(path):

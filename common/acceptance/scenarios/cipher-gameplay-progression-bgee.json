@@ -13,7 +13,8 @@
     "Controlled hostile and friendly targets with normal hits, critical hits and misses observed in real combat.",
     "Ordinary rest, inn rental and temple healing access, a second area and local saves; XP grants only prepare real level-up screens.",
     "Independent installed-rule oracles for Focus gain/cap/cost, learning credits and tier unlocks.",
-    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it."
+    "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it.",
+    "Fresh legally created Base Cipher and Soul Blade actors, plus a non-Cipher control; independent installed subclass, Focus-gain/cap and power-cost resources are retained with hashes."
   ],
   "instructions": [
     "Record starting Focus and before/after Focus for hostile normal/critical hits, misses and friendly attacks; reach the cap and attempt further gain.",
@@ -21,7 +22,10 @@
     "Compare visible learning eligibility and rejection of locked tiers against installed rules in cipher.tier-restrictions, including inaccessible Reaping Knives. Its ownership/combat tests are mandatory in the separate BG2EE/ToB scenario; do not grant the power or raise the BGEE cap to simulate access.",
     "Use real low/middle level-up screens and advance to the maximum level permitted by installed XPCAP/XPLEVEL. Record cap XP, expected/observed level, learning credits and tier eligibility in cipher.level.cap.",
     "Exercise actual inn room selection and rental confirmation for cipher.rest.inn; derive restored spell charges and any pool reset from installed rules. Temple healing is a separate store purchase, not rest: record native cure identity/effects, expected HP healing and unchanged known spells and Focus in cipher.temple-healing. Capture before/after values and native store UI actions; never invoke the store callbacks directly.",
-    "Compare observed Focus/powers after ordinary rest, inn rental, an area transition and save/reload with the documented reset/persistence rules. Quit normally."
+    "Compare observed Focus/powers after ordinary rest, inn rental, an area transition and save/reload with the documented reset/persistence rules. Quit normally.",
+    "Select Base Cipher and Soul Blade through the real selector, cancel before committing and compare unchanged identity/resources, then commit and verify persistent subclass identity after ordinary save/reload, quicksave/reload, area travel and rest.",
+    "Compare both subclasses and the non-Cipher control: normal hostile hits grant Base 5 and Soul Blade 10 Focus, critical hits 10 and 20, misses/friendly attacks no gain; neither gain nor spend may affect the non-Cipher. Derive these expectations independently from installed resources.",
+    "Exercise Soul Blade power and quickslot casting, checking its additional 5 Focus cost, target cancellation without spending, and cap behavior against 20 + 5 * min(level, 30). Observe overflow clipping and, where legally reachable, the 165-to-170 final partial gain; BGEE records its campaign-cap boundary and rejects unattainable higher tiers."
   ],
   "required_checkpoints": [
     "cipher.focus.start",
@@ -43,6 +47,16 @@
     "cipher.rest.inn",
     "cipher.temple-healing",
     "cipher.area-transition",
-    "cipher.save-reload"
+    "cipher.save-reload",
+    "cipher.subclass.selection",
+    "cipher.subclass.cancel",
+    "cipher.subclass.persistence",
+    "cipher.focus.class-isolation",
+    "cipher.soul-blade.cost",
+    "cipher.soul-blade.hostile-hit",
+    "cipher.soul-blade.critical-hit",
+    "cipher.soul-blade.miss-friendly",
+    "cipher.soul-blade.cap",
+    "cipher.soul-blade.quickslot"
   ]
 }

@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse
 import datetime as dt
+import hashlib
 import json
 import subprocess
 import sys
@@ -33,6 +34,15 @@ def terminate_process(process, grace_seconds=5):
 
 def write_manifest(path, manifest):
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def provenance_reference(path):
+    """Bind a private, externally prepared provenance document to this run."""
+    path = Path(path).resolve()
+    raw = path.read_bytes()
+    if not isinstance(json.loads(raw), dict):
+        raise ValueError("provenance must be a JSON object")
+    return {"path": str(path), "sha256": hashlib.sha256(raw).hexdigest()}
 
 
 def _string_list(value, field):
@@ -262,7 +272,10 @@ def parse_args(argv=None):
     parser.add_argument("--output", type=Path, default=Path("gemrb-acceptance"))
     parser.add_argument("--gemrb-version", default="")
     parser.add_argument("--gemrb-commit", default="")
+    parser.add_argument("--mods-commit", default="")
+    parser.add_argument("--provenance", type=Path)
     parser.add_argument("--game-type", default="")
+    parser.add_argument("--campaign", default="")
     parser.add_argument("--fixture-id", default="")
     parser.add_argument("--component", action="append", default=[])
     parser.add_argument("--install-order", action="append", default=[])
@@ -287,11 +300,15 @@ def main(argv=None):
     metadata = {
         "gemrb_version": args.gemrb_version,
         "gemrb_commit": args.gemrb_commit,
+        "mods_commit": args.mods_commit,
         "game_type": args.game_type,
+        "campaign": args.campaign,
         "fixture_id": args.fixture_id,
         "components": args.component,
         "install_order": args.install_order,
     }
+    if args.provenance:
+        metadata["provenance"] = provenance_reference(args.provenance)
     manifest_path, manifest = run_scenario(scenario, args.command, args.output, metadata)
     print(manifest_path)
     if manifest["failures"]:

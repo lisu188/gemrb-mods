@@ -14,7 +14,8 @@
     "Local XP grants are permitted for preparation; all subsequent level-up, learning, casting and persistence transitions must execute in GemRB.",
     "Expected PP, learning credits, power eligibility, DC resources and progression values are derived independently from current rules and installed resources.",
     "Before preparation, hash and read installed XPCAP and XPLEVEL rows; derive attainable levels from those resources. Controlled XP may reach the installed cap but must not change or bypass it.",
-    "Real BG2EE data with ToB available for high-level preparation; record the active campaign and preserve legally created actors. Low/middle checkpoints may resume genuine campaign-start or imported lower-level saves; never overwrite component/class levels."
+    "Real BG2EE data with ToB available for high-level preparation; record the active campaign and preserve legally created actors. Low/middle checkpoints may resume genuine campaign-start or imported lower-level saves; never overwrite component/class levels.",
+    "All five installed Psion equipment items and their independently decoded usability/effects, with actual Ribald shop access; two legal Psion owners and controlled injury/death/level-up fixtures for companion observations."
   ],
   "instructions": [
     "Record before/after learning credits and known powers for confirm and cancel, and compare each discipline's visible eligible powers at each unlocked tier.",
@@ -23,7 +24,11 @@
     "Exercise focus, Center Mind, feats, skills and quickslots through their real UI actions; observe combat effects and resource changes.",
     "Level through the actual screens at low, middle and level 17+ checkpoints. At each unlocked tier compare all six disciplines, including high-tier access for every discipline; record per-discipline observed/expected results in psion.discipline-access and psion.level.17-plus.",
     "Exercise actual inn room selection and rental confirmation for psion.rest.inn; derive restored spell charges and any pool reset from installed rules. Temple healing is a separate store purchase, not rest: record native cure identity/effects, expected HP healing and unchanged known spells and PP in psion.temple-healing. Capture before/after values and native store UI actions; never invoke the store callbacks directly.",
-    "Observe ordinary rest, inn rental, area transition and save/reload against recorded baselines or the applicable reset rule. Quit normally."
+    "Observe ordinary rest, inn rental, area transition and save/reload against recorded baselines or the applicable reset rule. Quit normally.",
+    "Exercise all five Psion equipment items through real inventory controls: Psion-only and slot restrictions, capacity changes on equip/remove without refilling PP and clamping excess, trained skill ranks versus equipment bonuses, and current-Intelligence DC effects. Capture each item identity, installed effect oracle and before/after stats; verify equipment effects through ordinary save/reload, quicksave/reload and area travel. Inspect Ribald stock through the real shop UI for the campaign-specific placement.",
+    "Use native feat/personality selectors to establish Psicrystal prerequisite rejection and all legal personality choices. Create companions for two Psion owners and observe distinct stable ownership, once-per-rest creation and no cross-owner control.",
+    "Injure a live companion, recall it through its native action and verify the same identity and HP without duplication. Dismiss or kill it and verify that the creation use is not refunded; rest permits replacement without automatically creating a creature. Level the owner through the actual UI and verify companion scaling without healing.",
+    "Verify each owner/companion mapping across area transitions, ordinary saves and quicksave/reload. Kill an owner in the controlled fixture and observe companion cleanup; retain independent installed lifetime/ownership and scaling rules with each checkpoint."
   ],
   "required_checkpoints": [
     "psion.learning.confirm",
@@ -49,6 +54,23 @@
     "psion.rest.inn",
     "psion.temple-healing",
     "psion.area-transition",
-    "psion.save-reload"
+    "psion.save-reload",
+    "psion.equipment.restrictions",
+    "psion.equipment.capacity",
+    "psion.equipment.skills",
+    "psion.equipment.current-int-dc",
+    "psion.equipment.persistence",
+    "psion.equipment.vendor",
+    "psion.psicrystal.prerequisites",
+    "psion.psicrystal.personalities",
+    "psion.psicrystal.two-owners",
+    "psion.psicrystal.once-per-rest",
+    "psion.psicrystal.recall",
+    "psion.psicrystal.dismiss-death",
+    "psion.psicrystal.rest-replacement",
+    "psion.psicrystal.scaling",
+    "psion.psicrystal.area-transition",
+    "psion.psicrystal.save-reload",
+    "psion.psicrystal.owner-death"
   ]
 }

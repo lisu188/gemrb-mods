@@ -12,13 +12,20 @@ including cancellation after a command has already been queued.
 
 ## Combat loop
 
-Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, successful weapon hits against hostile creatures add 5 Focus, critical hits add another 5 Focus for 10 total, and psychic powers spend Focus. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
+Cipher does not use spell slots or per-rest power charges. It begins each rest cycle with 20 Focus, and psychic powers spend Focus. For a base Cipher, successful weapon hits against hostile creatures add 5 Focus, and critical hits add another 5 Focus for 10 total. Maximum Focus is `20 + 5 × Cipher level`, capped by the runtime at level 30.
+
+New Ciphers may permanently choose **Soul Blade** through **Choose Cipher
+Subclass**, or remain base Ciphers by leaving the choice unspent. Soul Blades
+gain 10 Focus per hostile weapon hit and another 10 on a critical hit, while
+their powers cost 5 additional Focus. Both subclasses use the same level-based
+cap, enforced on every gain even when the character is not selected. Reaping
+Knives still transfers 5 Focus per ally hit. See [subclass rules](docs/subclasses.md).
 
 Soul Whip adds +1 weapon damage at level 1, +2 at level 10, and +3 at level 20. This is the portable BG-family approximation of PoE's percentage weapon-damage scaling: GemRB's common weapon damage bonus is applied only during weapon damage calculation, while percentage damage opcodes are damage-type based rather than weapon-source based.
 
-Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities carry an `ApplyEffectsList` hit effect that evaluates the struck creature against the weapon user through SPLPROT's caster↔target EA relation (`0x108`). Only hostile targets pass that gate. `CIFGAIN` is then applied with the weapon user preserved as caster; its self-targeted class gate and descending state dispatch advance Focus on the Cipher by exactly one unit without cascading multiple increments in the same hit.
+Focus is stored in scripting state stat 165 in five-point units. Each Focus value is represented by one permanent `CIFS<n>` actor effect so it survives normal save/load serialization. Weapon abilities carry an `ApplyEffectsList` hit effect that evaluates the struck creature against the weapon user through SPLPROT's caster↔target EA relation (`0x108`). Only hostile targets pass that gate. `CIFGAIN` is then applied with the weapon user preserved as caster. Its self-targeted Cipher class gate runs before subclass dispatch: a base Cipher gains one five-point step, while a Soul Blade gains two. Each step independently checks the level-based cap, so a Soul Blade with only 5 Focus of capacity left gains those 5 points, including the final 165→170 transition.
 
-Critical hits use GemRB's `CastSpellOnCriticalHit` actor hook. The installer exposes that hook through opcode `0x155` for both EE and classic GemRB profiles, and all three Soul Whip tiers attach `CIFCRIT`. `CIFCRIT` runs the same hostile-target gate before adding the second +5 Focus. Normal hit and critical bonus transitions are independently capped by the same Focus state machine. Rest and power spending use the same state-transition spells.
+Critical hits use GemRB's `CastSpellOnCriticalHit` actor hook. The installer exposes that hook through opcode `0x155` for both EE and classic GemRB profiles, and all three Soul Whip tiers attach `CIFCRIT`. `CIFCRIT` runs the same hostile-target gate and `CIFGAIN` dispatch again, adding another 5 Focus for a base Cipher or 10 for a Soul Blade. Thus a critical hit grants 10 or 20 total Focus respectively, limited by the actor's cap. Normal hit and critical bonus transitions are independently capped by the same Focus state machine. Rest and power spending use the same state-transition spells.
 
 ## Power progression
 
@@ -87,7 +94,7 @@ Psion and Cipher share one `GemRBModCore` GUI layer. They may be installed in ei
 - Soul Whip uses +1/+2/+3 weapon damage rather than PoE-style percentage weapon scaling because the supported BG-family effect model does not expose a portable weapon-source-only percentage modifier.
 - The reduced 18-power catalogue grants one powers-known credit per tier unlock rather than reproducing Pillars' denser level-by-level power acquisition.
 - Amplified Wave uses GemRB's prone-capable helpless state (including the knockdown/get-up animation) because BG-family data does not expose a separate portable PoE-style prone effect.
-- Beguiler, Soul Blade, and Ascendant are not implemented.
+- Beguiler and Ascendant are not implemented.
 
 ## Validation
 
@@ -106,7 +113,7 @@ bash cipher/tests/validate_weidu.sh
 
 CI additionally installs, uninstalls, and reinstalls the component against the repository's pinned GemRB fixture in normalized, native, and legacy class-table layouts. The fixture checks class registration, THAC0, persistent Focus setters, corrected attack modifiers, hostile-only normal/critical/Reaping-Knives Focus injection, shared GUI lifecycle behavior, selectable-power proxy generation and rollback, Detonate/Amplified Wave/Soul Collapse high-tier resources, item restrictions, and WeiDU rollback of patched items and IDS resources.
 
-These automated checks are the current release evidence; the real-engine cross-mod acceptance suite is tracked separately in #50.
+These automated checks are focused release evidence; current real-engine campaign coverage is reported separately in [the compatibility matrix](../docs/compatibility.md).
 
 ### Reaping Knives owner identity
 

@@ -1,6 +1,6 @@
 // Reapply Cipher Focus-on-hit support to items introduced after the main
-// component. The shared patch function is idempotent, so existing attack
-// headers remain unchanged.
+// component. The shared patch function also repairs old zero-probability
+// carriers without adding duplicate effects.
 //
 // Component 0 persists the exact numeric CIPHER_HOSTILE SPLPROT row when it
 // creates that row. WeiDU's READ_2DA_ENTRY considers only rows meeting the
