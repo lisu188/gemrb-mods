@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Fixed augmented powers such as Mind Thrust failing to enter targeting when
+  their selector had consumed the parent's innate charge. Exact Intelligence
+  variants now verify the actor's learned parent power without requiring an
+  ordinary spell index in the temporary selector book.
+
 ## 1.4.0
 
 - Added a permanent, independently owned psicrystal body with manifest/recall
