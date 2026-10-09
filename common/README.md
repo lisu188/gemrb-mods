@@ -4,6 +4,13 @@
 
 The GUI layer has one owner (`GemRBModCore`) and dispatches to optional class handlers. Transactions, reusable innate charges, persistent actor-effect state, selector helpers, and WeiDU SPL/ITM constructors live here rather than under a particular class.
 
+Shared Rest and inn hooks restore Psion and Cipher resources only when one native
+rest succeeds and advances game time by at least eight hours. Interrupted attempts
+do not combine into a completed rest. This uses GemRB's 300-second game hour;
+native rest checks, dreams, movies, healing and return values remain unchanged.
+Reinstallation upgrades recognized older shared rest hooks without replacing
+their original backups or unrelated edits.
+
 SPL constructors validate nonempty spellbook and memorized icon references while
 building resources. Existing BAMs are preserved. If an authored stock spell name
 plus `B`/`C` does not identify a real BAM, the constructor reads the corresponding

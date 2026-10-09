@@ -166,6 +166,12 @@ Public power resources keep the baseline save structure used by the catalogue. T
 
 The internal DC variants are implementation details and are not extra known powers. If a generated variant is unavailable, the runtime safely falls back to the canonical resource rather than inventing a second save-DC formula.
 
+Temporary augmentation choices verify that the actor knows the parent power.
+Opening the selector consumes its innate charge and replaces the ordinary spell
+indices with temporary choices, so neither an unused parent charge nor an
+ordinary spell index is required to prepare the selected DC variant. The normal
+class, discipline, Intelligence, level and PP checks still apply.
+
 ## High-level portable approximations
 
 Some level-6–9 tabletop mechanics cannot be represented safely by portable Infinity Engine resources:

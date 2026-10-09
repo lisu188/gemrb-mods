@@ -1094,17 +1094,6 @@ def resolve_power_entry(spellbook, actor, raw_spell):
     return None
 
 
-def _memorized_parent_entry(spellbook, actor, parent):
-    key = (parent or "").upper()
-    try:
-        for candidate in spellbook.GetUsableMemorizedSpells(actor, INNATE_TYPE):
-            if str(candidate.get("SpellResRef", "")).upper() == key:
-                return candidate
-    except Exception:
-        return None
-    return None
-
-
 def prepare_action_entry(spellbook, actor, entry):
     """Bind an installed exact-INT resource without changing memorization.
 
@@ -1127,7 +1116,10 @@ def prepare_action_entry(spellbook, actor, entry):
         return entry
 
     if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:
-        if not _memorized_parent_entry(spellbook, actor, info.get("parent")):
+        # Opening the selector consumes its parent's memorized charge and
+        # replaces spellinfo with temporary children. Authorize the learned
+        # parent independently of usable charges and ordinary spell indices.
+        if str(info.get("parent", "")).upper() not in known_power_refs(actor):
             return False
 
     entry["CastResRef"] = replacement
