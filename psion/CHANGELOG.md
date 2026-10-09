@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fixed interrupted resting incorrectly restoring PP, psionic focus and the
+  psicrystal creation allowance. Shared class resources now require one completed
+  eight-hour native rest, including when renting an inn room.
+
 - Fixed augmented powers such as Mind Thrust failing to enter targeting when
   their selector had consumed the parent's innate charge. Exact Intelligence
   variants now verify the actor's learned parent power without requiring an
