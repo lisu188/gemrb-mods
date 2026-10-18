@@ -378,7 +378,7 @@ def SetupProfsWindow (pc, proftype, window, callback):
 \treturn
 '''
     return {
-        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\tType = GemRB.GetVar ("Type")\n\tGemRB.SpellCast (pc, Type, Spell)\n''',
+        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\ttry:\n\t\tGUICommon.GameControl.GetFrame()\n\texcept RuntimeError:\n\t\treturn\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\tType = GemRB.GetVar ("Type")\n\tGemRB.SpellCast (pc, Type, Spell)\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
         "MenuWindow.py": 'import GemRB\n\ndef Rest():\n\tinfo = GemRB.RestParty (15, 0, 0)\n\treturn info\n',
         "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",
@@ -438,11 +438,11 @@ def exercise_order(first, second):
         profs = (folder / "LUProfsSelection.py").read_text(encoding="utf-8")
         spell_selection = (folder / "bg2" / "GUICG7.py").read_text(encoding="utf-8")
         spell_window = (folder / "LUSpellSelection.py").read_text(encoding="utf-8")
-        assert actions.count(installer.MARK_BEGIN) == 4
+        assert actions.count(installer.MARK_BEGIN) == 5
         assert spellbook.count(installer.MARK_BEGIN) == 1
-        assert 'if not info["Error"]:' in menu
-        assert "\t\tGemRBModCore.restore_party()" in menu
-        assert "\tGemRBModCore.restore_party()" in store
+        assert "info = GemRBModCore.rest_party (15, 0, 0)" in menu
+        assert "GemRBModCore.rest_party(0, 0)" in store
+        assert all(script.count(installer.REST_CHECK_MARKER) == 1 for script in (menu, store))
         assert all("import GemRBModClassChoice" in classes for classes in class_scripts)
         assert all("GemRBModClassChoice.on_load(globals())" in classes for classes in class_scripts)
         assert all("GemRBModStrings.CHOOSE_ALIGNMENT" in script for script in alignment_scripts)
@@ -455,6 +455,8 @@ def exercise_order(first, second):
             "(GameCheck.IsBG2OrEE () or GameCheck.IsBGEE ())"
         ) == 2
         assert "import GemRBModCore" in actions
+        assert "def UpdateActionsWindow ():\n\tGemRBModCore.install_engine_hooks()\n" in actions
+        assert "import GemRBModCore\nGemRBModCore.install_engine_hooks()\n" not in actions
         assert "GemRBModCore.begin_spell" in actions
         assert "GemRBModCore.action_info" in actions
         assert (folder / ".gemrbmodcore.psionics.active").exists()

@@ -4,6 +4,8 @@ import importlib
 
 _HANDLER_NAMES = ("Psionics", "Cipher")
 _pending_casts = {}
+_party_sync_timer_started = False
+_party_sync_running = False
 
 
 def _handlers():
@@ -38,6 +40,53 @@ def restore_party():
         function = getattr(handler, "restore_party", None)
         if function:
             function()
+
+
+def rest_party(*args, **kwargs):
+    """Restore class resources only after this native rest completed eight hours."""
+    import GemRB
+
+    before = GemRB.GetGameTime()
+    result = GemRB.RestParty(*args, **kwargs)
+    after = GemRB.GetGameTime()
+    # GetGameTime reports seconds; GemRB uses 300 seconds per game hour.
+    # Error means a pre-rest refusal, not an encounter interrupting the rest.
+    # Measure this synchronous call alone; partial attempts must never add up.
+    if (isinstance(result, dict) and result.get("Error") is False
+            and type(before) is int and type(after) is int
+            and after - before >= 8 * 300):
+        restore_party()
+    return result
+
+
+def sync_party():
+    """Maintain existing companions without refreshing resources or actions."""
+    global _party_sync_timer_started, _party_sync_running
+    if _party_sync_running:
+        return
+    import GemRB
+    import GUICommon
+
+    # Interface timers survive game loads and also run in the main menu.
+    # The scripting reference resolves the current GameControl each time.
+    try:
+        GUICommon.GameControl.GetFrame()
+    except RuntimeError:
+        return
+
+    _party_sync_running = True
+    try:
+        functions = [getattr(handler, "sync_party", None) for handler in _handlers()]
+        functions = [function for function in functions if function]
+        if functions and not _party_sync_timer_started:
+            GemRB.SetTimer(sync_party, 1000, -1)
+            _party_sync_timer_started = True
+        for function in functions:
+            function()
+    except Exception as error:
+        GemRB.Log(2, "GemRBModCore", "Party synchronization failed: %s" % error)
+    finally:
+        _party_sync_running = False
 
 
 def refresh_innate_charges(actor):
@@ -151,6 +200,42 @@ def confirm_spell(actor, resref):
         return False
     return True
 
+
+
+def confirm_nonparty_spell(actor, resref):
+    """Authorize one accepted scripted cast and return its executable resource."""
+    actual = str(resref or "").upper()
+    for handler in _handlers():
+        planner = getattr(handler, "manifestation_plan", None)
+        commit = getattr(handler, "commit_manifestation", None)
+        owns_actor = getattr(handler, "is_psion", None)
+        metadata = getattr(handler, "power_info", None)
+        if not planner or not commit or not owns_actor or not metadata:
+            continue
+        if not owns_actor(actor) or not metadata(actual):
+            continue
+        plan = planner(actor, actual)
+        if not plan.get("allowed"):
+            return False
+        canonical = str(plan.get("resref") or actual).upper()
+        if not commit(actor, canonical):
+            return False
+        executable = str(plan.get("cast_resref") or canonical).upper()
+        return executable if executable != actual else True
+    return True
+
+
+def install_engine_hooks():
+    """Install callbacks owned by the current GameControl when supported."""
+    import GemRB
+    setter = getattr(GemRB, "SetNonPartySpellCastCheck", None)
+    if not setter:
+        return False
+    try:
+        setter(confirm_nonparty_spell)
+    except RuntimeError:
+        return False
+    return True
 
 def action_info(resref):
     if not is_managed_action(resref):

@@ -1,73 +1,94 @@
-# Enemy Psion runtime spike
+# Enemy Psion runtime
 
-## Result
+## Engine contract
 
-Enemy Psion manifestations cannot safely share the player runtime on the currently
-pinned engine without an additional non-party accepted-cast hook.
+GemRB commit `dc975a69be0f048a9dfe01211fc8a183bccd58b3` provides
+`GemRB.SetNonPartySpellCastCheck`. The callback runs once for an accepted
+non-party scripted cast after target, range, line-of-sight and aura validation
+and immediately before `SpellCore` or `SpellPointCore` begins casting. It
+receives the caster global ActorID and resolved spell ResRef, may veto the cast,
+or may return a replacement executable ResRef. Python failures are rejected by
+the engine.
 
-The existing `GemRB.SetSpellCastCheck` contract is intentionally GUI-only.
-`GameControl::TryToCast` invokes it after GUI target validation and before
-queueing a player spell. Scripted and AI casts instead enter
-`GameScript::SpellCore` or `GameScript::SpellPointCore`, so they never pass
-through that callback.
+The GUIScript actor APIs accept a global ActorID, so the callback can use the
+same Psion runtime functions as party actors without translating the identifier
+or creating an NPC-only state store.
 
-The engine execution point suitable for enemy Psions is the first invocation of
-`Scriptable::CastSpell` / `CastSpellPoint`, after target, range, line-of-sight
-and aura checks have succeeded and before the cast begins. The action's
-`int2Parameter` first-pass state makes that point naturally once-per-cast.
+## Mod-side authority
 
-## Canonical mod-side contract
+`GemRBModCore.confirm_nonparty_spell(actor, resref)` leaves ordinary scripted
+spells and non-Psion actors unchanged. For a recognized Psion power it:
 
-`Psionics.manifestation_plan(actor, resref)` is now the non-mutating authority
-for a manifestation. It returns:
+1. calls `Psionics.manifestation_plan()` without mutating state;
+2. vetoes requirements, manifester-level and PP failures;
+3. calls `Psionics.commit_manifestation()` exactly once at the accepted-cast
+   boundary;
+4. returns the plan's exact-current-Intelligence executable ResRef to GemRB.
 
-- canonical save-bearing power resref;
-- exact-INT executable resref when the installed DC resource exists;
-- PP cost and current actor-local PP snapshot;
-- legality and a bounded rejection reason;
-- discipline, power level and parent metadata.
+Player GUI casts continue through `SetSpellCastCheck` and the transaction
+layer. Enemy casts do not touch player selectors, quickslots, `Spell` GUI
+variables or pending player transactions. Both paths share the same PP ledger,
+legality rules and save-DC variant generation.
 
-The planning path does not initialize, clamp, cache or spend PP. Missing
-persistent state is interpreted exactly as the existing runtime would initialize
-it: a full level/INT-derived pool.
+The installed action-window initialization hook registers the nonparty callback
+on the current GameControl, including after loading another game. Importing the
+shared runtime during the main menu does not access a GameControl. On engines
+without the new API it leaves the old behavior intact,
+so installation remains compatible while enemy Psion casting requires the
+documented engine contract.
 
-`Psionics.commit_manifestation(actor, resref)` recomputes the plan and performs
-the single PP mutation only when the plan is still legal. GUI
-`begin_manifest()` uses the same plan/commit pair through the existing
-transaction layer, so player behavior and future enemy behavior cannot drift
-into separate PP ledgers.
+## Deterministic AI fixture
 
-Exact-INT preparation also consumes the plan's executable resref. Internal DC
-variants remain implementation resources and are not learned powers.
+`psionai.2da` defines the deliberately small regression policy used to exercise
+four tactical roles without exposing the full catalogue to generic random AI:
 
-## Required engine hook
+- OFFENSE: `PS2CBLS`, enemy target;
+- DEFENSE: `PS1IARM`, self target;
+- CONTROL: `PS3THOP`, enemy target;
+- MOBILITY: `PS3SSTP`, point target.
 
-The follow-up engine change must:
+The table records minimum PP and reserve policy and is installed as
+`PSIONAI.2DA`. Campaign encounter scripts can select from this bounded set and
+cast the canonical power ResRef normally; the accepted-cast callback remains the
+authority for affordability, exact-INT substitution and the once-only PP spend.
 
-1. run only for non-party/scripted actors so player GUI casts are not
-   double-accounted;
-2. run once after script target/range/LOS/aura acceptance and immediately before
-   the initial `CastSpell` or `CastSpellPoint` call;
-3. receive the actor global ID and resolved spell resref;
-4. allow the callback to veto the cast or replace the executable resref;
-5. fail closed on callback exceptions;
-6. leave ordinary enemy spells unchanged when the callback returns the original
-   resref;
-7. cover both actor-target and point-target script casts;
-8. have native tests proving no callback on rejected/out-of-range/retried casts,
-   exactly one callback on an accepted cast, veto semantics, and resref
-   substitution.
+`psion/tests/validate_enemy_runtime.py` verifies callback registration, global
+ActorID routing, native-spell bypass, non-Psion bypass, two exact-INT resource
+variants, unaffordable veto, exactly-once commit, and registry coverage for
+offensive, defensive, control and mobility roles.
 
-Once that hook is available, `GemRBModCore` can route non-party `PS*`
-resources to `manifestation_plan()`, commit PP exactly once, and return the
-plan's exact-INT resref. Only then should encounter BCS/CRE resources be added.
+`psion/tests/validate_enemy_psion_native.py` is the real-engine regression. It
+spawns a non-party creature in the public GemRB demo, assigns the installed
+PSION_NOMAD class, initializes canonical actor-local PP, executes a BCS
+`ForceSpellRES` action targeting a separate friendly nonparty dummy by scripting
+name, observes the actual nonparty accepted-cast callback with a hostile caster,
+requires the INT-18 executable resource `PS3THOP4`, and checks five PP are spent
+exactly once. A deterministic failing target save and zero magic resistance let
+the fixture require the delivered `PS3THOP4` Maze effect and avatar removal,
+so callback acceptance alone cannot pass. After checking delivery, the fixture
+removes caster hostility and waits for the action list to empty and the combat
+counter to reach zero before an ordinary save. No party actor is targeted by
+Time Hop's Maze effect and no save restriction
+is bypassed. After load it resolves the persistent nonparty caster through its
+saved native owner/resource token and checks its scripting identity and committed
+pool, rather than reusing a GlobalID from the previous game instance. The runner
+records the actual engine checkout commit in its result. The fixture is
+deliberately not placed into a campaign.
 
-## Source evidence
+The public demo's sparse script dictionary is extended with the probe's native
+trigger symbols. Its placeholder INTMOD is given native Maze duration columns,
+so the delivered effect lasts six rounds instead of expiring immediately from
+missing dice values. These fixture rules do not modify the installed power.
 
-- Engine commit `330f3d827382b9b7505975da8cac2a8236864d9f` introduced
-  `SetSpellCastCheck` and documents that AI casts are excluded.
-- Current `gemrb/core/GUI/GameControl.cpp` owns that callback and calls it only
-  from GUI cast dispatch.
-- Current `gemrb/core/GameScript/GSUtils.cpp` implements
-  `SpellCore`/`SpellPointCore` and reaches `CastSpell`/`CastSpellPoint`
-  without a mod callback.
+## Save/load semantics
+
+Enemy PP and other Psion state use the same actor-local persistent effects as
+player Psions. No pending Python transaction is required for a scripted cast:
+state changes happen only at the engine's accepted-cast callback. A save therefore
+contains only committed PP. After load, the next accepted scripted cast is
+planned from the restored actor state; no quickslot or GUI reconstruction is
+required.
+
+This implementation proves non-party runtime support and a bounded encounter
+policy. It does not automatically populate campaign areas with Psion enemies or
+attempt a general tactical AI over all installed powers.

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Fixed interrupted resting incorrectly restoring PP, psionic focus and the
+  psicrystal creation allowance. Shared class resources now require one completed
+  eight-hour native rest, including when renting an inn room.
+
+- Fixed augmented powers such as Mind Thrust failing to enter targeting when
+  their selector had consumed the parent's innate charge. Exact Intelligence
+  variants now verify the actor's learned parent power without requiring an
+  ordinary spell index in the temporary selector book.
+- Synchronize existing psicrystals automatically during play and after loading,
+  including when their owner is not selected and Innates is closed. Maintenance
+  preserves injuries and never restores class resources or creates a body.
+- Preserve exact save difficulty when two DC lenses are equipped at Intelligence
+  24 or 25, including augmented powers, without changing PP costs.
+
 ## 1.4.0
 
 - Added a permanent, independently owned psicrystal body with manifest/recall

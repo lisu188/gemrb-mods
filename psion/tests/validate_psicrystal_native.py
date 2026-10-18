@@ -2,6 +2,7 @@
 """Run the actual pinned engine against public demo assets and installed Psion rules."""
 from pathlib import Path
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -9,8 +10,9 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-CHECKPOINTS = ("native_personality_selector", "accepted_cast", "saved", "loaded", "dismiss_and_remanifest",
-               "area_remanifest", "body_death_resummon", "owner_death_cleanup")
+CHECKPOINTS = ("automatic_sync_started", "native_personality_selector", "accepted_cast", "automatic_area_sync",
+               "saved", "loaded", "dismiss_and_remanifest", "automatic_return_sync",
+               "body_death_resummon", "owner_death_cleanup")
 TABLES = {"trigger.ids", "action.ids", "object.ids", "gemtrig.ids", "classes.2da",
           "clastext.2da", "clskills.2da", "hpclass.2da", "qslots.2da", "class.ids",
           "proftype.2da", "weapprof.2da", "xplevel.2da", "thac0.2da", "xpcap.2da"}
@@ -68,9 +70,10 @@ def prepare(root, engine_source, runtime, installed, weidu="weidu"):
     row = next(line for line in avatars.read_text().splitlines() if "PSCRANI" in line.upper())
     with (override / "avatars.2da").open("a") as out:
         out.write("\n" + row + "\n")
-    for path in (ROOT / "common/guiscripts").glob("*.py"):
-        shutil.copy2(path, scripts / path.name)
-    shutil.copy2(ROOT / "psion/guiscripts/Psionics.py", scripts / "Psionics.py")
+    spec = importlib.util.spec_from_file_location("native_companion_installer", ROOT / "common/tools/install_guiscripts.py")
+    installer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(installer)
+    installer.install_handler(scripts, "Psionics", ROOT / "psion/guiscripts/Psionics.py")
     shutil.copy2(ROOT / "psion/tests/psicrystal_native_scenario.py", scripts / "CompanionProbe.py")
     for name in ("effects.ids", "savegame.2da"):
         shutil.copy2(engine_source / "gemrb/unhardcoded/bgee" / name, override / name)
@@ -115,6 +118,9 @@ CaseSensitive=1
 
 
 def run(args):
+    engine_commit = subprocess.check_output(
+        ["git", "-C", str(args.engine_source.resolve()), "rev-parse", "--verify", "HEAD"], text=True,
+    ).strip()
     root = args.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
     config = prepare(root, args.engine_source.resolve(), args.runtime.resolve(), args.installed.resolve(), args.weidu)
@@ -138,8 +144,11 @@ def run(args):
     assert completed.returncode == 0, (completed.returncode, log)
     assert "PSICRYSTAL_NATIVE_PASS" in text and "PSICRYSTAL_NATIVE_FAIL" not in text, log
     assert [entry["checkpoint"] for entry in checkpoints] == list(CHECKPOINTS), checkpoints
-    assert "Traceback" not in text and "Unhandled trigger" not in text, log
-    report = {"engine_contract_commit": "28d8a9d2ebd19f0de560856e67dc3cd7a7b74204",
+    for failure in ("Traceback", "Unhandled trigger", "Invalid scripting trigger:", "Invalid scripting action:",
+                    "[GUIScript/ERROR]: Runtime Error:",
+                    "[GUIScript/ERROR]: Unhandled target type"):
+        assert failure not in text, (failure, log)
+    report = {"engine_contract_commit": engine_commit,
               "fixture": "public GemRB demo plus actual WeiDU-installed Psion resources",
               "checkpoints": checkpoints, "campaign_acceptance": False}
     (root / "result.json").write_text(json.dumps(report, indent=2) + "\n")

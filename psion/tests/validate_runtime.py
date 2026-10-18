@@ -234,14 +234,7 @@ def main() -> None:
         class FakeSpellbook:
             @staticmethod
             def GetUsableMemorizedSpells(actor, book_type):
-                if book_type != module.INNATE_TYPE:
-                    return []
-                return [{
-                    "SpellResRef": "PS1MTHR",
-                    "BookType": module.INNATE_TYPE,
-                    "SpellLevel": 1,
-                    "SpellIndex": 4007,
-                }]
+                raise AssertionError("DC preparation must not depend on temporary spellinfo indices")
 
         normal_entry = {
             "SpellResRef": "PS1CHAR",
@@ -255,9 +248,13 @@ def main() -> None:
         assert "Spell" not in gemrb_vars
 
         temporary_entry = {"SpellResRef": "PSMT03", "SpellIndex": 255000}
-        assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry
-        assert temporary_entry["CastResRef"] == "PSMT034"
-        assert not prepared_casts
+        known_innates.append({"SpellResRef": "PS1MTHR"})
+        try:
+            assert module.prepare_action_entry(FakeSpellbook, 1, temporary_entry) is temporary_entry
+            assert temporary_entry["CastResRef"] == "PSMT034"
+            assert not prepared_casts
+        finally:
+            known_innates.pop()
 
         assert stats[(1, 239)] == 0
         assert not get_effects(1, module.STATE_EFFECT_OPCODE)

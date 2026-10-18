@@ -25,6 +25,7 @@ COPY ~psion/tables/psionfeatpick.2da~ ~override/psfeatpk.2da~
 COPY ~psion/tables/psfsel.2da~ ~override/psfsel.2da~
 COPY ~psion/tables/pspick.2da~ ~override/pspick.2da~
 COPY ~psion/tables/psionpowers.2da~ ~override/pspowers.2da~
+COPY ~psion/tables/psionai.2da~ ~override/psionai.2da~
 COPY ~psion/tables/psionaugment.2da~ ~override/psaugmnt.2da~
 COPY ~psion/tables/ps1eray.2da~ ~override/ps1eray.2da~
 COPY ~psion/tables/ps1mthr.2da~ ~override/ps1mthr.2da~

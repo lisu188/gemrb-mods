@@ -28,8 +28,11 @@ def main():
         root = Path(folder)
         binary = root / "synthetic-engine"
         binary.write_text("Synthetic executable placeholder for provenance tests only")
+        empty_resource = root / "gemtrig.ids"
+        empty_resource.write_bytes(b"")
         build = write(root / "build.json", {"engine_commit": engine, "engine_status": "",
-                      "install_root": str(root), "files": {binary.name: check.digest(binary)}})
+                      "install_root": str(root), "files": {binary.name: check.digest(binary),
+                      empty_resource.name: check.digest(empty_resource)}})
         frozen = write(root / "frozen.json", {"engine_commit": engine, "mods_commit": mods,
                        "fixture_id": "synthetic", "family": "bg2ee"})
         scenario_path = check.ACCEPTANCE / "scenarios/sorcerer-monk-tob-hla.json"
@@ -63,6 +66,37 @@ def main():
         def result():
             return check.check_matrix(root, engine, mods, matrix)
 
+        # Empty installed resources are valid only while their exact hashes match.
+        assert result()["status"] == "success"
+        empty_resource.unlink()
+        assert result()["status"] == "failure", "missing build resource accepted"
+        empty_resource.mkdir()
+        assert result()["status"] == "failure", "directory accepted as build resource"
+        empty_resource.rmdir()
+        empty_resource.write_bytes(b"unexpected content")
+        assert "SHA-256 mismatch" in result()["runs"][0]["detail"]
+        empty_resource.write_bytes(b"")
+        assert result()["status"] == "success"
+        for sha256, message in (("0" * 64, "SHA-256 mismatch"), ("invalid", "missing SHA-256")):
+            try:
+                check.bound_file(empty_resource.name, sha256, root, allow_empty=True)
+            except ValueError as error:
+                assert message in str(error)
+            else:
+                raise AssertionError("empty build resource accepted with an invalid hash")
+
+        # Evidence must remain nonempty, even if an empty file's hash is recorded.
+        for evidence in (manifest_path, provenance, build, frozen, log, image):
+            original = evidence.read_bytes()
+            evidence.write_bytes(b"")
+            assert result()["status"] == "failure", f"empty evidence accepted: {evidence.name}"
+            try:
+                check.bound_file(evidence.name, check.digest(evidence), root)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError(f"hash-bound empty evidence accepted: {evidence.name}")
+            evidence.write_bytes(original)
         assert result()["status"] == "success"
         for label, mutation in (
             ("stale mods", lambda d: d["metadata"].update(mods_commit="c" * 40)),

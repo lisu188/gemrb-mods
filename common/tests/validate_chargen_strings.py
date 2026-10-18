@@ -126,7 +126,10 @@ def fixture_texts():
 import Spellbook
 
 def UpdateActionsWindow ():
-\tpass
+\ttry:
+\t\tGUICommon.GameControl.GetFrame()
+\texcept RuntimeError:
+\t\treturn
 
 def ActionQSpellPressed (which):
 \tpc = GemRB.GameGetFirstSelectedActor ()

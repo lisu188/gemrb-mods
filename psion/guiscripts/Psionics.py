@@ -116,7 +116,7 @@ TEMPORARY_SPELLINFO_TYPE = 255
 DC_BASELINE_MODIFIER = 2
 DC_MODIFIER_SUFFIXES = {
     -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",
-    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8",
+    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9",
 }
 DC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}
 
@@ -1094,17 +1094,6 @@ def resolve_power_entry(spellbook, actor, raw_spell):
     return None
 
 
-def _memorized_parent_entry(spellbook, actor, parent):
-    key = (parent or "").upper()
-    try:
-        for candidate in spellbook.GetUsableMemorizedSpells(actor, INNATE_TYPE):
-            if str(candidate.get("SpellResRef", "")).upper() == key:
-                return candidate
-    except Exception:
-        return None
-    return None
-
-
 def prepare_action_entry(spellbook, actor, entry):
     """Bind an installed exact-INT resource without changing memorization.
 
@@ -1127,7 +1116,10 @@ def prepare_action_entry(spellbook, actor, entry):
         return entry
 
     if int(entry.get("SpellIndex", 0)) // 1000 == TEMPORARY_SPELLINFO_TYPE:
-        if not _memorized_parent_entry(spellbook, actor, info.get("parent")):
+        # Opening the selector consumes its parent's memorized charge and
+        # replaces spellinfo with temporary children. Authorize the learned
+        # parent independently of usable charges and ordinary spell indices.
+        if str(info.get("parent", "")).upper() not in known_power_refs(actor):
             return False
 
     entry["CastResRef"] = replacement
@@ -1712,6 +1704,11 @@ def sync_psicrystal_party():
             _scale_psicrystal(actor, psicrystal_companion(actor, 3))
         except Exception as error:
             GemRB.Log(2, "Psionics", "Psicrystal synchronization failed: %s" % error)
+
+
+def sync_party():
+    """Shared action-window/timer hook; never creates or restores a body."""
+    sync_psicrystal_party()
 
 
 def psicrystal_skill_bonus(actor, skill):
