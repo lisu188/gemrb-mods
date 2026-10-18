@@ -1,0 +1,66 @@
+name: Enemy Psion native runtime
+
+on:
+  pull_request:
+    paths:
+      - 'psion/**'
+      - 'common/**'
+      - '.github/workflows/enemy-psion-native.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'psion/**'
+      - 'common/**'
+      - '.github/workflows/enemy-psion-native.yml'
+
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: lisu188/gemrb
+          ref: 5e5f45da0d801674174a118aad9d5c49ec224542
+          path: vendor/gemrb
+      - name: Install native test dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libsdl2-dev libfreetype-dev libpng-dev python3-dev xvfb xauth
+      - name: Build pinned engine with non-party cast hook
+        run: |
+          cmake -S vendor/gemrb -B vendor/build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG='-O1 -g0' -DPYTHON_VERSION=3 -DUSE_SDLMIXER=OFF -DUSE_OPENAL=OFF -DUSE_LIBVLC=OFF -DUSE_VORBIS=OFF -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/runtime"
+          cmake --build vendor/build -j2
+          cmake --install vendor/build
+      - name: Install official WeiDU
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v251.00 --repo WeiDUorg/weidu --pattern '*Linux*' --dir "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/weidu"
+          unzip -q "$(find "$RUNNER_TEMP" -maxdepth 1 -iname '*Linux*' -print -quit)" -d "$RUNNER_TEMP/weidu"
+          executable="$(find "$RUNNER_TEMP/weidu" -type f -name weidu -print -quit)"
+          chmod +x "$executable"
+          echo "$(dirname "$executable")" >> "$GITHUB_PATH"
+      - name: Install Psion into public fixture
+        run: |
+          python3 psion/tests/seed_savewiz_fixture.py vendor/gemrb
+          python3 psion/tests/make_weidu_fixture.py --gemrb-root vendor/gemrb --output "$RUNNER_TEMP/game"
+          cp -r common psion "$RUNNER_TEMP/game/"
+          cd "$RUNNER_TEMP/game"
+          weidu psion/setup-psion.tp2 --use-lang en_US --force-install 0 --no-exit-pause > "$RUNNER_TEMP/weidu-install.log" 2>&1
+      - name: Validate accepted enemy cast, exact DC, PP and save-load
+        run: |
+          python3 psion/tests/validate_enemy_psion_native.py --engine-source vendor/gemrb --runtime "$RUNNER_TEMP/runtime" --installed "$RUNNER_TEMP/game" --output "$RUNNER_TEMP/enemy-psion-native"
+      - name: Preserve native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enemy-psion-native-evidence
+          path: |
+            ${{ runner.temp }}/enemy-psion-native/result.json
+            ${{ runner.temp }}/enemy-psion-native/engine.log
+            ${{ runner.temp }}/weidu-install.log

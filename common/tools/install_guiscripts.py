@@ -12,6 +12,8 @@ QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
 REST_CHECK_MARKER = "# GEMRB MOD CORE REST CHECK v1"
 PARTY_SYNC_MARKER = "# GEMRB MOD CORE PARTY SYNC v1"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
+ENGINE_HOOK_BOOTSTRAP = "\tGemRBModCore.install_engine_hooks()\n"
+LEGACY_ENGINE_HOOK_BOOTSTRAP = "GemRBModCore.install_engine_hooks()\n"
 COMMON_MODULES = (
     "GemRBModCore.py",
     "GemRBModClassChoice.py",
@@ -31,6 +33,23 @@ def _insert_import(text, path):
     if needle not in text:
         raise RuntimeError(f"{path.name} GemRB import not found")
     return text.replace(needle, needle + "import GemRBModCore\n", 1)
+
+
+def _ensure_engine_hook_bootstrap(text, path):
+    legacy_block = "import GemRBModCore\n" + LEGACY_ENGINE_HOOK_BOOTSTRAP
+    if legacy_block in text:
+        text = text.replace(legacy_block, "import GemRBModCore\n", 1)
+    if ENGINE_HOOK_BOOTSTRAP in text:
+        return text
+    for function_name in ("OpenActionsWindowControls", "UpdateActionsWindow"):
+        if f"def {function_name}" not in text:
+            continue
+        start, _ = _function_bounds(text, function_name)
+        line_end = text.find("\n", start)
+        if line_end < 0:
+            break
+        return text[:line_end + 1] + ENGINE_HOOK_BOOTSTRAP + text[line_end + 1:]
+    raise RuntimeError(f"{path.name} action-window initialization not recognized")
 
 
 def _insert_named_import(text, path, module):
@@ -288,7 +307,8 @@ def _upgrade_rest(text, path):
 def render_patch(text, kind, path):
     if MARK_BEGIN in text:
         if kind == "actions":
-            upgraded = _upgrade_spell_pressed(text, path) or text
+            upgraded = _ensure_engine_hook_bootstrap(text, path)
+            upgraded = _upgrade_spell_pressed(upgraded, path) or upgraded
             upgraded = _upgrade_quickspell(upgraded, path) or upgraded
             upgraded = _patch_party_sync(upgraded, path) or upgraded
             return upgraded if upgraded != text else None
@@ -297,6 +317,7 @@ def render_patch(text, kind, path):
         return None
     text = _insert_import(text, path)
     if kind == "actions":
+        text = _ensure_engine_hook_bootstrap(text, path)
         text = _patch_party_sync(text, path)
         text = _patch_spell_pressed(text)
         text = _patch_quickspell(text)
