@@ -26,6 +26,7 @@ class EquipmentDCTests(unittest.TestCase):
                             sys.modules["GUICommon"].GetClassRowName = lambda actor: "PSION_TELEPATH"
                             fx.stats[1, 38] = intelligence
                             fx.stats[1, 34] = 20
+                            fx.known[1] = ["PS1CHAR", "PS1MTHR"]
                             fx.seed(psion.POOL_EFFECT_MARKER, psion.POOL_EFFECT_RESOURCE, 100)
                             for _ in range(lenses):
                                 fx.seed(0, "PSIDC1", 0)

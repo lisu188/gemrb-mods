@@ -2,7 +2,7 @@
 
 ## Engine contract
 
-GemRB commit `5e5f45da0d801674174a118aad9d5c49ec224542` provides
+GemRB commit `dc975a69be0f048a9dfe01211fc8a183bccd58b3` provides
 `GemRB.SetNonPartySpellCastCheck`. The callback runs once for an accepted
 non-party scripted cast after target, range, line-of-sight and aura validation
 and immediately before `SpellCore` or `SpellPointCore` begins casting. It
@@ -58,11 +58,20 @@ offensive, defensive, control and mobility roles.
 `psion/tests/validate_enemy_psion_native.py` is the real-engine regression. It
 spawns a non-party creature in the public GemRB demo, assigns the installed
 PSION_NOMAD class, initializes canonical actor-local PP, executes a BCS
-`ForceSpellRES("PS3THOP",Player1)` action, observes the actual non-party accepted-cast
-callback, requires the INT-18 executable resource `PS3THOP4`, checks three PP are
-spent exactly once, then saves and reloads the area and verifies the committed
-pool and Psion identity survive. The fixture is deliberately not placed into a
-campaign.
+`ForceSpellRES` action targeting a separate friendly nonparty dummy by scripting
+name, observes the actual nonparty accepted-cast callback with a hostile caster,
+requires the INT-18 executable resource `PS3THOP4`, and checks five PP are spent
+exactly once. A deterministic failing target save and zero magic resistance let
+the fixture require the delivered `PS3THOP4` Maze effect and avatar removal,
+so callback acceptance alone cannot pass. After checking delivery, the fixture
+removes caster hostility and waits for the action list to empty and the combat
+counter to reach zero before an ordinary save. No party actor is targeted by
+Time Hop's Maze effect and no save restriction
+is bypassed. After load it resolves the persistent nonparty caster through its
+saved native owner/resource token and checks its scripting identity and committed
+pool, rather than reusing a GlobalID from the previous game instance. The runner
+records the actual engine checkout commit in its result. The fixture is
+deliberately not placed into a campaign.
 
 ## Save/load semantics
 
