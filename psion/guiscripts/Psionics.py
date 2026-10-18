@@ -116,7 +116,7 @@ TEMPORARY_SPELLINFO_TYPE = 255
 DC_BASELINE_MODIFIER = 2
 DC_MODIFIER_SUFFIXES = {
     -5: "V", -4: "W", -3: "X", -2: "Y", -1: "Z",
-    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8",
+    0: "0", 1: "1", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9",
 }
 DC_SUFFIX_MODIFIERS = {suffix: modifier for modifier, suffix in DC_MODIFIER_SUFFIXES.items()}
 
@@ -1704,6 +1704,11 @@ def sync_psicrystal_party():
             _scale_psicrystal(actor, psicrystal_companion(actor, 3))
         except Exception as error:
             GemRB.Log(2, "Psionics", "Psicrystal synchronization failed: %s" % error)
+
+
+def sync_party():
+    """Shared action-window/timer hook; never creates or restores a body."""
+    sync_psicrystal_party()
 
 
 def psicrystal_skill_bonus(actor, skill):

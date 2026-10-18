@@ -55,7 +55,7 @@ def validate(game, engine):
             assert signatures[name] == [(definitions[target], 1)], (name, signatures[name], target)
     inherited = 0
     for name in files:
-        if name.startswith("PS") and name[-1] in "VWXYZ0134567" and name[:-1] in files:
+        if name.startswith("PS") and name[-1] in "VWXYZ013456789" and name[:-1] in files:
             assert signatures[name] == signatures[name[:-1]], (name, "DC clone changed target")
             inherited += 1
         owner = re.fullmatch(r"CI8RK([0-9]{1,3})", name)

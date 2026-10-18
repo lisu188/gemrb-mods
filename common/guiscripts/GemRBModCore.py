@@ -4,6 +4,8 @@ import importlib
 
 _HANDLER_NAMES = ("Psionics", "Cipher")
 _pending_casts = {}
+_party_sync_timer_started = False
+_party_sync_running = False
 
 
 def _handlers():
@@ -55,6 +57,36 @@ def rest_party(*args, **kwargs):
             and after - before >= 8 * 300):
         restore_party()
     return result
+
+
+def sync_party():
+    """Maintain existing companions without refreshing resources or actions."""
+    global _party_sync_timer_started, _party_sync_running
+    if _party_sync_running:
+        return
+    import GemRB
+    import GUICommon
+
+    # Interface timers survive game loads and also run in the main menu.
+    # The scripting reference resolves the current GameControl each time.
+    try:
+        GUICommon.GameControl.GetFrame()
+    except RuntimeError:
+        return
+
+    _party_sync_running = True
+    try:
+        functions = [getattr(handler, "sync_party", None) for handler in _handlers()]
+        functions = [function for function in functions if function]
+        if functions and not _party_sync_timer_started:
+            GemRB.SetTimer(sync_party, 1000, -1)
+            _party_sync_timer_started = True
+        for function in functions:
+            function()
+    except Exception as error:
+        GemRB.Log(2, "GemRBModCore", "Party synchronization failed: %s" % error)
+    finally:
+        _party_sync_running = False
 
 
 def refresh_innate_charges(actor):

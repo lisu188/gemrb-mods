@@ -329,9 +329,11 @@ rules, not a complete implementation of tabletop psicrystal abilities.
 
 The native lifecycle stores namespaced owner/companion identities in save data
 and uses the persistent NPC roster. It never identifies owners by mutable party
-slots. The shared action-bar refresh synchronizes existing companions across
-areas and rebinds their current summoner after loading; it never creates a copy
-on load. The follow script then keeps the body near its owner within the area.
+slots. The shared action-bar refresh starts one repeating maintenance timer,
+which synchronizes existing companions across areas and rebinds their current
+summoner after loading even while Innates is closed. It checks the current party
+once per second, preserves injuries, and never creates a copy on load or restores
+class resources. The follow script keeps the body near its owner within the area.
 Each Psion owns an independent body and rest-use state. Ordinary familiar
 ownership and protagonist familiar HP bonuses are untouched.
 

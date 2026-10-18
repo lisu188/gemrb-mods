@@ -50,6 +50,9 @@ def main():
     assert MOD.variant_resref("PS1MTHR", -5) == "PS1MTHRV"
     assert MOD.variant_resref("PSMT20", 7) == "PSMT207"
     assert MOD.variant_resref("PSMT20", 8) == "PSMT208"
+    assert MOD.variant_resref("PSMT20", 9) == "PSMT209"
+    assert save_bonus(MOD.adjusted_variant(baseline, 8)) == -8
+    assert save_bonus(MOD.adjusted_variant(baseline, 9)) == -9
     assert MOD.variant_resref("PS1MTHR", 2) == "PS1MTHR"
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -58,6 +61,7 @@ def main():
         output = root / "generated"
         override.mkdir()
         (override / "PS1MTHR.spl").write_bytes(baseline)
+        (override / "PSMT03.spl").write_bytes(baseline)
         (override / "PSNOSEV.spl").write_bytes(make_spl(-2, 0))
         powers = root / "powers.2da"
         powers.write_text(
@@ -65,11 +69,16 @@ def main():
             encoding="utf-8",
         )
         augments = root / "augment.2da"
-        augments.write_text("2DA V1.0\n*\n PARENT\n", encoding="utf-8")
+        augments.write_text("2DA V1.0\n*\n PARENT\nPSMT03 PS1MTHR\n", encoding="utf-8")
         sources, variants = MOD.build(override, output, powers, augments)
-        assert sources == 1
-        assert variants == len(MOD.MODIFIER_SUFFIXES)
+        assert sources == 2
+        assert variants == 2 * len(MOD.MODIFIER_SUFFIXES)
         assert (output / "PS1MTHR5.spl").exists()
+        for source in ("PS1MTHR", "PSMT03"):
+            for modifier in (8, 9):
+                generated = (output / f"{source}{modifier}.spl").read_bytes()
+                assert save_bonus(generated) == -modifier
+                assert generated[0x72:0x72 + 0x28] == baseline[0x72:0x72 + 0x28]
         assert not (output / "PSNOSEV5.spl").exists()
 
     print("Psion exact Intelligence save-DC variants validated")
