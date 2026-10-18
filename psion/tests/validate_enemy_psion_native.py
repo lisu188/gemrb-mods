@@ -135,7 +135,7 @@ def run(args):
     log = root / "engine.log"
     with log.open("w") as output:
         completed = subprocess.run(command, env=environment, cwd=root, stdout=output,
-                                   stderr=subprocess.STDOUT, timeout=45)
+                                   stderr=subprocess.STDOUT, timeout=55)
     text = log.read_text(errors="replace")
     checkpoints = [json.loads(line.split("ENEMY_PSION_NATIVE ", 1)[1])
                    for line in text.splitlines() if "ENEMY_PSION_NATIVE {" in line]

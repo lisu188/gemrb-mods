@@ -91,7 +91,7 @@ def start():
     schedule(after_cast, 2600)
 
 
-def after_cast():
+def after_cast(attempt=0):
     assert len(observed) == 1, observed
     requested, executable, pool = observed[0]
     assert requested == "PS3THOP"
@@ -102,7 +102,12 @@ def after_cast():
     assert GemRB.GetPlayerStat(target, 234) == 4
     maze = GemRB.CountEffects(target, "Maze", -1, -1, "", executable)
     removed = GemRB.GetPlayerStat(target, 201)
-    assert maze == 1 and removed == 1, (maze, removed)
+    if maze != 1 or removed != 1:
+        # ForceSpell keeps its real casting time. Interface timers use wall
+        # time, so a busy runner can observe this before the cast winds down.
+        assert attempt < 30, (maze, removed, attempt)
+        schedule(lambda: after_cast(attempt + 1), 500)
+        return
     record("power_delivered", target=target, identity=target_name, source=executable,
            maze_effects=maze, avatar_removal=removed,
            save_vs_spell=GemRB.GetPlayerStat(target, 13), magic_resistance=GemRB.GetPlayerStat(target, 18))

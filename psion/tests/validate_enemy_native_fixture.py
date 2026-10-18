@@ -152,10 +152,27 @@ class NativeEnemyFixtureTests(unittest.TestCase):
         with contextlib.redirect_stdout(self.output), contextlib.redirect_stderr(self.output):
             self.scenario.start()
             self.delivered = False
-            self.timers.pop(0)()
+            for _ in range(31):
+                self.timers.pop(0)()
         self.assertFalse(self.saves)
         self.assertFalse(self.loaded)
+        self.assertTrue(self.quit)
         self.assertIn("ENEMY_PSION_NATIVE_FAIL", self.output.getvalue())
+
+    def test_delayed_delivery_preserves_one_cast_and_exact_pp(self):
+        with contextlib.redirect_stdout(self.output):
+            self.scenario.start()
+            self.delivered = False
+            self.timers.pop(0)()
+            self.assertFalse(self.saves)
+            self.assertEqual(self.pool, 30)
+            self.delivered = self.idle = self.peaceful = True
+            self.timers.pop(0)()
+            self.timers.pop(0)()
+        self.assertEqual(len(self.actions), 1)
+        self.assertEqual(self.pool, 30)
+        self.assertEqual(len(self.saves), 1)
+        self.assertIn("ENEMY_PSION_NATIVE_PASS", self.output.getvalue())
 
 
 class NativeProbeRulesTests(unittest.TestCase):
