@@ -378,7 +378,7 @@ def SetupProfsWindow (pc, proftype, window, callback):
 \treturn
 '''
     return {
-        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\tpass\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\tType = GemRB.GetVar ("Type")\n\tGemRB.SpellCast (pc, Type, Spell)\n''',
+        "ActionsWindow.py": '''import GemRB\nimport Spellbook\n\ndef UpdateActionsWindow ():\n\ttry:\n\t\tGUICommon.GameControl.GetFrame()\n\texcept RuntimeError:\n\t\treturn\n\ndef ActionQSpellPressed (which):\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tGemRB.SpellCast (pc, -2, which)\n\tUpdateActionsWindow ()\n\treturn\n\ndef ActionCastPressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef ActionInnatePressed ():\n\tGemRB.SetVar ("QSpell", None)\n\ndef SpellPressed ():\n\tpc = GemRB.GameGetFirstSelectedActor ()\n\tSpell = GemRB.GetVar ("Spell")\n\tType = GemRB.GetVar ("Type")\n\tGemRB.SpellCast (pc, Type, Spell)\n''',
         "Spellbook.py": '''import GemRB\n\ndef GetSpellinfoSpells(actor, BookType):\n\tmemorizedSpells = []\n\tspellResRefs = GemRB.GetSpelldata (actor)\n\tfor i, resRef in enumerate(spellResRefs):\n\t\tmemorizedSpells.append({"SpellIndex": i + 255000, "SpellResRef": resRef})\n\treturn memorizedSpells\n''',
         "MenuWindow.py": 'import GemRB\n\ndef Rest():\n\tinfo = GemRB.RestParty (15, 0, 0)\n\treturn info\n',
         "GUISTORE.py": "import GemRB\n\ndef Rest():\n\tGemRB.RestParty(0, 0)\n",
@@ -438,7 +438,7 @@ def exercise_order(first, second):
         profs = (folder / "LUProfsSelection.py").read_text(encoding="utf-8")
         spell_selection = (folder / "bg2" / "GUICG7.py").read_text(encoding="utf-8")
         spell_window = (folder / "LUSpellSelection.py").read_text(encoding="utf-8")
-        assert actions.count(installer.MARK_BEGIN) == 4
+        assert actions.count(installer.MARK_BEGIN) == 5
         assert spellbook.count(installer.MARK_BEGIN) == 1
         assert 'if not info["Error"]:' in menu
         assert "\t\tGemRBModCore.restore_party()" in menu

@@ -2,12 +2,16 @@ import json
 import traceback
 
 import GemRB
+import ActionsWindow
 import GemRBModCore
 import GUICommon
 import Psionics
 import Spellbook
 
 bodies = []
+saved_names = {}
+saved_ids = {}
+saved_resources = None
 
 
 def record(name, **data):
@@ -41,7 +45,9 @@ def cast(actor, resource):
 
 
 def companion(actor):
-    return Psionics.psicrystal_companion(actor)
+    # Inspection must not dismiss a dead owner's body and mask missing timer
+    # maintenance. The Psion convenience wrapper deliberately has that effect.
+    return GemRB.ManageCompanion(actor, Psionics.PSICRYSTAL_BODY, 0)
 
 
 def exists(actor):
@@ -49,8 +55,18 @@ def exists(actor):
     return bool(current and current['Alive'])
 
 
+def resource_state():
+    return {actor: [Psionics._read_persistent_pool_state(actor), Psionics._read_focus_state(actor),
+                    Psionics._psicrystal_used_state(actor)] for actor in (1, 2)}
+
+
 def start():
     assert [GUICommon.GetClassRowName(actor) for actor in (1, 2)] == ['PSION_SEER', 'PSION_EGOIST']
+    # Exercise the installed shared hook. The demo has no ordinary action bar,
+    # so invoke its real redraw endpoint once after GameControl becomes ready.
+    ActionsWindow.UpdateActionsWindow()
+    assert GemRBModCore._party_sync_timer_started
+    record('automatic_sync_started')
     cast(1, 'PXCRYST')
     # Self-targeted selector spells enter the native action queue. Observe
     # their delivered opcode instead of treating queue acceptance as delivery.
@@ -84,6 +100,7 @@ def personality_selected(actor):
 
 
 def before_save():
+    global saved_names, saved_ids, saved_resources
     assert exists(1) and exists(2)
     for body in bodies:
         assert GemRB.GetPlayerStat(body, 0) == 40
@@ -96,14 +113,32 @@ def before_save():
     assert int(companion(1)['ActorID']) == bodies[1]
     assert int(companion(2)['ActorID']) == bodies[0]
     GemRB.SetPlayerStat(bodies[0], 0, 17)
-    Psionics.refresh_innate_charges(2)
-    assert GemRB.GetPlayerStat(bodies[0], 0) == 17
-    GemRBModCore.cancel_pending()
+    saved_ids = {actor: int(companion(actor)['ActorID']) for actor in (1, 2)}
+    saved_names = {actor: GemRB.GetPlayerName(saved_ids[actor], 2) for actor in (1, 2)}
+    saved_resources = resource_state()
+    GemRB.SetVar('ActionLevel', 0)
+    GemRB.GameSelectPC(0, True)
+    GemRB.MoveToArea('AR0110')
+    # No recall, innate refresh or explicit synchronization after travel.
+    schedule(save_after_travel, 3000)
+
+
+def save_after_travel():
+    assert GemRB.GetCurrentArea() == 'AR0110'
+    for actor in (1, 2):
+        current = companion(actor)
+        assert current and current['Alive'] and current['InArea']
+        assert int(current['ActorID']) == saved_ids[actor]
+    assert GemRB.GetPlayerStat(saved_ids[2], 0) == 17
+    assert resource_state() == saved_resources
+    assert len(bodies) == 2
+    record('automatic_area_sync', bodies=saved_ids, hp=17, innates_closed=True)
+    GemRB.GameSelectPC(1, True, 1)
     result = GemRB.SaveGame(None, 'Psicrystal lifecycle', 0, GemRB.GetGamePreview())
     assert result == 0, result
     games = GemRB.GetSaveGames()
     assert games
-    record('saved', saves=len(games), owner1=2, owner2=1)
+    record('saved', saves=len(games), owner1=2, owner2=1, bodies=saved_ids, identities=saved_names)
     GemRB.LoadGame(games[0])
     GemRB.EnterGame()
     schedule(after_load, 3000)
@@ -111,18 +146,24 @@ def before_save():
 
 def after_load():
     assert GemRB.GetPartySize() == 2
+    assert GemRB.GetCurrentArea() == 'AR0110'
     assert exists(1) and exists(2)
     loaded1 = companion(1)
     loaded2 = companion(2)
     assert loaded1 and loaded2
     assert int(loaded1['ActorID']) != int(loaded2['ActorID'])
+    assert loaded1['InArea'] and loaded2['InArea']
+    loaded_ids = {actor: int(companion(actor)['ActorID']) for actor in (1, 2)}
+    assert {actor: GemRB.GetPlayerName(loaded_ids[actor], 2) for actor in (1, 2)} == saved_names
+    assert resource_state() == saved_resources
     body = companion(2)
     assert body
     body_id = int(body['ActorID'])
     assert GemRB.GetPlayerStat(body_id, 0) == 17
     assert GemRB.GetPlayerStat(body_id, 8) == 0
     assert len(bodies) == 2
-    record('loaded', no_duplicate=True, hp_preserved=True, zero_attacks=True)
+    record('loaded', no_duplicate=True, hp_preserved=True, zero_attacks=True,
+           bodies=loaded_ids, identities=saved_names, innates_closed=True)
     cast(2, 'PXCRDIS')
     schedule(after_dismiss)
 
@@ -133,33 +174,23 @@ def after_dismiss():
     cast(2, 'PXCRSUM')
     assert len(bodies) == 3
     record('dismiss_and_remanifest', body=int(companion(2)['ActorID']))
+    GemRB.SetPlayerStat(bodies[2], 0, 11)
+    GemRB.SetVar('ActionLevel', 0)
     GemRB.GameSelectPC(0, True)
-    GemRB.MoveToArea('AR0110')
-    schedule(after_area)
+    GemRB.MoveToArea('AR0100')
+    schedule(after_area, 3000)
 
 
 def after_area():
-    assert GemRB.GetCurrentArea() == 'AR0110', GemRB.GetCurrentArea()
+    assert GemRB.GetCurrentArea() == 'AR0100', GemRB.GetCurrentArea()
     before = companion(2)
     assert before and before['Alive']
     body_id = int(before['ActorID'])
-    cast(2, 'PXCRSUM')
-    assert int(companion(2)['ActorID']) == body_id
+    assert before['InArea']
+    assert body_id == bodies[2]
+    assert GemRB.GetPlayerStat(body_id, 0) == 11
     assert len(bodies) == 3
-    record('area_remanifest', body=body_id)
-    GemRB.GameSelectPC(0, True)
-    GemRB.MoveToArea('AR0100')
-    schedule(old_area, 3000)
-
-
-def old_area():
-    assert GemRB.GetCurrentArea() == 'AR0100'
-    before = companion(2)
-    assert before and before['Alive']
-    body_id = int(before['ActorID'])
-    cast(2, 'PXCRSUM')
-    assert int(companion(2)['ActorID']) == body_id
-    assert len(bodies) == 3
+    record('automatic_return_sync', body=body_id, hp=11, innates_closed=True)
     GemRB.SetPlayerStat(body_id, 0, 0)
     schedule(after_death, 3000)
 
@@ -171,6 +202,7 @@ def after_death():
     cast(2, 'PXCRSUM')
     assert len(bodies) == 4
     GemRB.GameSelectPC(1, True, 1)
+    GemRB.SetVar('ActionLevel', 0)
     GemRB.GameSetProtagonistMode(2)
     GemRB.SetPlayerStat(2, 0, 0)
     record('body_death_resummon')
@@ -179,7 +211,7 @@ def after_death():
 
 def owner_dead():
     assert not exists(2)
-    assert not Psionics.psicrystal_companion(2)
-    record('owner_death_cleanup')
+    assert not companion(2)
+    record('owner_death_cleanup', owner_selected=False, innates_closed=True)
     print('PSICRYSTAL_NATIVE_PASS', flush=True)
     GemRB.Quit()

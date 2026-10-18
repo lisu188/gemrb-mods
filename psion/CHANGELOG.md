@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Synchronize existing psicrystals automatically during play and after loading,
+  including when their owner is not selected and Innates is closed. Maintenance
+  preserves injuries and never restores class resources or creates a body.
+- Preserve exact save difficulty when two DC lenses are equipped at Intelligence
+  24 or 25, including augmented powers, without changing PP costs.
+
 ## 1.4.0
 
 - Added a permanent, independently owned psicrystal body with manifest/recall

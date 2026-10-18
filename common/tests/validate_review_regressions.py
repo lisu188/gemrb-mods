@@ -13,6 +13,12 @@ ROOT = Path(__file__).resolve().parents[2]
 GUI = ROOT / "common/guiscripts"
 ACTIONS = '''import GemRB
 
+def UpdateActionsWindow():
+\ttry:
+\t\tGUICommon.GameControl.GetFrame()
+\texcept RuntimeError:
+\t\treturn
+
 def SpellPressed():
 	pc = GemRB.GameGetFirstSelectedActor ()
 	Spell = GemRB.GetVar ("Spell")
@@ -193,7 +199,7 @@ class CastingRegression(unittest.TestCase):
             self.assertIsNotNone(upgraded)
             self.patcher.apply_patch(target, upgraded)
             self.assertIn(self.patcher.CAST_CHECK_MARKER, target.read_text())
-            self.assertEqual(target.read_text().count(self.patcher.MARK_BEGIN), 4)
+            self.assertEqual(target.read_text().count(self.patcher.MARK_BEGIN), 5)
             self.assertEqual(target.with_suffix(".py" + self.patcher.CORE_BACKUP_SUFFIX).read_text(), ACTIONS)
             self.assertIsNone(self.patcher.render_patch(target.read_text(), "actions", target))
             self.patcher.remove_patch(target)

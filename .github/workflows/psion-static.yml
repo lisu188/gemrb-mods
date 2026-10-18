@@ -41,6 +41,10 @@ jobs:
         run: python psion/tests/validate_qslots.py
       - name: Validate exact Intelligence save-DC variants
         run: python psion/tests/validate_dc_variants.py
+      - name: Validate stacked DC equipment at the Intelligence cap
+        run: python psion/tests/validate_dc_equipment.py
+      - name: Validate automatic party sync and shared hook upgrades
+        run: python common/tests/validate_party_sync.py
       - name: Validate optional Psion equipment
         run: python psion/tests/validate_items.py
       - name: Validate persistent psicrystal runtime and resources

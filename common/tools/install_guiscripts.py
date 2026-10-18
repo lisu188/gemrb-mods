@@ -9,6 +9,7 @@ MARK_BEGIN = "# GEMRB MOD CORE BEGIN"
 MARK_END = "# GEMRB MOD CORE END"
 CAST_CHECK_MARKER = "# GEMRB MOD CORE CAST CHECK v2"
 QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
+PARTY_SYNC_MARKER = "# GEMRB MOD CORE PARTY SYNC v1"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
 COMMON_MODULES = (
     "GemRBModCore.py",
@@ -56,6 +57,33 @@ def _insert_before(text, function_name, needle, hook):
     pos = text.find(needle, start, end)
     if pos < 0:
         raise RuntimeError(f"{function_name} layout not recognized")
+    return text[:pos] + hook + text[pos:]
+
+
+def _party_sync_hook():
+    return (
+        "\t" + MARK_BEGIN + "\n"
+        "\t" + PARTY_SYNC_MARKER + "\n"
+        "\tGemRBModCore.sync_party()\n"
+        "\t" + MARK_END + "\n"
+    )
+
+
+def _patch_party_sync(text, path):
+    start, end = _function_bounds(text, "UpdateActionsWindow")
+    body = text[start:end]
+    hook = _party_sync_hook()
+    guard = "\ttry:\n\t\tGUICommon.GameControl.GetFrame()\n\texcept RuntimeError:\n\t\treturn\n"
+    if body.count(guard) != 1:
+        raise RuntimeError(f"{path.name} action window GameControl guard not recognized")
+    pos = start + body.index(guard) + len(guard)
+    if MARK_BEGIN in body or MARK_END in body:
+        if (body.count(MARK_BEGIN) != 1 or body.count(MARK_END) != 1
+                or text[pos:pos + len(hook)] != hook):
+            raise RuntimeError(f"{path.name} has an unrecognized modified party sync hook; refusing to overwrite it")
+        return None
+    if "GemRBModCore.sync_party" in body or "# GEMRB MOD CORE PARTY SYNC" in text:
+        raise RuntimeError(f"{path.name} party sync hook boundaries not recognized")
     return text[:pos] + hook + text[pos:]
 
 
@@ -235,10 +263,12 @@ def render_patch(text, kind, path):
         if kind == "actions":
             upgraded = _upgrade_spell_pressed(text, path) or text
             upgraded = _upgrade_quickspell(upgraded, path) or upgraded
+            upgraded = _patch_party_sync(upgraded, path) or upgraded
             return upgraded if upgraded != text else None
         return None
     text = _insert_import(text, path)
     if kind == "actions":
+        text = _patch_party_sync(text, path)
         text = _patch_spell_pressed(text)
         text = _patch_quickspell(text)
         text = _patch_open(text, "ActionInnatePressed", True)
