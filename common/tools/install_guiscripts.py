@@ -9,6 +9,7 @@ MARK_BEGIN = "# GEMRB MOD CORE BEGIN"
 MARK_END = "# GEMRB MOD CORE END"
 CAST_CHECK_MARKER = "# GEMRB MOD CORE CAST CHECK v2"
 QUICK_CHECK_MARKER = "# GEMRB MOD CORE QUICK CAST CHECK v2"
+REST_CHECK_MARKER = "# GEMRB MOD CORE REST CHECK v1"
 CORE_BACKUP_SUFFIX = ".gemrbmodcore.bak"
 COMMON_MODULES = (
     "GemRBModCore.py",
@@ -211,13 +212,37 @@ def _patch_spellinfo(text):
     return text[:pos] + hook + text[pos:]
 
 
+def _rest_call(text, path, function="GemRB.RestParty"):
+    matches = list(re.finditer(
+        r"(?m)^([ \t]*)(?:([A-Za-z_]\w*)[ \t]*=[ \t]*)?"
+        + re.escape(function) + r"[ \t]*\([^\n]*\)\n", text))
+    if len(matches) != 1:
+        raise RuntimeError(f"{path.name} unique rest call not recognized")
+    return matches[0]
+
+
+def _rest_hook(call, indent):
+    return (indent + MARK_BEGIN + "\n" + indent + REST_CHECK_MARKER + "\n"
+            + call.replace("GemRB.RestParty", "GemRBModCore.rest_party", 1)
+            + indent + MARK_END + "\n")
+
+
 def _patch_rest(text, path):
-    match = re.search(
-        r"(?m)^([ \t]*)(?:([A-Za-z_]\w*)[ \t]*=[ \t]*)?GemRB\.RestParty[ \t]*\([^\n]*\)\n",
-        text,
-    )
-    if not match:
-        raise RuntimeError(f"{path.name} rest call not found")
+    match = _rest_call(text, path)
+    return text[:match.start()] + _rest_hook(match.group(0), match.group(1)) + text[match.end():]
+
+
+def _upgrade_rest(text, path):
+    """Replace only a recognized owned rest hook; keep user edits and backups."""
+    if text.count(MARK_BEGIN) != 1 or text.count(MARK_END) != 1:
+        raise RuntimeError(f"{path.name} rest hook boundaries not recognized; refusing to overwrite it")
+    if "GemRBModCore.rest_party" in text:
+        match = _rest_call(text, path, "GemRBModCore.rest_party")
+        hook = _rest_hook(match.group(0), match.group(1))
+        if text.count(hook) != 1:
+            raise RuntimeError(f"{path.name} has an unrecognized modified rest hook; refusing to overwrite it")
+        return None
+    match = _rest_call(text, path)
     indent = match.group(1)
     result = match.group(2)
     hook = match.group(0) + indent + MARK_BEGIN + "\n"
@@ -227,7 +252,9 @@ def _patch_rest(text, path):
     else:
         hook += indent + "GemRBModCore.restore_party()\n"
     hook += indent + MARK_END + "\n"
-    return text[:match.start()] + hook + text[match.end():]
+    if text[match.start():match.start() + len(hook)] != hook:
+        raise RuntimeError(f"{path.name} has an unrecognized modified rest hook; refusing to overwrite it")
+    return text[:match.start()] + _rest_hook(match.group(0), indent) + text[match.start() + len(hook):]
 
 
 def render_patch(text, kind, path):
@@ -236,6 +263,8 @@ def render_patch(text, kind, path):
             upgraded = _upgrade_spell_pressed(text, path) or text
             upgraded = _upgrade_quickspell(upgraded, path) or upgraded
             return upgraded if upgraded != text else None
+        if kind == "rest":
+            return _upgrade_rest(text, path)
         return None
     text = _insert_import(text, path)
     if kind == "actions":

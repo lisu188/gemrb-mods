@@ -32,6 +32,8 @@ jobs:
           python-version: '3.12'
       - name: Validate repeated spell transactions
         run: python common/tests/validate_transactions.py
+      - name: Validate completed-rest shared resource restoration
+        run: python common/tests/validate_rest_completion.py
       - name: Validate Cipher sources and runtime
         run: python cipher/tests/validate.py
       - name: Validate Reaping Knives runtime routing

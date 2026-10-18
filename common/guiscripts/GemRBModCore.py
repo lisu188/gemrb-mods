@@ -40,6 +40,23 @@ def restore_party():
             function()
 
 
+def rest_party(*args, **kwargs):
+    """Restore class resources only after this native rest completed eight hours."""
+    import GemRB
+
+    before = GemRB.GetGameTime()
+    result = GemRB.RestParty(*args, **kwargs)
+    after = GemRB.GetGameTime()
+    # GetGameTime reports seconds; GemRB uses 300 seconds per game hour.
+    # Error means a pre-rest refusal, not an encounter interrupting the rest.
+    # Measure this synchronous call alone; partial attempts must never add up.
+    if (isinstance(result, dict) and result.get("Error") is False
+            and type(before) is int and type(after) is int
+            and after - before >= 8 * 300):
+        restore_party()
+    return result
+
+
 def refresh_innate_charges(actor):
     restored = 0
     for handler in _handlers():

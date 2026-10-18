@@ -32,16 +32,17 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def resolve_file(value, base):
+def resolve_file(value, base, *, allow_empty=False):
     require(isinstance(value, str) and bool(value), "missing evidence path")
     path = Path(value)
     path = path if path.is_absolute() else base / path
-    require(path.is_file() and path.stat().st_size > 0, f"missing or empty evidence: {path}")
+    require(path.is_file() and (allow_empty or path.stat().st_size > 0),
+            f"missing or empty evidence: {path}")
     return path.resolve()
 
 
-def bound_file(value, sha256, base):
-    path = resolve_file(value, base)
+def bound_file(value, sha256, base, *, allow_empty=False):
+    path = resolve_file(value, base, allow_empty=allow_empty)
     require(isinstance(sha256, str) and re.fullmatch(r"[0-9a-f]{64}", sha256),
             f"missing SHA-256 for {path}")
     require(digest(path) == sha256, f"SHA-256 mismatch: {path}")
@@ -70,7 +71,8 @@ def verify_provenance(manifest, path, entry, engine_commit, mods_commit):
     require(isinstance(files, dict) and files, "build file hashes absent")
     install = Path(build.get("install_root", str(build_path.parent)))
     for filename, sha256 in files.items():
-        bound_file(filename, sha256, install)
+        # Installed resources may intentionally be empty; their hashes still bind them.
+        bound_file(filename, sha256, install, allow_empty=True)
     frozen_path = bound_file(provenance.get("frozen_fixture"),
                              provenance.get("frozen_fixture_sha256"), source.parent)
     frozen = read_json(frozen_path)

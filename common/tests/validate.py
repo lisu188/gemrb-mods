@@ -440,9 +440,9 @@ def exercise_order(first, second):
         spell_window = (folder / "LUSpellSelection.py").read_text(encoding="utf-8")
         assert actions.count(installer.MARK_BEGIN) == 4
         assert spellbook.count(installer.MARK_BEGIN) == 1
-        assert 'if not info["Error"]:' in menu
-        assert "\t\tGemRBModCore.restore_party()" in menu
-        assert "\tGemRBModCore.restore_party()" in store
+        assert "info = GemRBModCore.rest_party (15, 0, 0)" in menu
+        assert "GemRBModCore.rest_party(0, 0)" in store
+        assert all(script.count(installer.REST_CHECK_MARKER) == 1 for script in (menu, store))
         assert all("import GemRBModClassChoice" in classes for classes in class_scripts)
         assert all("GemRBModClassChoice.on_load(globals())" in classes for classes in class_scripts)
         assert all("GemRBModStrings.CHOOSE_ALIGNMENT" in script for script in alignment_scripts)

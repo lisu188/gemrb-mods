@@ -41,6 +41,8 @@ jobs:
         run: python psion/tests/validate_qslots.py
       - name: Validate exact Intelligence save-DC variants
         run: python psion/tests/validate_dc_variants.py
+      - name: Validate temporary DC choices after parent charge consumption
+        run: python psion/tests/validate_dc_selector_parent.py
       - name: Validate optional Psion equipment
         run: python psion/tests/validate_items.py
       - name: Validate persistent psicrystal runtime and resources
@@ -50,6 +52,8 @@ jobs:
         run: python psion/tests/validate_runtime.py
       - name: Validate GUI patch lifecycle
         run: python psion/tests/validate_patcher.py
+      - name: Validate completed-rest shared resource restoration
+        run: python common/tests/validate_rest_completion.py
       - name: Validate level-3 powers
         run: python psion/tests/validate_level3.py
       - name: Validate level-4 powers
