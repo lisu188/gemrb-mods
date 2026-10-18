@@ -30,8 +30,10 @@ layer. Enemy casts do not touch player selectors, quickslots, `Spell` GUI
 variables or pending player transactions. Both paths share the same PP ledger,
 legality rules and save-DC variant generation.
 
-`GemRBModCore` installs the non-party callback when the shared runtime module
-is imported. On engines without the new API it leaves the old behavior intact,
+The installed action-window initialization hook registers the nonparty callback
+on the current GameControl, including after loading another game. Importing the
+shared runtime during the main menu does not access a GameControl. On engines
+without the new API it leaves the old behavior intact,
 so installation remains compatible while enemy Psion casting requires the
 documented engine contract.
 
@@ -72,6 +74,11 @@ saved native owner/resource token and checks its scripting identity and committe
 pool, rather than reusing a GlobalID from the previous game instance. The runner
 records the actual engine checkout commit in its result. The fixture is
 deliberately not placed into a campaign.
+
+The public demo's sparse script dictionary is extended with the probe's native
+trigger symbols. Its placeholder INTMOD is given native Maze duration columns,
+so the delivered effect lasts six rounds instead of expiring immediately from
+missing dice values. These fixture rules do not modify the installed power.
 
 ## Save/load semantics
 

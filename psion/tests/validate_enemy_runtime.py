@@ -23,6 +23,17 @@ sys.modules["GemRB"] = gemrb
 spec = importlib.util.spec_from_file_location("GemRBModCoreEnemyTest", ROOT / "common/guiscripts/GemRBModCore.py")
 core = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(core)
+assert not registered, "Importing shared runtime must not require a GameControl"
+spec = importlib.util.spec_from_file_location("enemy_bootstrap_installer", ROOT / "common/tools/install_guiscripts.py")
+installer = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(installer)
+bootstrap = installer._ensure_engine_hook_bootstrap(
+    "def OpenActionsWindowControls(Window):\n\tpass\n", Path("ActionsWindow.py"),
+)
+namespace = {"GemRBModCore": core}
+exec(compile(bootstrap, "installed_enemy_bootstrap", "exec"), namespace)
+namespace["OpenActionsWindowControls"](None)
+assert registered["callback"] is core.confirm_nonparty_spell
 
 class Handler:
     __name__ = "Psionics"
@@ -71,6 +82,9 @@ handler.allowed = True
 assert callback(4242, "PSENEM3") is True
 assert handler.commits[-1] == (4242, "PSENEMY")
 
+registered.clear()
+namespace["OpenActionsWindowControls"](None)  # new GameControl after loading
+assert registered["callback"] is core.confirm_nonparty_spell
 registered.clear()
 assert core.install_engine_hooks()
 assert registered["callback"] is core.confirm_nonparty_spell

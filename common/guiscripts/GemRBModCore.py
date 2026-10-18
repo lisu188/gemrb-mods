@@ -300,11 +300,3 @@ def _native_spell_selection(spellbook, actor, raw_spell):
 def spell_error(spellbook, actor, raw_spell, error):
     abort_action(actor, error)
     return _native_spell_selection(spellbook, actor, raw_spell)
-
-
-try:
-    import GemRB
-except ImportError:
-    pass
-else:
-    install_engine_hooks()

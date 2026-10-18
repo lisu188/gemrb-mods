@@ -5,6 +5,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -13,6 +14,37 @@ CHECKPOINTS = ("accepted_hook", "power_delivered", "pp_spent_once", "combat_comp
 TABLES = {"trigger.ids", "action.ids", "object.ids", "gemtrig.ids", "classes.2da",
           "clastext.2da", "clskills.2da", "hpclass.2da", "qslots.2da", "class.ids",
           "proftype.2da", "weapprof.2da", "xplevel.2da", "thac0.2da", "xpcap.2da"}
+
+
+def configure_probe_rules(override):
+    trigger = override / "trigger.ids"
+    text = trigger.read_text(encoding="ascii")
+    used = set()
+    for name in ("trigger.ids", "gemtrig.ids"):
+        path = override / name
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="ascii").splitlines():
+            try:
+                used.add(int(line.split()[0], 0) & 0x3FFF)
+            except (ValueError, IndexError):
+                continue
+    for declaration in ("InParty(O:Object*)", "ObjectActionListEmpty(O:Object*)", "CombatCounter(I:Value*)"):
+        symbol = declaration.split("(")[0]
+        if re.search(r"\b" + symbol + r"\s*\(", text, re.IGNORECASE):
+            continue
+        # Demo IDS are intentionally sparse. GemRB binds fixture-only numbers
+        # by function name; avoid both game and extension dictionary entries.
+        number = next(index for index in range(1, 300) if index not in used)
+        used.add(number)
+        text = text.rstrip() + "\n0x%04x %s\n" % (0x4000 | number, declaration)
+    trigger.write_text(text, encoding="ascii")
+    # Demo INTMOD has no Maze columns. Native Maze replaces the SPL duration
+    # using columns 3/4; use six one-sided dice for a deterministic six rounds.
+    (override / "intmod.2da").write_text(
+        "2DA V1.0\n0\nLEARN LEVEL SPELLS MAZE_SIZE MAZE_DICE\n"
+        + "".join(f"{value} 0 0 0 1 6\n" for value in range(26)), encoding="ascii",
+    )
 
 
 def prepare(root, engine_source, runtime, installed, weidu="weidu"):
@@ -35,6 +67,7 @@ def prepare(root, engine_source, runtime, installed, weidu="weidu"):
     fixture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(fixture)
     fixture.copy_script_ids(root, installed, override, weidu)
+    configure_probe_rules(override)
     avatars = next(path for path in (installed / "override").iterdir() if path.name.casefold() == "avatars.2da")
     row = next(line for line in avatars.read_text().splitlines() if "PSCRANI" in line.upper())
     with (override / "avatars.2da").open("a") as out:
@@ -109,7 +142,8 @@ def run(args):
     assert completed.returncode == 0, (completed.returncode, log)
     assert "ENEMY_PSION_NATIVE_PASS" in text and "ENEMY_PSION_NATIVE_FAIL" not in text, log
     assert [entry["checkpoint"] for entry in checkpoints] == list(CHECKPOINTS), checkpoints
-    for failure in ("Traceback", "Unhandled trigger", "[GUIScript/ERROR]: Runtime Error:",
+    for failure in ("Traceback", "Unhandled trigger", "Invalid scripting trigger:", "Invalid scripting action:",
+                    "[GUIScript/ERROR]: Runtime Error:",
                     "[GUIScript/ERROR]: Unhandled target type"):
         assert failure not in text, (failure, log)
     report = {

@@ -144,7 +144,8 @@ def run(args):
     assert completed.returncode == 0, (completed.returncode, log)
     assert "PSICRYSTAL_NATIVE_PASS" in text and "PSICRYSTAL_NATIVE_FAIL" not in text, log
     assert [entry["checkpoint"] for entry in checkpoints] == list(CHECKPOINTS), checkpoints
-    for failure in ("Traceback", "Unhandled trigger", "[GUIScript/ERROR]: Runtime Error:",
+    for failure in ("Traceback", "Unhandled trigger", "Invalid scripting trigger:", "Invalid scripting action:",
+                    "[GUIScript/ERROR]: Runtime Error:",
                     "[GUIScript/ERROR]: Unhandled target type"):
         assert failure not in text, (failure, log)
     report = {"engine_contract_commit": engine_commit,

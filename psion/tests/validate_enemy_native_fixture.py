@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import patch
@@ -155,6 +156,53 @@ class NativeEnemyFixtureTests(unittest.TestCase):
         self.assertFalse(self.saves)
         self.assertFalse(self.loaded)
         self.assertIn("ENEMY_PSION_NATIVE_FAIL", self.output.getvalue())
+
+
+class NativeProbeRulesTests(unittest.TestCase):
+    def test_sparse_demo_rules_supply_real_probe_triggers_and_maze_duration(self):
+        spec = importlib.util.spec_from_file_location("enemy_probe_rules_test", ROOT / "psion/tests/validate_enemy_psion_native.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        with tempfile.TemporaryDirectory() as directory:
+            override = Path(directory)
+            original = "0x4001 True()\n0x4004 Existing()\n"
+            (override / "trigger.ids").write_text(original)
+            (override / "gemtrig.ids").write_text("IDS\n0x4002 Extension()\n")
+            runner.configure_probe_rules(override)
+            text = (override / "trigger.ids").read_text()
+            self.assertTrue(text.startswith(original))
+            self.assertIn("0x4003 InParty(O:Object*)", text)
+            self.assertIn("0x4005 ObjectActionListEmpty(O:Object*)", text)
+            self.assertIn("0x4006 CombatCounter(I:Value*)", text)
+            table = (override / "intmod.2da").read_text().splitlines()
+            self.assertEqual(len(table[3:]), 26)
+            self.assertTrue(all(row.split()[4:] == ["1", "6"] for row in table[3:]))
+            runner.configure_probe_rules(override)
+            self.assertEqual((override / "trigger.ids").read_text(), text)
+
+    def test_error_markers_reject_otherwise_complete_native_evidence(self):
+        spec = importlib.util.spec_from_file_location("enemy_probe_error_test", ROOT / "psion/tests/validate_enemy_psion_native.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        complete = "\n".join("ENEMY_PSION_NATIVE " + json.dumps({"checkpoint": name}) for name in runner.CHECKPOINTS)
+        complete += "\nENEMY_PSION_NATIVE_PASS\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for index, marker in enumerate(("Traceback", "Unhandled trigger", "Invalid scripting trigger:",
+                                             "Invalid scripting action:", "[GUIScript/ERROR]: Runtime Error:",
+                                             "[GUIScript/ERROR]: Unhandled target type")):
+                with self.subTest(marker=marker):
+                    args = types.SimpleNamespace(output=root / str(index), engine_source=root,
+                                                 runtime=root, installed=root, weidu="weidu")
+                    def native(command, **kwargs):
+                        kwargs["stdout"].write(complete + marker + "\n")
+                        return types.SimpleNamespace(returncode=0)
+                    with patch.object(runner, "prepare", return_value=root / "GemRB.cfg"), \
+                            patch.object(runner.subprocess, "check_output", return_value="exact-engine-head\n"), \
+                            patch.object(runner.subprocess, "run", side_effect=native):
+                        with self.assertRaises(AssertionError):
+                            runner.run(args)
+                    self.assertFalse((args.output / "result.json").exists())
 
 
 if __name__ == "__main__":
