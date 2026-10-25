@@ -20,6 +20,9 @@ env:
   GEMRB_CONTRACT_REPOSITORY: ${{ github.event_name == 'schedule' && 'gemrb/gemrb' || 'lisu188/gemrb' }}
   GEMRB_CONTRACT_REF: ${{ github.event_name == 'schedule' && 'master' || '91e64d19c90f169530f99f5a08ecf96f1402cf67' }}
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -105,3 +108,4 @@ jobs:
         run: python sorcerer-monk/tests/weidu_smc_gameplay_smoke.py weidu
       - name: Real WeiDU Sorcerer Monk Cleric progression smoke tests
         run: python sorcerer-monk/tests/weidu_smc_progression_smoke.py weidu
+
