@@ -314,14 +314,21 @@ sub fixTriggersOnly {
             $in_or = 0;
         }
         if ($line =~ /Player6/) {
+            if ($new_trigger_half =~ /(^[^\S\n]*OR\(2\)\n[^\n]*\bNumInPartyLT\(6\)[^\n]*\n)\z/m) {
+                my $prefix = $1;
+                my $original_line = $line;
+                for (my $i = 7; $i <= $party_num; $i++) {
+                    my $new_prefix = $prefix =~ s/NumInPartyLT\(6\)/NumInPartyLT($i)/r;
+                    my $new_line = $original_line =~ s/\bPlayer6\b/Player$i/gr;
+                    $line .= "\n" . $new_prefix . $new_line;
+                }
+                $new_trigger_half .= $line . "\n";
+                next;
+            }
             # adjust OR() if needed
             if ($in_or) {
                 # FIXME: UGLY, perhaps just split on OR(.) and work on that?
-                my $cur_pos = index $new_trigger_half, my $grr = $line =~ s/Player6/Player5/r;
-                my $or_pos = rindex $new_trigger_half, " OR(", $cur_pos;
-				if (index $new_trigger_half, " OR(", ($or_pos) > 0) {
-				    $or_pos = index $new_trigger_half, " OR(", ($or_pos);
-				}
+                my $or_pos = rindex $new_trigger_half, " OR(";
 #               print $new_trigger_half, "|\n" , $line, "\n";
 #               print ((substr $new_trigger_half, $or_pos, 6), "||", $cur_pos, "||", $or_pos, "||\n");
                 # we have to set the new count carefully in case there are other actions inside the Or: just add to existing
@@ -386,7 +393,7 @@ sub extendDLG {
         # IF( [^~]*)? ~.*~ THEN .* (GOTO|EXIT|EXTERN).*$?
         $state = $state =~ s{/\*(?:(?!\*/).)*\*/}{}gsr;
         my $state2;
-        my @transitions = split /(^\s*IF(?:(?:(?!(?:GOTO|EXIT|EXTERN)).)*)(?:GOTO|EXIT|EXTERN) *\w*\n?)/ms, $state;
+        my @transitions = split /(^\s*IF(?:(?:(?!(?:GOTO|EXIT|EXTERN)).)*)(?:GOTO *\w+|EXIT|EXTERN *(?:~[^~]*~|"[^"]*"|\w+) *\w+)\n?)/ms, $state;
         my $seenP5 = 0;
         # print_r(@transitions);
         foreach my $trans (@transitions) {
